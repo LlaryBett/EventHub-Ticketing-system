@@ -1,0 +1,34 @@
+/* Your existing CSS variables */
+:root {
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --accent-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --error-color: #ef4444;
+}
+
+/* Your existing utility classes */
+.gradient-bg {
+  background: var(--primary-gradient);
+}
+
+.accent-gradient {
+  background: var(--accent-gradient);
+}
+
+/* Add Tailwind v4 theme configuration */
+@theme {
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  
+  --color-accent-500: #f59e0b;
+  --color-accent-600: #d97706;
+  
+  /* You can also add your existing colors as Tailwind utilities */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+}

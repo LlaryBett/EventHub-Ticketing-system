@@ -1,0 +1,534 @@
+// backend/src/controllers/authController.js
+const User = require('../models/User');
+const Organizer = require('../models/Organizer');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const { validationResult } = require('express-validator');
+const { sendEmail } = require('../utils/emailService');
+
+// Generate JWT Token
+const generateToken = (id, userType) => {
+  return jwt.sign({ id, userType }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  });
+};
+
+// Send response with token
+const sendTokenResponse = (user, statusCode, res, userType) => {
+  const token = generateToken(user._id, userType);
+
+  const options = {
+    expires: new Date(
+      Date.now() + (process.env.JWT_COOKIE_EXPIRE || 7) * 24 * 60 * 60 * 1000
+    ),
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+  };
+
+  // Remove password from output
+  user.password = undefined;
+
+  res.status(statusCode).cookie('token', token, options).json({
+    success: true,
+    token,
+    data: user,
+    userType
+  });
+};
+
+// @desc    Register attendee
+// @route   POST /api/auth/register/attendee
+// @access  Public
+exports.registerAttendee = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { name, email, password, phone, acceptTerms, marketingConsent } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists with this email'
+      });
+    }
+
+    // Create user
+    const user = await User.create({
+      name,
+      email,
+      password,
+      phone,
+      userType: 'attendee',
+      acceptTerms,
+      marketingConsent,
+      status: 'active'
+    });
+
+    sendTokenResponse(user, 201, res, 'attendee');
+  } catch (error) {
+    console.error('Register attendee error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Register organizer (step 1 - personal info)
+// @route   POST /api/auth/register/organizer/step1
+// @access  Public
+exports.registerOrganizerStep1 = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { name, email, password, phone } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists with this email'
+      });
+    }
+
+    // Store step 1 data in session or temporary storage
+    // In a real application, you might use Redis or database for multi-step registration
+    req.session.organizerStep1 = {
+      name,
+      email,
+      password,
+      phone,
+      timestamp: Date.now()
+    };
+
+    res.status(200).json({
+      success: true,
+      message: 'Step 1 completed successfully',
+      data: { email }
+    });
+  } catch (error) {
+    console.error('Organizer step 1 error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Register organizer (step 2 - business info)
+// @route   POST /api/auth/register/organizer/step2
+// @access  Public
+exports.registerOrganizerStep2 = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    // Check if step 1 data exists
+    if (!req.session.organizerStep1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please complete step 1 first'
+      });
+    }
+
+    const {
+      organizationName,
+      businessType,
+      businessAddress,
+      city,
+      state,
+      zipCode,
+      taxId,
+      website,
+      acceptTerms,
+      marketingConsent
+    } = req.body;
+
+    const step1Data = req.session.organizerStep1;
+
+    // Check if user already exists (again for safety)
+    const existingUser = await User.findOne({ email: step1Data.email });
+    if (existingUser) {
+      delete req.session.organizerStep1;
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists with this email'
+      });
+    }
+
+    // Create user with organizer role
+    const user = await User.create({
+      name: step1Data.name,
+      email: step1Data.email,
+      password: step1Data.password,
+      phone: step1Data.phone,
+      userType: 'organizer',
+      acceptTerms,
+      marketingConsent,
+      status: 'pending_verification' // Organizers need approval
+    });
+
+    // Create organizer profile
+    const organizer = await Organizer.create({
+      userId: user._id,
+      organizationName,
+      businessType,
+      businessAddress,
+      city,
+      state,
+      zipCode,
+      taxId: taxId || null,
+      website: website || null,
+      verificationStatus: 'pending',
+      approvalStatus: 'pending'
+    });
+
+    // Send approval notification email to admin
+    try {
+      await sendEmail({
+        to: process.env.ADMIN_EMAIL || 'admin@example.com',
+        subject: 'New Organizer Application',
+        html: `
+          <h2>New Organizer Application</h2>
+          <p><strong>Organization:</strong> ${organizationName}</p>
+          <p><strong>Contact:</strong> ${step1Data.name} (${step1Data.email})</p>
+          <p><strong>Business Type:</strong> ${businessType}</p>
+          <p><strong>Address:</strong> ${businessAddress}, ${city}, ${state} ${zipCode}</p>
+          <p>Please review this application in the admin panel.</p>
+        `
+      });
+    } catch (emailError) {
+      console.error('Failed to send admin notification:', emailError);
+    }
+
+    // Send confirmation email to user
+    try {
+      await sendEmail({
+        to: step1Data.email,
+        subject: 'Organizer Application Received',
+        html: `
+          <h2>Thank you for your application!</h2>
+          <p>Dear ${step1Data.name},</p>
+          <p>We've received your application to become an EventHub organizer for <strong>${organizationName}</strong>.</p>
+          <p>Our team will review your application within 2-3 business days. You'll receive an email notification once your account has been approved.</p>
+          <p>If you have any questions, please contact our support team.</p>
+          <br>
+          <p>Best regards,<br>The EventHub Team</p>
+        `
+      });
+    } catch (emailError) {
+      console.error('Failed to send confirmation email:', emailError);
+    }
+
+    // Clear session data
+    delete req.session.organizerStep1;
+
+    res.status(201).json({
+      success: true,
+      message: 'Organizer application submitted successfully. You will receive an email once your account is approved.',
+      data: {
+        userId: user._id,
+        organizerId: organizer._id,
+        status: 'pending_verification'
+      }
+    });
+  } catch (error) {
+    console.error('Organizer step 2 error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Login user
+// @route   POST /api/auth/login
+// @access  Public
+exports.login = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { email, password } = req.body;
+
+    // Check if user exists
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Check if password matches
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Check if organizer account is approved (if organizer)
+    if (user.userType === 'organizer') {
+      const organizer = await Organizer.findOne({ userId: user._id });
+      if (organizer && organizer.approvalStatus !== 'approved') {
+        return res.status(401).json({
+          success: false,
+          message: 'Your organizer account is pending approval. Please wait for admin verification.'
+        });
+      }
+    }
+
+    // Check if account is active
+    if (user.status !== 'active') {
+      return res.status(401).json({
+        success: false,
+        message: 'Your account is not active. Please contact support.'
+      });
+    }
+
+    sendTokenResponse(user, 200, res, user.userType);
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Get current logged in user
+// @route   GET /api/auth/me
+// @access  Private
+exports.getMe = async (req, res, next) => {
+  try {
+    let userData = await User.findById(req.user.id);
+
+    // If user is organizer, include organizer profile
+    if (req.user.userType === 'organizer') {
+      const organizerProfile = await Organizer.findOne({ userId: req.user.id });
+      userData = userData.toObject();
+      userData.organizerProfile = organizerProfile;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: userData
+    });
+  } catch (error) {
+    console.error('Get me error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Log user out / clear cookie
+// @route   GET /api/auth/logout
+// @access  Private
+exports.logout = async (req, res, next) => {
+  try {
+    res.cookie('token', 'none', {
+      expires: new Date(Date.now() + 10 * 1000),
+      httpOnly: true
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Forgot password
+// @route   POST /api/auth/forgotpassword
+// @access  Public
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'No user found with this email'
+      });
+    }
+
+    // Generate reset token
+    const resetToken = user.getResetPasswordToken();
+    await user.save({ validateBeforeSave: false });
+
+    // Create reset URL
+    const resetUrl = `${req.protocol}://${req.get('host')}/api/auth/resetpassword/${resetToken}`;
+
+    // Email message
+    const message = `
+      <h2>Password Reset Request</h2>
+      <p>You are receiving this email because you (or someone else) has requested a password reset for your EventHub account.</p>
+      <p>Please click on the following link to reset your password:</p>
+      <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
+      <p>If you did not request this, please ignore this email and your password will remain unchanged.</p>
+      <p>This reset token is valid for 10 minutes.</p>
+    `;
+
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Password Reset Request',
+        html: message
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Email sent with password reset instructions'
+      });
+    } catch (error) {
+      console.error('Email send error:', error);
+      
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      return res.status(500).json({
+        success: false,
+        message: 'Email could not be sent'
+      });
+    }
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Reset password
+// @route   PUT /api/auth/resetpassword/:resettoken
+// @access  Public
+exports.resetPassword = async (req, res, next) => {
+  try {
+    // Get hashed token
+    const resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(req.params.resettoken)
+      .digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token'
+      });
+    }
+
+    // Set new password
+    user.password = req.body.password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    sendTokenResponse(user, 200, res, user.userType);
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Update user details
+// @route   PUT /api/auth/updatedetails
+// @access  Private
+exports.updateDetails = async (req, res, next) => {
+  try {
+    const fieldsToUpdate = {
+      name: req.body.name,
+      email: req.body.email,
+      phone: req.body.phone
+    };
+
+    const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
+      new: true,
+      runValidators: true
+    });
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Update details error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Update password
+// @route   PUT /api/auth/updatepassword
+// @access  Private
+exports.updatePassword = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select('+password');
+
+    // Check current password
+    if (!(await user.matchPassword(req.body.currentPassword))) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    user.password = req.body.newPassword;
+    await user.save();
+
+    sendTokenResponse(user, 200, res, user.userType);
+  } catch (error) {
+    console.error('Update password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
