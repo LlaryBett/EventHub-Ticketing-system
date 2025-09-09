@@ -19,7 +19,10 @@ const EventDetails = () => {
     const fetchEvent = async () => {
       try {
         const eventData = await eventService.getEventById(id);
-        setEvent(eventData);
+        console.log('Payload received from getEventById:', eventData); // Log the payload
+        // Support response shape: { success, data: [event] } or { data: event }
+        const eventObj = eventData?.data;
+        setEvent(eventObj);
       } catch (error) {
         console.error('Failed to fetch event:', error);
         showError('Failed to load event details');
@@ -32,6 +35,7 @@ const EventDetails = () => {
   }, [id, showError]);
 
   const handleAddToCart = () => {
+    console.log('Event object in handleAddToCart:', event); // Log the event object
     if (event && spotsLeft >= selectedQuantity) {
       addToCart(event, selectedQuantity);
       showSuccess(`${selectedQuantity} ticket(s) for ${event.title} added to cart!`);
@@ -68,39 +72,40 @@ const EventDetails = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="relative h-96 overflow-hidden">
-        <img
-          src={event.image}
-          alt={event.title}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black bg-opacity-50"></div>
-        <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
-          <div className="max-w-7xl mx-auto container-padding">
-            <div className="flex items-center mb-4">
-              <span className="bg-primary-600 text-white px-3 py-1 rounded-full text-sm font-medium capitalize mr-4">
-                {event.category}
-              </span>
-              {event.featured && (
-                <span className="bg-yellow-400 text-gray-900 px-3 py-1 rounded-full text-sm font-medium">
-                  Featured Event
+      <div className="max-w-5xl mx-auto mt-8 rounded-3xl shadow-2xl overflow-hidden bg-white/80 relative">
+        <div className="relative h-96">
+          <img
+            src={event.image}
+            alt={event.title}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+            <div className="max-w-7xl mx-auto container-padding">
+              <div className="flex items-center mb-4">
+                <span className="bg-primary-600 text-white px-3 py-1 rounded-full text-sm font-medium capitalize mr-4">
+                  {event.category}
                 </span>
-              )}
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">{event.title}</h1>
-            <div className="flex flex-wrap items-center gap-6 text-lg">
-              <div className="flex items-center">
-                <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                {formatDate(event.date)} at {event.time}
+                {event.featured && (
+                  <span className="bg-yellow-400 text-gray-900 px-3 py-1 rounded-full text-sm font-medium">
+                    Featured Event
+                  </span>
+                )}
               </div>
-              <div className="flex items-center">
-                <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                {event.location}
+              <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">{event.title}</h1>
+              <div className="flex flex-wrap items-center gap-6 text-lg drop-shadow">
+                <div className="flex items-center">
+                  <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {formatDate(event.date)} at {event.time}
+                </div>
+                <div className="flex items-center">
+                  <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {event.location}
+                </div>
               </div>
             </div>
           </div>

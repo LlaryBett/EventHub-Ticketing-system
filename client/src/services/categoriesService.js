@@ -1,9 +1,9 @@
-// client/src/services/eventService.js
+// client/src/services/categoriesService.js
 import { api } from './api';
 
-class EventService {
-  // Get all events
-  async getAllEvents(filters = {}) {
+class CategoriesService {
+  // Get all categories
+  async getAllCategories(filters = {}) {
     try {
       const params = new URLSearchParams();
       
@@ -15,7 +15,7 @@ class EventService {
       });
       
       const queryString = params.toString();
-      const url = `/events${queryString ? `?${queryString}` : ''}`;
+      const url = `/categories${queryString ? `?${queryString}` : ''}`;
       
       const response = await api.get(url);
       return response.data;
@@ -24,60 +24,50 @@ class EventService {
     }
   }
 
-  // Get featured events
-  async getFeaturedEvents() {
+  // Get category by ID
+  async getCategoryById(id) {
     try {
-      const response = await api.get('/events/featured');
+      const response = await api.get(`/categories/${id}`);
       return response.data;
     } catch (error) {
       this.handleError(error);
     }
   }
 
-  // Get event by ID
-  async getEventById(id) {
+  // Create a new category (admin only)
+  async createCategory(categoryData) {
     try {
-      const response = await api.get(`/events/${id}`);
+      const response = await api.post('/categories', categoryData);
       return response.data;
     } catch (error) {
       this.handleError(error);
     }
   }
 
-  // Register for an event
-  async registerForEvent(eventId) {
+  // Update a category (admin only)
+  async updateCategory(id, categoryData) {
     try {
-      const response = await api.post(`/events/${eventId}/register`);
+      const response = await api.put(`/categories/${id}`, categoryData);
       return response.data;
     } catch (error) {
       this.handleError(error);
     }
   }
 
-  // Create a new event (admin/organizer only)
-  async createEvent(eventData) {
+  // Delete a category (admin only)
+  async deleteCategory(id) {
     try {
-      const response = await api.post('/events', eventData);
+      const response = await api.delete(`/categories/${id}`);
       return response.data;
     } catch (error) {
       this.handleError(error);
     }
   }
 
-  // Update an event (admin/organizer only)
-  async updateEvent(id, eventData) {
+  // Get category statistics overview (admin only)
+  async getCategoryStats() {
     try {
-      const response = await api.put(`/events/${id}`, eventData);
-      return response.data;
-    } catch (error) {
-      this.handleError(error);
-    }
-  }
-
-  // Delete an event (admin/organizer only)
-  async deleteEvent(id) {
-    try {
-      const response = await api.delete(`/events/${id}`);
+      const response = await api.get('/categories/stats/overview');
       return response.data;
     } catch (error) {
       this.handleError(error);
@@ -101,4 +91,4 @@ class EventService {
 }
 
 // Export as a singleton instance
-export const eventService = new EventService();
+export const categoriesService = new CategoriesService();

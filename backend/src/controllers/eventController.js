@@ -127,7 +127,7 @@ const getEventById = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id)
       .populate('category', 'name')
-      .populate('organizer', 'name');
+      .populate('organizer', 'organizationName'); // ✅ FIX
 
     if (!event) {
       return res.status(404).json({
@@ -136,18 +136,17 @@ const getEventById = async (req, res) => {
       });
     }
 
-    // Transform data to match your expected format
     const transformedEvent = {
       id: event._id,
       title: event.title,
       description: event.description,
       image: event.image,
-      date: event.date.toISOString().split('T')[0], // Format as YYYY-MM-DD
+      date: event.date.toISOString().split('T')[0],
       time: event.time,
       location: event.location,
       price: event.price,
-      category: event.category.name,
-      organizer: event.organizer.name,
+      category: event.category?.name || null,
+      organizer: event.organizer?.organizationName || null, // ✅ FIX
       capacity: event.capacity,
       registered: event.registered,
       featured: event.featured,
@@ -173,6 +172,7 @@ const getEventById = async (req, res) => {
     });
   }
 };
+
 
 // Create a new event
 // Create a new event

@@ -11,6 +11,8 @@ const Header = () => {
   const navigate = useNavigate();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
+ 
+
   const handleLogout = () => {
     logout();
     navigate('/');
@@ -76,10 +78,8 @@ const Header = () => {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors duration-200"
                 >
-                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium">{user.name?.charAt(0) || 'U'}</span>
-                  </div>
-                  <span className="hidden md:block font-medium">{user.name}</span>
+                  {/* Only show the first name, no avatar */}
+                  <span className="font-medium">{user.data?.name?.split(' ')[0]}</span>
                 </button>
 
                 {userMenuOpen && (

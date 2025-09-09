@@ -21,7 +21,7 @@ const Events = () => {
       setLoading(true);
       try {
         const fetchedEvents = await eventService.getAllEvents(filters);
-        setEvents(fetchedEvents);
+        setEvents(Array.isArray(fetchedEvents) ? fetchedEvents : fetchedEvents?.data || []);
       } catch (error) {
         console.error('Failed to fetch events:', error);
       } finally {

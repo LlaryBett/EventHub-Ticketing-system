@@ -7,17 +7,17 @@ exports.getAllCategories = async (req, res, next) => {
   try {
     const categories = await Category.find().sort({ name: 1 });
     
-    // Get event counts for each category
+    // Get event counts for each category (no status filter)
     const categoriesWithCounts = await Promise.all(
       categories.map(async (category) => {
-        const count = await Event.countDocuments({ category: category._id, status: 'published' });
+        const count = await Event.countDocuments({ category: category._id });
         return {
           id: category._id,
           name: category.name,
           description: category.description,
           icon: category.icon,
           color: category.color,
-          count: count
+          count
         };
       })
     );
@@ -31,6 +31,7 @@ exports.getAllCategories = async (req, res, next) => {
   }
 };
 
+
 // Get single category by ID
 exports.getCategoryById = async (req, res, next) => {
   try {
@@ -43,10 +44,8 @@ exports.getCategoryById = async (req, res, next) => {
       });
     }
     
-    const eventCount = await Event.countDocuments({ 
-      category: req.params.id, 
-      status: 'published' 
-    });
+    // Count all events for this category (no status filter)
+    const eventCount = await Event.countDocuments({ category: req.params.id });
     
     res.status(200).json({
       success: true,
@@ -63,6 +62,7 @@ exports.getCategoryById = async (req, res, next) => {
     next(error);
   }
 };
+
 
 // Create new category (Admin only)
 exports.createCategory = async (req, res, next) => {

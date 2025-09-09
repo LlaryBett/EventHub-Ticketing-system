@@ -40,25 +40,25 @@ app.use(cookieParser());
  */
 app.use((req, res, next) => {
   const sanitize = (obj) => {
+    if (!obj || typeof obj !== 'object') return; // skip if null, undefined, or not an object
     for (let key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        // If the key itself is malicious, delete it
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         if (key.includes('$') || key.includes('.')) {
           delete obj[key];
         } else if (typeof obj[key] === 'object' && obj[key] !== null) {
           sanitize(obj[key]);
         }
-        // ✅ Do NOT alter string values — leave emails/names intact
       }
     }
   };
 
-  if (req.body) sanitize(req.body);
-  if (req.query) sanitize(req.query);
-  if (req.params) sanitize(req.params);
+  sanitize(req.body);
+  sanitize(req.query);
+  sanitize(req.params);
 
   next();
 });
+
  
 app.use(
   session({
