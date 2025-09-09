@@ -25,13 +25,18 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
+    console.log('Login payload:', formData);
     try {
-      await login(formData.email, formData.password);
-      showSuccess('Welcome back! You have successfully logged in.');
+      const response = await login(formData.email, formData.password);
+      showSuccess(response?.message || 'Welcome back! You have successfully logged in.');
       navigate('/dashboard', { replace: true });
     } catch (error) {
-      showError(error.message || 'Login failed. Please check your credentials.');
+      // Check if it's an authentication error from the interceptor
+      if (error.isAuthError) {
+        showError('Session expired. Please login again.');
+      } else {
+        showError(error?.message || (error?.response?.data?.message) || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
@@ -58,80 +63,79 @@ const Login = () => {
               </p>
               {/* Features */}
               <div className="p-4 bg-primary-50 rounded-lg border-l-4 border-primary-600 space-y-4">
-  <div className="flex items-center space-x-3">
-    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-primary-600">
-      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-        <path
-          fillRule="evenodd"
-          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-          clipRule="evenodd"
-        />
-      </svg>
-    </div>
-    <span className="text-gray-700">Access to thousands of events</span>
-  </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-primary-600">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-gray-700">Access to thousands of events</span>
+                </div>
 
-  <div className="flex items-center space-x-3">
-    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-primary-600">
-      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-        <path
-          fillRule="evenodd"
-          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-          clipRule="evenodd"
-        />
-      </svg>
-    </div>
-    <span className="text-gray-700">Personalized recommendations</span>
-  </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-primary-600">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-gray-700">Personalized recommendations</span>
+                </div>
 
-  <div className="flex items-center space-x-3">
-    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-primary-600">
-      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-        <path
-          fillRule="evenodd"
-          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-          clipRule="evenodd"
-        />
-      </svg>
-    </div>
-    <span className="text-gray-700">Easy ticket management</span>
-  </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-primary-600">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-gray-700">Easy ticket management</span>
+                </div>
 
-  <div className="flex items-center space-x-3">
-    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-primary-600">
-      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-        <path
-          fillRule="evenodd"
-          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-          clipRule="evenodd"
-        />
-      </svg>
-    </div>
-    <span className="text-gray-700">Connect with your community</span>
-  </div>
-</div>
-
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-primary-600">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                  <span className="text-gray-700">Connect with your community</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Right Column - Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-4"> {/* reduced padding */}
-          <div className="max-w-xs w-full"> {/* reduced max width */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-4">
+          <div className="max-w-xs w-full">
             {/* Header */}
-            <div className="text-center mb-4"> {/* reduced margin */}
+            <div className="text-center mb-4">
               <Link to="/" className="flex items-center justify-center space-x-2 mb-2">
-                <div className="w-7 h-7 bg-primary-600 rounded-lg flex items-center justify-center"> {/* reduced size */}
-                  <span className="text-white font-bold text-base">E</span> {/* reduced font */}
+                <div className="w-7 h-7 bg-primary-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-base">E</span>
                 </div>
-                <span className="text-4xl font-bold text-gray-900 ">EventHub</span> {/* reduced font */}
+                <span className="text-4xl font-bold text-gray-900 ">EventHub</span>
               </Link>
-              <h1 className="text-base font-bold text-gray-900 mb-1">Welcome Back</h1> {/* reduced font */}
-              <p className="text-xs text-gray-600">Sign in to your account to continue</p> {/* reduced font */}
+              <h1 className="text-base font-bold text-gray-900 mb-1">Welcome Back</h1>
+              <p className="text-xs text-gray-600">Sign in to your account to continue</p>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-2"> {/* reduced spacing */}
+            <form onSubmit={handleSubmit} className="space-y-2">
               <Input
                 label="Email Address"
                 type="email"
@@ -139,7 +143,7 @@ const Login = () => {
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 required
-                className="py-1 px-2 text-xs" // reduced input size
+                className="py-1 px-2 text-xs"
                 inputClassName="text-xs"
                 labelClassName="text-xs font-medium"
               />
@@ -185,7 +189,7 @@ const Login = () => {
             </form>
 
             {/* Sign up link */}
-            <div className="mt-2 text-center"> {/* reduced margin */}
+            <div className="mt-2 text-center">
               <p className="text-xs text-gray-600">
                 Don't have an account?{' '}
                 <Link

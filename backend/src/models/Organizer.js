@@ -203,4 +203,4 @@ OrganizerSchema.methods.addRevenue = function(amount) {
   return this.save();
 };
 
-module.exports = mongoose.model('Organizer', OrganizerSchema);
+module.exports = mongoose.models.Organizer || mongoose.model('Organizer', OrganizerSchema);

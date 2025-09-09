@@ -13,9 +13,8 @@ require('dotenv').config();
 
 // Import route files
 const authRoutes = require('./src/routes/auth');
-// const userRoutes = require('./src/routes/users');
-// const eventRoutes = require('./src/routes/events');
-// const organizerRoutes = require('./src/routes/organizers');
+const eventRoutes = require('./src/routes/events');
+const categoryRoutes = require('./src/routes/categories');
 
 // Import database connection
 const connectDB = require('./src/config/database');
@@ -106,7 +105,11 @@ app.use(
     origin:
       process.env.NODE_ENV === 'production'
         ? process.env.FRONTEND_URL || 'http://localhost:3000'
-        : ['http://localhost:3000', 'http://localhost:3001'],
+        : [
+            'http://localhost:3000',
+            'http://localhost:3001',
+            'http://localhost:5173' // Added Vite dev server
+          ],
     credentials: true,
     optionsSuccessStatus: 200,
   })
@@ -119,6 +122,8 @@ if (process.env.NODE_ENV === 'production') {
 
 // Mount routers
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/events', eventRoutes);
+app.use('/api/v1/categories', categoryRoutes);
 
 // Health check endpoint
 app.get('/api/v1/health', (req, res) => {

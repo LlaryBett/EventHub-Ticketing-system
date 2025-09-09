@@ -4,14 +4,22 @@ import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
+import Modal from '../components/common/Modal';
 
 const Register = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { register } = useAuth();
+  const { 
+    registerAttendee, 
+    registerOrganizerStep1, 
+    registerOrganizerStep2 
+  } = useAuth();
   const { showSuccess, showError } = useUI();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [step1Response, setStep1Response] = useState(null);
+  const [showOrganizerSuccessModal, setShowOrganizerSuccessModal] = useState(false);
+  const [organizerSuccessMessage, setOrganizerSuccessMessage] = useState('');
 
   // Helper function to determine registration type from URL
   const getRegistrationTypeFromURL = () => {
@@ -53,6 +61,7 @@ const Register = () => {
     
     // Reset to step 1 when switching between registration types
     setCurrentStep(1);
+    setStep1Response(null);
   }, [location.search]);
 
   const handleInputChange = (field, value) => {
@@ -92,37 +101,97 @@ const Register = () => {
     return true;
   };
 
-  const handleNext = () => {
-    if (currentStep === 1 && validateStep1()) {
-      setCurrentStep(2);
-    }
-  };
-
-  const handleBack = () => {
-    setCurrentStep(1);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validateStep2()) return;
+  const handleOrganizerStep1 = async () => {
+    if (!validateStep1()) return;
 
     setLoading(true);
 
     try {
-      await register({
-        ...formData,
-        userType: 'organizer',
-        status: 'pending_verification' // Organizers need approval
+      const response = await registerOrganizerStep1({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone
       });
       
-      showSuccess('Organizer application submitted! You\'ll receive an email once your account is approved.');
-      navigate('/organizer/application-submitted');
+      setStep1Response(response);
+      setCurrentStep(2);
+      showSuccess('Personal information saved successfully');
     } catch (error) {
       showError(error.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOrganizerStep2 = async (e) => {
+    e.preventDefault();
+    if (!validateStep2()) return;
+    setLoading(true);
+    try {
+      const response = await registerOrganizerStep2({
+        organizationName: formData.organizationName,
+        businessType: formData.businessType,
+        businessAddress: formData.businessAddress,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        taxId: formData.taxId,
+        website: formData.website,
+        acceptTerms: formData.acceptTerms,
+        marketingConsent: formData.marketingConsent
+      });
+      setShowOrganizerSuccessModal(true);
+      setOrganizerSuccessMessage(response.message || "Organizer application submitted! You'll receive an email once your account is approved.");
+      showSuccess(response.message || "Organizer application submitted! You'll receive an email once your account is approved.");
+    } catch (error) {
+      showError(error.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAttendeeSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.name || !formData.email || !formData.password) {
+      showError('Please fill in all required fields');
+      return;
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      showError('Passwords do not match');
+      return;
+    }
+    
+    if (formData.password.length < 8) {
+      showError('Password must be at least 8 characters long');
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      await registerAttendee({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        acceptTerms: formData.acceptTerms,
+        marketingConsent: formData.marketingConsent
+      });
+      
+      showSuccess('Account created successfully! Welcome to EventHub.');
+      navigate('/');
+    } catch (error) {
+      showError(error.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    setCurrentStep(1);
   };
 
   // Function to toggle registration type and update URL
@@ -145,6 +214,7 @@ const Register = () => {
     
     // Reset to step 1 when toggling
     setCurrentStep(1);
+    setStep1Response(null);
   };
 
   return (
@@ -259,36 +329,7 @@ const Register = () => {
 
             {/* Attendee Registration Form */}
             {isAttendee ? (
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                if (!formData.name || !formData.email || !formData.password) {
-                  showError('Please fill in all required fields');
-                  return;
-                }
-                if (formData.password !== formData.confirmPassword) {
-                  showError('Passwords do not match');
-                  return;
-                }
-                if (formData.password.length < 8) {
-                  showError('Password must be at least 8 characters long');
-                  return;
-                }
-                setLoading(true);
-                try {
-                  await register({
-                    name: formData.name,
-                    email: formData.email,
-                    password: formData.password,
-                    userType: 'attendee'
-                  });
-                  showSuccess('Account created successfully! Welcome to EventHub.');
-                  navigate('/');
-                } catch (error) {
-                  showError(error.message || 'Registration failed. Please try again.');
-                } finally {
-                  setLoading(false);
-                }
-              }} className="space-y-4">
+              <form onSubmit={handleAttendeeSubmit} className="space-y-4">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Attendee Registration</h2>
                 <Input
                   label="Full Name *"
@@ -321,6 +362,13 @@ const Register = () => {
                   onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                   required
                 />
+                <Input
+                  label="Phone Number (Optional)"
+                  type="tel"
+                  placeholder="Enter your phone number"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                />
                 <div className="flex items-start">
                   <input
                     type="checkbox"
@@ -339,6 +387,19 @@ const Register = () => {
                       <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
                         Privacy Policy
                       </a>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <input
+                    type="checkbox"
+                    checked={formData.marketingConsent}
+                    onChange={(e) => handleInputChange('marketingConsent', e.target.checked)}
+                    className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div className="ml-3">
+                    <p className="text-sm text-gray-600">
+                      I'd like to receive marketing updates and event recommendations
                     </p>
                   </div>
                 </div>
@@ -370,7 +431,7 @@ const Register = () => {
                     ></div>
                   </div>
                 </div>
-                <form onSubmit={currentStep === 2 ? handleSubmit : (e) => e.preventDefault()}>
+                <form onSubmit={currentStep === 2 ? handleOrganizerStep2 : (e) => e.preventDefault()}>
                   {/* Step 1: Personal Information */}
                   {currentStep === 1 && (
                     <div className="space-y-4">
@@ -422,11 +483,13 @@ const Register = () => {
 
                       <Button
                         type="button"
-                        onClick={handleNext}
+                        onClick={handleOrganizerStep1}
                         fullWidth
+                        loading={loading}
+                        disabled={loading}
                         className="bg-purple-600 hover:bg-purple-700"
                       >
-                        Continue to Business Information
+                        {loading ? 'Processing...' : 'Continue to Business Information'}
                       </Button>
                     </div>
                   )}
@@ -569,6 +632,24 @@ const Register = () => {
                   )}
                 </form>
               </>
+            )}
+
+            {/* Organizer Success Modal */}
+            {!isAttendee && showOrganizerSuccessModal && (
+              <Modal onClose={() => setShowOrganizerSuccessModal(false)}>
+                <div className="p-6 text-center">
+                  <h2 className="text-2xl font-bold mb-4 text-purple-700">Application Submitted!</h2>
+                  <p className="mb-4 text-gray-700">
+                    {organizerSuccessMessage}
+                  </p>
+                  <Button
+                    onClick={() => setShowOrganizerSuccessModal(false)}
+                    className="bg-purple-600 hover:bg-purple-700 w-full mt-2"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </Modal>
             )}
 
             {/* Sign in link */}

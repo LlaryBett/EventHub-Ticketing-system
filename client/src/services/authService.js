@@ -1,61 +1,179 @@
-// Mock authentication service
-export const authService = {
-  login: async (email, password) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (email === 'admin@example.com' && password === 'admin123') {
-      return {
-        id: 1,
-        email,
-        name: 'Admin User',
-        role: 'admin',
-        token: 'mock-jwt-token'
-      };
-    } else if (email && password) {
-      return {
-        id: 2,
-        email,
-        name: 'Regular User',
-        role: 'user',
-        token: 'mock-jwt-token'
-      };
-    } else {
-      throw new Error('Invalid credentials');
+// client/src/services/authService.js
+import { api } from './api';
+
+// Register an attendee
+export const registerAttendee = async (userData) => {
+  try {
+    const response = await api.post('/auth/register/attendee', userData);
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
     }
-  },
-
-  register: async (userData) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return {
-      id: Date.now(),
-      ...userData,
-      role: 'user',
-      token: 'mock-jwt-token'
-    };
-  },
-
-  logout: async () => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return true;
-  },
-
-  getCurrentUser: () => {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
-  },
-
-  updateProfile: async (userData) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const currentUser = authService.getCurrentUser();
-    const updatedUser = { ...currentUser, ...userData };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    
-    return updatedUser;
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
   }
+};
+
+// Register an organizer - Step 1
+export const registerOrganizerStep1 = async (userData) => {
+  try {
+    const response = await api.post('/auth/register/organizer/step1', userData);
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Register an organizer - Step 2
+export const registerOrganizerStep2 = async (userData) => {
+  try {
+    const response = await api.post('/auth/register/organizer/step2', userData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Login user
+// client/src/services/authService.js
+export const login = async (credentials) => {
+  try {
+    const response = await api.post('/auth/login', credentials);
+    console.log('Login API response:', response.data); // Debug log
+    
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      
+      // Map "data" to "user" to match your frontend expectation
+      const userData = response.data.data || response.data.user;
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Return the formatted response that your AuthContext expects
+      return {
+        token: response.data.token,
+        user: userData,
+        message: response.data.message || 'Login successful'
+      };
+    }
+    
+    throw new Error('No token received from server');
+    
+  } catch (error) {
+    console.error('Login API error:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Login failed';
+    const formattedError = new Error(errorMessage);
+    
+    if (error.response) {
+      formattedError.response = error.response;
+    }
+    
+    throw formattedError;
+  }
+};
+
+// Get current user
+export const getMe = async () => {
+  try {
+    const response = await api.get('/auth/me');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Logout user
+export const logout = async () => {
+  try {
+    const response = await api.get('/auth/logout');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return response.data;
+  } catch (error) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    throw error.response?.data || error.message;
+  }
+};
+
+// Forgot password
+export const forgotPassword = async (email) => {
+  try {
+    const response = await api.post('/auth/forgotpassword', { email });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Reset password
+export const resetPassword = async (resetToken, password) => {
+  try {
+    const response = await api.put(`/auth/resetpassword/${resetToken}`, { password });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Update user details
+export const updateDetails = async (userData) => {
+  try {
+    const response = await api.put('/auth/updatedetails', userData);
+    if (response.data.user) {
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Update password
+export const updatePassword = async (passwords) => {
+  try {
+    const response = await api.put('/auth/updatepassword', passwords);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Check if user is authenticated
+export const isAuthenticated = () => {
+  const token = localStorage.getItem('token');
+  return !!token;
+};
+
+// Get current user from localStorage
+export const getCurrentUser = () => {
+  const userStr = localStorage.getItem('user');
+  if (!userStr) return null;
+  try {
+    return JSON.parse(userStr);
+  } catch {
+    return null;
+  }
+};
+
+// Get user role
+export const getUserRole = () => {
+  const user = getCurrentUser();
+  return user ? user.role : null;
+};
+
+// Check if user is an organizer
+export const isOrganizer = () => {
+  const role = getUserRole();
+  return role === 'organizer';
+};
+
+// Check if user is an attendee
+export const isAttendee = () => {
+  const role = getUserRole();
+  return role === 'attendee';
 };
