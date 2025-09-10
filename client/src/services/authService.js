@@ -1,4 +1,3 @@
-// client/src/services/authService.js
 import { api } from './api';
 
 // Register an attendee
@@ -40,7 +39,6 @@ export const registerOrganizerStep2 = async (userData) => {
 };
 
 // Login user
-// client/src/services/authService.js
 export const login = async (credentials) => {
   try {
     const response = await api.post('/auth/login', credentials);
@@ -76,30 +74,6 @@ export const login = async (credentials) => {
   }
 };
 
-// Get current user
-export const getMe = async () => {
-  try {
-    const response = await api.get('/auth/me');
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Logout user
-export const logout = async () => {
-  try {
-    const response = await api.get('/auth/logout');
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    return response.data;
-  } catch (error) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    throw error.response?.data || error.message;
-  }
-};
-
 // Forgot password
 export const forgotPassword = async (email) => {
   try {
@@ -120,25 +94,16 @@ export const resetPassword = async (resetToken, password) => {
   }
 };
 
-// Update user details
-export const updateDetails = async (userData) => {
+// Logout user
+export const logout = async () => {
   try {
-    const response = await api.put('/auth/updatedetails', userData);
-    if (response.data.user) {
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-    }
+    const response = await api.get('/auth/logout');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     return response.data;
   } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Update password
-export const updatePassword = async (passwords) => {
-  try {
-    const response = await api.put('/auth/updatepassword', passwords);
-    return response.data;
-  } catch (error) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     throw error.response?.data || error.message;
   }
 };

@@ -56,20 +56,20 @@ const CartSidebar = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {cartItems.map((item) => (
-                  <div key={item.id} className="bg-gray-50 rounded-lg p-4">
+                {Array.isArray(cartItems) && cartItems.map((item) => (
+                  <div key={item.id || item._id} className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-start space-x-3">
                       <img
-                        src={item.image}
-                        alt={item.title}
+                        src={item.event?.image}
+                        alt={item.event?.title}
                         className="w-16 h-16 rounded-lg object-cover"
                       />
                       <div className="flex-1 min-w-0">
                         <h3 className="font-medium text-gray-900 text-sm line-clamp-2">
-                          {item.title}
+                          {item.event?.title}
                         </h3>
                         <p className="text-sm text-gray-500 mt-1">
-                          {item.date} • {item.time}
+                          {item.event?.date} • {item.event?.time}
                         </p>
                         <p className="text-sm font-medium text-primary-600 mt-1">
                           {formatPrice(item.price)} each

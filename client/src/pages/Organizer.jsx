@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import { eventService } from '../services/eventService';
-import { mockCategories } from '../data/mockCategories';
+import { categoriesService } from '../services/categoriesService';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 
@@ -10,20 +10,67 @@ const Organizer = () => {
   const { user } = useAuth();
   const { showSuccess, showError } = useUI();
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [ticketTypes, setTicketTypes] = useState([
+    { type: '', price: '', quantity: '', id: 1 }
+  ]);
   const [eventData, setEventData] = useState({
     title: '',
     description: '',
     category: '',
     date: '',
     time: '',
-    location: '',
-    price: '',
-    capacity: '',
-    image: ''
+    venue: '', // Changed from location to venue
+    image: '',
+    tags: ''
   });
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const categoriesData = await categoriesService.getAllCategories();
+        // Ensure categories is always an array
+        if (Array.isArray(categoriesData)) {
+          setCategories(categoriesData);
+        } else if (Array.isArray(categoriesData?.data)) {
+          setCategories(categoriesData.data);
+        } else {
+          setCategories([]);
+        }
+      } catch (error) {
+        showError('Failed to load categories. Please try again.');
+        console.error('Categories loading error:', error);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, [showError]);
 
   const handleInputChange = (field, value) => {
     setEventData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleTicketChange = (index, field, value) => {
+    const updatedTickets = [...ticketTypes];
+    updatedTickets[index][field] = value;
+    setTicketTypes(updatedTickets);
+  };
+
+  const addTicketType = () => {
+    setTicketTypes([...ticketTypes, { type: '', price: '', quantity: '', id: Date.now() }]);
+  };
+
+  const removeTicketType = (index) => {
+    if (ticketTypes.length > 1) {
+      const updatedTickets = [...ticketTypes];
+      updatedTickets.splice(index, 1);
+      setTicketTypes(updatedTickets);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -34,17 +81,40 @@ const Organizer = () => {
       return;
     }
 
+    // Check if user is an organizer and has organizerProfile
+    if (user.data.userType !== 'organizer' || !user.data.organizerProfile || !user.data.organizerProfile._id) {
+      showError('You must be an organizer to create events. Please complete your organizer profile first.');
+      return;
+    }
+
+    // Validate tickets
+    const validTickets = ticketTypes.filter(ticket => 
+      ticket.type.trim() && ticket.price && ticket.quantity
+    );
+
+    if (validTickets.length === 0) {
+      showError('Please add at least one valid ticket type');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const newEvent = {
         ...eventData,
-        price: parseFloat(eventData.price),
-        capacity: parseInt(eventData.capacity),
-        organizer: user.name,
+        tickets: validTickets.map(ticket => ({
+          type: ticket.type.trim(),
+          price: parseFloat(ticket.price),
+          quantity: parseInt(ticket.quantity)
+        })),
+        organizer: user.data.organizerProfile._id,
         image: eventData.image || 'https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=800',
-        tags: []
+        tags: eventData.tags
+          ? eventData.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+          : []
       };
+
+      console.log('Payload sent to backend (newEvent):', newEvent);
 
       await eventService.createEvent(newEvent);
       showSuccess('Event created successfully!');
@@ -56,11 +126,11 @@ const Organizer = () => {
         category: '',
         date: '',
         time: '',
-        location: '',
-        price: '',
-        capacity: '',
-        image: ''
+        venue: '',
+        image: '',
+        tags: ''
       });
+      setTicketTypes([{ type: '', price: '', quantity: '', id: 1 }]);
     } catch (error) {
       showError('Failed to create event. Please try again.');
       console.error('Event creation error:', error);
@@ -131,14 +201,18 @@ const Organizer = () => {
                       onChange={(e) => handleInputChange('category', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       required
+                      disabled={categoriesLoading}
                     >
                       <option value="">Select a category</option>
-                      {mockCategories.map((category) => (
+                      {categories.map((category) => (
                         <option key={category.id} value={category.id}>
                           {category.name}
                         </option>
                       ))}
                     </select>
+                    {categoriesLoading && (
+                      <p className="text-sm text-gray-500 mt-2">Loading categories...</p>
+                    )}
                   </div>
                 </div>
               </section>
@@ -170,35 +244,83 @@ const Organizer = () => {
                 <Input
                   label="Venue Address"
                   placeholder="Where will your event take place?"
-                  value={eventData.location}
-                  onChange={(e) => handleInputChange('location', e.target.value)}
+                  value={eventData.venue}
+                  onChange={(e) => handleInputChange('venue', e.target.value)}
                   required
                 />
               </section>
 
-              {/* Pricing & Capacity */}
+              {/* Ticket Types */}
               <section>
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Pricing & Capacity</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Ticket Price (USD)"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={eventData.price}
-                    onChange={(e) => handleInputChange('price', e.target.value)}
-                    required
-                  />
-                  <Input
-                    label="Maximum Capacity"
-                    type="number"
-                    min="1"
-                    placeholder="How many people can attend?"
-                    value={eventData.capacity}
-                    onChange={(e) => handleInputChange('capacity', e.target.value)}
-                    required
-                  />
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">Ticket Types</h2>
+                <div className="space-y-4">
+                  {ticketTypes.map((ticket, index) => (
+                    <div key={ticket.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Ticket Type <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g., General, VIP, Early Bird"
+                            value={ticket.type}
+                            onChange={(e) => handleTicketChange(index, 'type', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Price ($) <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={ticket.price}
+                            onChange={(e) => handleTicketChange(index, 'price', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Quantity <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            placeholder="100"
+                            value={ticket.quantity}
+                            onChange={(e) => handleTicketChange(index, 'quantity', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            required
+                          />
+                        </div>
+                      </div>
+                      {ticketTypes.length > 1 && (
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            onClick={() => removeTicketType(index)}
+                            className="text-red-600 text-sm font-medium hover:text-red-800"
+                          >
+                            Remove Ticket Type
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    onClick={addTicketType}
+                    variant="outline"
+                    size="small"
+                  >
+                    + Add Another Ticket Type
+                  </Button>
                 </div>
               </section>
 
@@ -217,6 +339,21 @@ const Organizer = () => {
                 </p>
               </section>
 
+              {/* Tags Input */}
+              <section>
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">Tags (Optional)</h2>
+                <Input
+                  label="Tags (comma separated)"
+                  type="text"
+                  placeholder="e.g. startup, pitch, investment"
+                  value={eventData.tags}
+                  onChange={(e) => handleInputChange('tags', e.target.value)}
+                />
+                <p className="text-sm text-gray-500 mt-2">
+                  Add relevant tags to help people find your event. Separate tags with commas.
+                </p>
+              </section>
+
               {/* Submit Button */}
               <div className="pt-6">
                 <Button
@@ -224,7 +361,7 @@ const Organizer = () => {
                   fullWidth
                   size="large"
                   loading={loading}
-                  disabled={loading}
+                  disabled={loading || categoriesLoading}
                 >
                   {loading ? 'Creating Event...' : 'Create Event'}
                 </Button>
@@ -238,6 +375,12 @@ const Organizer = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Tips for a Successful Event</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
+              <h3 className="font-semibold text-gray-900 mb-2">🎫 Offer Multiple Ticket Types</h3>
+              <p className="text-gray-600 text-sm">
+                Consider offering different ticket tiers (General, VIP, Early Bird) to appeal to different audiences.
+              </p>
+            </div>
+            <div>
               <h3 className="font-semibold text-gray-900 mb-2">📝 Write a Great Description</h3>
               <p className="text-gray-600 text-sm">
                 Be clear about what attendees can expect. Include the agenda, speakers, and any special features.
@@ -250,13 +393,7 @@ const Organizer = () => {
               </p>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">💰 Price it Right</h3>
-              <p className="text-gray-600 text-sm">
-                Research similar events in your area. Consider offering early bird discounts.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibent text-gray-900 mb-2">📍 Choose the Right Venue</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">📍 Choose the Right Venue</h3>
               <p className="text-gray-600 text-sm">
                 Make sure your venue is accessible and has the right capacity for your expected audience.
               </p>

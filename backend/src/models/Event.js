@@ -25,15 +25,22 @@ const eventSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Event time is required']
   },
-  location: {
+  venue: { // Changed from 'location' to 'venue' to match your cart controller
     type: String,
-    required: [true, 'Event location is required']
+    required: [true, 'Event venue is required']
   },
-  price: {
-    type: Number,
-    required: [true, 'Event price is required'],
-    min: [0, 'Price cannot be negative']
-  },
+  // REMOVE the single price field
+  // price: {
+  //   type: Number,
+  //   required: [true, 'Event price is required'],
+  //   min: [0, 'Price cannot be negative']
+  // },
+  // ADD tickets array instead
+  tickets: [{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Ticket'
+}],
+
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category',

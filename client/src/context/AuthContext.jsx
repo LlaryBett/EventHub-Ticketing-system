@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import * as authService from '../services/authService';
+import * as userService from '../services/userService'; // Import the new user service
 
 const AuthContext = createContext();
 
@@ -22,7 +23,7 @@ export const AuthProvider = ({ children }) => {
         const token = localStorage.getItem('token');
         if (token) {
           // Verify token is still valid by fetching user data
-          const userData = await authService.getMe();
+          const userData = await userService.getMe(); // Changed to userService
           setUser(userData);
         }
       } catch (error) {
@@ -46,7 +47,7 @@ export const AuthProvider = ({ children }) => {
       
       // 2. Now verify the token and get fresh user data by calling getMe()
       console.log('Calling getMe() to verify token and get user data...');
-      const userData = await authService.getMe();
+      const userData = await userService.getMe(); // Changed to userService
       console.log('getMe() response:', userData);
       
       // 3. Set the user in context with the data from getMe()
@@ -69,7 +70,7 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.registerAttendee(userData);
       
       // After registration, also call getMe() to get fresh user data
-      const freshUserData = await authService.getMe();
+      const freshUserData = await userService.getMe(); // Changed to userService
       setUser(freshUserData);
       
       return {
@@ -86,7 +87,7 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.registerOrganizerStep1(userData);
       
       // After registration, also call getMe() to get fresh user data
-      const freshUserData = await authService.getMe();
+      const freshUserData = await userService.getMe(); // Changed to userService
       setUser(freshUserData);
       
       return {
@@ -140,10 +141,10 @@ export const AuthProvider = ({ children }) => {
 
   const updateDetails = async (userData) => {
     try {
-      const response = await authService.updateDetails(userData);
+      const response = await userService.updateDetails(userData); // Changed to userService
       
       // After update, get fresh user data
-      const freshUserData = await authService.getMe();
+      const freshUserData = await userService.getMe(); // Changed to userService
       setUser(freshUserData);
       
       return {
@@ -157,10 +158,33 @@ export const AuthProvider = ({ children }) => {
 
   const updatePassword = async (currentPassword, newPassword) => {
     try {
-      const response = await authService.updatePassword({
+      const response = await userService.updatePassword({ // Changed to userService
         currentPassword,
         newPassword
       });
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  // New function to update organizer profile
+  const updateOrganizerProfile = async (profileData) => {
+    try {
+      const response = await userService.updateOrganizerProfile(profileData);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  // New function to delete account
+  const deleteAccount = async () => {
+    try {
+      const response = await userService.deleteAccount();
+      setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       return response;
     } catch (error) {
       throw error;
@@ -182,6 +206,8 @@ export const AuthProvider = ({ children }) => {
     resetPassword,
     updateDetails,
     updatePassword,
+    updateOrganizerProfile, // Added new function
+    deleteAccount, // Added new function
     getCurrentUser: authService.getCurrentUser
   };
 

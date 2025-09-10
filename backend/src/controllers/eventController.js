@@ -21,6 +21,7 @@ const getAllEvents = async (req, res) => {
 
     const filter = {};
 
+    // Filter by category (name → id)
     if (category) {
       const categoryDoc = await Category.findOne({ name: category });
       if (categoryDoc) {
@@ -29,35 +30,38 @@ const getAllEvents = async (req, res) => {
       }
     }
 
+    // Filter by featured
     if (featured !== undefined) filter.featured = featured === 'true';
 
+    // Filter by organizer (id or name)
     if (organizer) {
       if (/^[0-9a-fA-F]{24}$/.test(organizer)) {
         // Organizer is an ObjectId
         filter.organizer = organizer;
         const organizerDoc = await Organizer.findById(organizer);
         if (organizerDoc) {
-          console.log("🔎 Matched organizer by ID:", organizerDoc._id, "=>", organizerDoc.organizationName);
+          console.log("🔎 Matched organizer by ID:", organizerDoc._id, "=>", organizerDoc.name);
         } else {
           console.log("⚠️ Organizer ID not found:", organizer);
         }
       } else {
-        // Organizer is a name (organizationName)
-        const organizerDoc = await Organizer.findOne({ organizationName: organizer });
+        // Organizer is a name
+        const organizerDoc = await Organizer.findOne({ name: organizer });
         if (organizerDoc) {
           filter.organizer = organizerDoc._id;
-          console.log("🔎 Matched organizer by organizationName:", organizer, "=>", organizerDoc._id);
+          console.log("🔎 Matched organizer by name:", organizer, "=>", organizerDoc._id);
         } else {
           console.log("⚠️ Organizer name not found:", organizer);
         }
       }
     }
 
+    // Search filter
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
-        { location: { $regex: search, $options: 'i' } }
+        { venue: { $regex: search, $options: 'i' } }
       ];
       console.log("🔎 Search applied:", search);
     }
@@ -66,20 +70,16 @@ const getAllEvents = async (req, res) => {
     const sort = {};
     sort[sortBy] = order === 'desc' ? -1 : 1;
 
+    // Query events
     const events = await Event.find(filter)
       .populate('category', 'name')
-      .populate('organizer', 'organizationName') // ✅ FIX: use organizationName
+      .populate('organizer', 'name')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
 
+    // Transform to new format
     const transformedEvents = events.map(event => {
-      console.log("📌 Event found:", {
-        id: event._id,
-        title: event.title,
-        organizer: event.organizer?.organizationName,
-        organizerId: event.organizer?._id
-      });
       return {
         id: event._id,
         title: event.title,
@@ -87,10 +87,10 @@ const getAllEvents = async (req, res) => {
         image: event.image,
         date: event.date.toISOString().split('T')[0],
         time: event.time,
-        location: event.location,
-        price: event.price,
+        venue: event.venue,
+        tickets: event.tickets,
         category: event.category?.name || null,
-        organizer: event.organizer?.organizationName || null, // ✅ FIX
+        organizer: event.organizer?.name || null,
         capacity: event.capacity,
         registered: event.registered,
         featured: event.featured,
@@ -122,12 +122,14 @@ const getAllEvents = async (req, res) => {
 
 
 
+
 // Get single event by ID
 const getEventById = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id)
-      .populate('category', 'name')
-      .populate('organizer', 'organizationName'); // ✅ FIX
+      .populate('tickets') // ✅ populate ticket refs
+      .populate('category', 'name icon color') // get extra info if needed
+      .populate('organizer', 'name email');    // match createEvent
 
     if (!event) {
       return res.status(404).json({
@@ -141,12 +143,34 @@ const getEventById = async (req, res) => {
       title: event.title,
       description: event.description,
       image: event.image,
-      date: event.date.toISOString().split('T')[0],
+      date: event.date ? event.date.toISOString().split('T')[0] : null,
       time: event.time,
-      location: event.location,
-      price: event.price,
-      category: event.category?.name || null,
-      organizer: event.organizer?.organizationName || null, // ✅ FIX
+      venue: event.venue,
+      tickets: event.tickets.map(ticket => ({
+        id: ticket._id,
+        type: ticket.type,
+        price: ticket.price,
+        quantity: ticket.quantity,
+        available: ticket.available,
+        description: ticket.description,
+        benefits: ticket.benefits,
+        salesStart: ticket.salesStart,
+        salesEnd: ticket.salesEnd,
+        minOrder: ticket.minOrder,
+        maxOrder: ticket.maxOrder,
+        isActive: ticket.isActive
+      })),
+      category: event.category ? {
+        id: event.category._id,
+        name: event.category.name,
+        icon: event.category.icon,
+        color: event.category.color
+      } : null,
+      organizer: event.organizer ? {
+        id: event.organizer._id,
+        name: event.organizer.name,
+        email: event.organizer.email
+      } : null,
       capacity: event.capacity,
       registered: event.registered,
       featured: event.featured,
@@ -172,6 +196,8 @@ const getEventById = async (req, res) => {
     });
   }
 };
+
+
 
 
 // Create a new event
@@ -211,12 +237,60 @@ const createEvent = async (req, res) => {
       req.body.image = imageUrl;
     }
 
+    // Parse and validate tickets
+    let tickets = [];
+    if (req.body.tickets) {
+      try {
+        // If tickets is a JSON string, parse it
+        tickets = typeof req.body.tickets === 'string' 
+          ? JSON.parse(req.body.tickets) 
+          : req.body.tickets;
+        
+        // Validate each ticket
+        for (const ticket of tickets) {
+          if (!ticket.type || !ticket.price || !ticket.quantity) {
+            return res.status(400).json({
+              success: false,
+              message: 'Each ticket must have type, price, and quantity'
+            });
+          }
+          
+          if (ticket.price < 0) {
+            return res.status(400).json({
+              success: false,
+              message: 'Ticket price cannot be negative'
+            });
+          }
+          
+          if (ticket.quantity < 0) {
+            return res.status(400).json({
+              success: false,
+              message: 'Ticket quantity cannot be negative'
+            });
+          }
+        }
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid tickets format'
+        });
+      }
+    }
+
+    // Calculate total capacity from tickets
+    const capacity = tickets.reduce((total, ticket) => total + ticket.quantity, 0);
+
     // Create event with category and organizer IDs
     const eventData = {
       ...req.body,
+      tickets: tickets,
+      capacity: capacity, // Set capacity as sum of all ticket quantities
       category: category._id,
       organizer: organizer._id
     };
+
+    // Remove the old single price field if it exists
+    delete eventData.price;
 
     const event = new Event(eventData);
     await event.save();
@@ -231,8 +305,8 @@ const createEvent = async (req, res) => {
       image: event.image,
       date: event.date.toISOString().split('T')[0],
       time: event.time,
-      location: event.location,
-      price: event.price,
+      venue: event.venue, // Changed from location to venue
+      tickets: event.tickets, // Include tickets array instead of single price
       category: event.category.name,
       organizer: event.organizer.name,
       capacity: event.capacity,

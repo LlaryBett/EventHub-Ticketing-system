@@ -51,7 +51,10 @@ const EventsShowcase = () => {
     const fetchFeaturedEvents = async () => {
       try {
         const events = await eventService.getFeaturedEvents();
-        setFeaturedEvents(events.slice(0, 4)); // Show 4 featured events
+        console.log('Featured events payload:', events);
+        // Ensure events is always an array
+        let eventArr = Array.isArray(events) ? events : (Array.isArray(events?.data) ? events.data : []);
+        setFeaturedEvents(eventArr.slice(0, 4)); // Show 4 featured events
       } catch (error) {
         console.error('Failed to fetch featured events:', error);
       } finally {

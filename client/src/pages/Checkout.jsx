@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
-import { cartService } from '../services/cartService';
+import cartService from '../services/cartService';
 import { formatPrice } from '../utils/formatDate';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';

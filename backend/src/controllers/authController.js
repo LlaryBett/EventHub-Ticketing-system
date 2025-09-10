@@ -323,32 +323,7 @@ exports.login = async (req, res, next) => {
   }
 };
 
-// @desc    Get current logged in user
-// @route   GET /api/auth/me
-// @access  Private
-exports.getMe = async (req, res, next) => {
-  try {
-    let userData = await User.findById(req.user.id);
 
-    // If user is organizer, include organizer profile
-    if (req.user.userType === 'organizer') {
-      const organizerProfile = await Organizer.findOne({ userId: req.user.id });
-      userData = userData.toObject();
-      userData.organizerProfile = organizerProfile;
-    }
-
-    res.status(200).json({
-      success: true,
-      data: userData
-    });
-  } catch (error) {
-    console.error('Get me error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server Error'
-    });
-  }
-};
 
 // @desc    Log user out / clear cookie
 // @route   GET /api/auth/logout
@@ -526,6 +501,32 @@ exports.updatePassword = async (req, res, next) => {
     sendTokenResponse(user, 200, res, user.userType);
   } catch (error) {
     console.error('Update password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+// @desc    Get current logged in user
+// @route   GET /api/auth/me
+// @access  Private
+exports.getMe = async (req, res, next) => {
+  try {
+    let userData = await User.findById(req.user.id);
+
+    // If user is organizer, include organizer profile
+    if (req.user.userType === 'organizer') {
+      const organizerProfile = await Organizer.findOne({ userId: req.user.id });
+      userData = userData.toObject();
+      userData.organizerProfile = organizerProfile;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: userData
+    });
+  } catch (error) {
+    console.error('Get me error:', error);
     res.status(500).json({
       success: false,
       message: 'Server Error'

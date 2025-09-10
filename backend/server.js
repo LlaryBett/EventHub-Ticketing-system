@@ -15,6 +15,9 @@ require('dotenv').config();
 const authRoutes = require('./src/routes/auth');
 const eventRoutes = require('./src/routes/events');
 const categoryRoutes = require('./src/routes/categories');
+const cartRoutes = require('./src/routes/cart');
+const ticketRoutes = require('./src/routes/ticket');
+const userRoutes = require('./src/routes/user');
 
 // Import database connection
 const connectDB = require('./src/config/database');
@@ -124,6 +127,9 @@ if (process.env.NODE_ENV === 'production') {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/categories', categoryRoutes);
+app.use('/api/v1/cart', cartRoutes);
+app.use('/api/v1/ticket', ticketRoutes);
+app.use('/api/v1/user', userRoutes);
 
 // Health check endpoint
 app.get('/api/v1/health', (req, res) => {

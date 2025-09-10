@@ -6,12 +6,9 @@ const {
   registerOrganizerStep1,
   registerOrganizerStep2,
   login,
-  getMe,
   logout,
   forgotPassword,
-  resetPassword,
-  updateDetails,
-  updatePassword
+  resetPassword
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
@@ -121,17 +118,6 @@ const resetPasswordValidation = [
     .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number')
 ];
 
-const updatePasswordValidation = [
-  body('currentPassword')
-    .notEmpty()
-    .withMessage('Current password is required'),
-  body('newPassword')
-    .isLength({ min: 8 })
-    .withMessage('New password must be at least 8 characters long')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('New password must contain at least one lowercase letter, one uppercase letter, and one number')
-];
-
 // Public routes
 router.post('/register/attendee', attendeeValidation, registerAttendee);
 router.post('/register/organizer/step1', organizerStep1Validation, registerOrganizerStep1);
@@ -141,9 +127,6 @@ router.post('/forgotpassword', forgotPasswordValidation, forgotPassword);
 router.put('/resetpassword/:resettoken', resetPasswordValidation, resetPassword);
 
 // Protected routes
-router.get('/me', protect, getMe);
 router.get('/logout', protect, logout);
-router.put('/updatedetails', protect, updateDetails);
-router.put('/updatepassword', protect, updatePasswordValidation, updatePassword);
 
 module.exports = router;

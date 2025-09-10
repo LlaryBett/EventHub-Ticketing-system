@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import cartService from '../services/cartService';
 
 const CartContext = createContext();
 
@@ -13,62 +14,120 @@ export const useCart = () => {
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
+  // Fetch cart from backend on component mount
   useEffect(() => {
-    const storedCart = localStorage.getItem('cart');
-    if (storedCart) {
-      setCartItems(JSON.parse(storedCart));
-    }
+    fetchCart();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
-  }, [cartItems]);
-
-  const addToCart = (event, quantity = 1) => {
-    setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.id === event.id);
-      
-      if (existingItem) {
-        return prevItems.map(item =>
-          item.id === event.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      } else {
-        return [...prevItems, { ...event, quantity }];
+  const fetchCart = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await cartService.getCart();
+      // Set cartItems to the items array inside response.data
+      setCartItems(response.data?.items || []);
+    } catch (error) {
+      console.error('Failed to fetch cart:', error);
+      setError(error.message || 'Failed to load cart');
+      // If it's an auth error, you might want to handle it differently
+      if (error.isAuthError) {
+        // Clear local cart since user is not authenticated
+        setCartItems([]);
       }
-    });
-    setIsOpen(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const removeFromCart = (eventId) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== eventId));
+  const addToCart = async (item, quantity = 1) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const itemData = {
+        eventId: item.eventId,
+        eventName: item.eventName,
+        eventImage: item.eventImage,
+        ticketId: item.ticketId,
+        ticketType: item.ticketType,
+        price: item.price,
+        quantity
+      };
+
+      await cartService.addToCart(itemData);
+      await fetchCart(); // Ensure cartItems is updated from backend
+      setIsOpen(true);
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+      setError(error.message || 'Failed to add item to cart');
+      if (error.isAuthError) {
+        throw error;
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateQuantity = (eventId, quantity) => {
+  const removeFromCart = async (itemId) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await cartService.removeFromCart(itemId);
+      setCartItems(response.data || response.items || []);
+    } catch (error) {
+      console.error('Failed to remove from cart:', error);
+      setError(error.message || 'Failed to remove item from cart');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateQuantity = async (itemId, quantity) => {
     if (quantity <= 0) {
-      removeFromCart(eventId);
+      await removeFromCart(itemId);
       return;
     }
     
-    setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === eventId ? { ...item, quantity } : item
-      )
-    );
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await cartService.updateCartItem(itemId, quantity);
+      setCartItems(response.data || response.items || []);
+    } catch (error) {
+      console.error('Failed to update quantity:', error);
+      setError(error.message || 'Failed to update quantity');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const clearCart = () => {
-    setCartItems([]);
+  const clearCart = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      await cartService.clearCart();
+      setCartItems([]);
+    } catch (error) {
+      console.error('Failed to clear cart:', error);
+      setError(error.message || 'Failed to clear cart');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return Array.isArray(cartItems)
+      ? cartItems.reduce((total, item) => total + (item.price * item.quantity), 0)
+      : 0;
   };
 
   const getTotalItems = () => {
-    return cartItems.reduce((total, item) => total + item.quantity, 0);
+    return Array.isArray(cartItems)
+      ? cartItems.reduce((total, item) => total + item.quantity, 0)
+      : 0;
   };
 
   const toggleCart = () => {
@@ -85,7 +144,10 @@ export const CartProvider = ({ children }) => {
     getTotalItems,
     isOpen,
     toggleCart,
-    setIsOpen
+    setIsOpen,
+    loading,
+    error,
+    refetchCart: fetchCart
   };
 
   return (
@@ -95,4 +157,4 @@ export const CartProvider = ({ children }) => {
   );
 };
 
-export { CartContext }
+export { CartContext };

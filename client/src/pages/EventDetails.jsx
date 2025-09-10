@@ -12,6 +12,7 @@ const EventDetails = () => {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
+  const [selectedTicketIndex, setSelectedTicketIndex] = useState(0);
   const { addToCart } = useCart();
   const { showSuccess, showError } = useUI();
 
@@ -37,7 +38,7 @@ const EventDetails = () => {
   const handleAddToCart = () => {
     console.log('Event object in handleAddToCart:', event); // Log the event object
     if (event && spotsLeft >= selectedQuantity) {
-      addToCart(event, selectedQuantity);
+      addToCart({ ...event, price: ticketPrice }, selectedQuantity);
       showSuccess(`${selectedQuantity} ticket(s) for ${event.title} added to cart!`);
     } else {
       showError('Not enough spots available');
@@ -68,6 +69,12 @@ const EventDetails = () => {
   const daysUntil = getDaysUntilEvent(event.date);
   const isUpcoming = daysUntil >= 0;
   const spotsLeft = event.capacity - event.registered;
+  const tickets = Array.isArray(event.tickets) ? event.tickets : [];
+  const selectedTicket = tickets[selectedTicketIndex] || {};
+  const ticketPrice = selectedTicket.price || 0;
+  const minOrder = selectedTicket.minOrder || 1;
+  const maxOrder = Math.min(selectedTicket.maxOrder || 10, selectedTicket.available || 10);
+  const available = selectedTicket.available || 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -83,7 +90,7 @@ const EventDetails = () => {
             <div className="max-w-7xl mx-auto container-padding">
               <div className="flex items-center mb-4">
                 <span className="bg-primary-600 text-white px-3 py-1 rounded-full text-sm font-medium capitalize mr-4">
-                  {event.category}
+                  {event.category?.name}
                 </span>
                 {event.featured && (
                   <span className="bg-yellow-400 text-gray-900 px-3 py-1 rounded-full text-sm font-medium">
@@ -129,7 +136,7 @@ const EventDetails = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">Organizer</h3>
-                    <p className="text-gray-600">{event.organizer}</p>
+                    <p className="text-gray-600">{event.organizer?.id || 'N/A'}</p>
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">Capacity</h3>
@@ -188,12 +195,49 @@ const EventDetails = () => {
             <div className="bg-white rounded-lg shadow-md p-6 sticky top-8">
               <div className="text-center mb-6">
                 <div className="text-3xl font-bold text-primary-600 mb-2">
-                  {formatPrice(event.price)}
+                  {formatPrice(ticketPrice)}
                 </div>
                 <p className="text-gray-500">per ticket</p>
               </div>
 
-              {isUpcoming && spotsLeft > 0 ? (
+              {/* Ticket Type Selection */}
+              {tickets.length > 1 && (
+                <div className="mb-4">
+                  <label htmlFor="ticketType" className="block text-sm font-medium text-gray-700 mb-2">
+                    Ticket Type
+                  </label>
+                  <select
+                    id="ticketType"
+                    value={selectedTicketIndex}
+                    onChange={e => {
+                      const newIndex = Number(e.target.value);
+                      setSelectedTicketIndex(newIndex);
+                      setSelectedQuantity(tickets[newIndex]?.minOrder || 1);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    {tickets.map((ticket, idx) => (
+                      <option key={ticket.id || ticket._id} value={idx}>
+                        {ticket.type} • {formatPrice(ticket.price)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Ticket Benefits */}
+              {selectedTicket.benefits && selectedTicket.benefits.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="font-semibold text-gray-900 mb-2">Benefits</h4>
+                  <ul className="list-disc pl-5 text-gray-700 text-sm">
+                    {selectedTicket.benefits.map((benefit, idx) => (
+                      <li key={idx}>{benefit}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {isUpcoming && available > 0 ? (
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-2">
@@ -202,12 +246,12 @@ const EventDetails = () => {
                     <select
                       id="quantity"
                       value={selectedQuantity}
-                      onChange={(e) => setSelectedQuantity(parseInt(e.target.value))}
+                      onChange={e => setSelectedQuantity(parseInt(e.target.value))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     >
-                      {[...Array(Math.min(10, spotsLeft))].map((_, index) => (
-                        <option key={index + 1} value={index + 1}>
-                          {index + 1}
+                      {[...Array(Math.min(maxOrder, available)).keys()].map(i => (
+                        <option key={i + minOrder} value={i + minOrder}>
+                          {i + minOrder}
                         </option>
                       ))}
                     </select>
@@ -217,12 +261,24 @@ const EventDetails = () => {
                     <div className="flex justify-between items-center mb-4">
                       <span className="font-medium">Total:</span>
                       <span className="text-xl font-bold text-primary-600">
-                        {formatPrice(event.price * selectedQuantity)}
+                        {formatPrice(ticketPrice * selectedQuantity)}
                       </span>
                     </div>
                   </div>
 
-                  <Button fullWidth size="large" onClick={handleAddToCart}>
+                  <Button fullWidth size="large" onClick={() => {
+                    const ticket = tickets[selectedTicketIndex] || {};
+                    addToCart({
+                      eventId: event._id || event.id,
+                      eventName: event.title,
+                      eventImage: event.image,
+                      ticketId: ticket._id || ticket.id,
+                      ticketType: ticket.type,
+                      price: ticket.price || 0,
+                      quantity: selectedQuantity
+                    }, selectedQuantity);
+                    showSuccess(`${selectedQuantity} ticket(s) for ${event.title} (${ticket.type}) added to cart!`);
+                  }}>
                     Add to Cart
                   </Button>
 
@@ -232,19 +288,19 @@ const EventDetails = () => {
                     </p>
                   )}
 
-                  {spotsLeft <= 10 && (
+                  {available <= 10 && (
                     <p className="text-sm text-red-600 text-center">
-                      🔥 Only {spotsLeft} spots left!
+                      🔥 Only {available} spots left!
                     </p>
                   )}
                 </div>
-              ) : spotsLeft === 0 ? (
+              ) : available === 0 ? (
                 <div className="text-center">
                   <Button fullWidth disabled size="large" variant="secondary">
                     Sold Out
                   </Button>
                   <p className="text-sm text-gray-500 mt-2">
-                    This event is currently sold out
+                    This ticket type is currently sold out
                   </p>
                 </div>
               ) : (

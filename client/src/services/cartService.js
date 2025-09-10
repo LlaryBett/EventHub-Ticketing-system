@@ -1,62 +1,82 @@
-export const cartService = {
-  processCheckout: async (cartItems, paymentData, userInfo) => {
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Mock successful payment
-    const order = {
-      id: Date.now(),
-      items: cartItems,
-      total: cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-      status: 'confirmed',
-      paymentMethod: paymentData.method,
-      userInfo,
-      createdAt: new Date().toISOString(),
-      confirmationCode: `EVT-${Date.now().toString().slice(-6)}`
-    };
-    
-    return order;
-  },
+import { api } from './api';
 
-  getOrderHistory: async (userId) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 600));
-    
-    // Return mock order history
-    return [
-      {
-        id: 1,
-        confirmationCode: 'EVT-123456',
-        date: '2024-12-20',
-        total: 299,
-        status: 'confirmed',
-        items: [
-          {
-            id: 1,
-            title: 'Tech Conference 2025',
-            price: 299,
-            quantity: 1
-          }
-        ]
-      }
-    ];
-  },
-
-  applyDiscount: async (code) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const discountCodes = {
-      'SAVE10': { percentage: 10, description: '10% off your order' },
-      'WELCOME': { percentage: 15, description: 'Welcome discount 15% off' },
-      'STUDENT': { percentage: 20, description: 'Student discount 20% off' }
-    };
-    
-    const discount = discountCodes[code.toUpperCase()];
-    if (!discount) {
-      throw new Error('Invalid discount code');
+/**
+ * Cart Service - Handles all cart-related API calls
+ * Uses consistent error handling pattern with authService
+ */
+const cartService = {
+  /**
+   * Get current user's cart
+   * @returns {Promise} Cart data
+   */
+  getCart: async () => {
+    try {
+      const response = await api.get('/cart');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
     }
-    
-    return discount;
+  },
+
+  /**
+   * Add item to cart
+   * @param {Object} itemData - Item data to add to cart
+   * @param {string} itemData.eventId - Event ID
+   * @param {number} itemData.quantity - Quantity of tickets
+   * @param {string} itemData.ticketType - Type of ticket (e.g., 'adult', 'child')
+   * @param {number} itemData.price - Price per ticket
+   * @returns {Promise} Updated cart data
+   */
+  addToCart: async (itemData) => {
+    try {
+      const response = await api.post('/cart', itemData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Update cart item quantity
+   * @param {string} itemId - Cart item ID
+   * @param {number} quantity - New quantity
+   * @returns {Promise} Updated cart data
+   */
+  updateCartItem: async (itemId, quantity) => {
+    try {
+      const response = await api.put(`/cart/${itemId}`, { quantity });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Remove single item from cart
+   * @param {string} itemId - Cart item ID to remove
+   * @returns {Promise} Updated cart data
+   */
+  removeFromCart: async (itemId) => {
+    try {
+      const response = await api.delete(`/cart/${itemId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  /**
+   * Clear entire cart
+   * @returns {Promise} Success message
+   */
+  clearCart: async () => {
+    try {
+      const response = await api.delete('/cart');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
   }
 };
+
+export default cartService;

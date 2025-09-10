@@ -1,68 +1,82 @@
-export const userService = {
-  getUserProfile: async (userId) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 600));
-    
-    return {
-      id: userId,
-      name: 'John Doe',
-      email: 'john@example.com',
-      avatar: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100',
-      joinedDate: '2024-01-15',
-      eventsAttended: 12,
-      upcomingEvents: 3,
-      preferences: {
-        categories: ['technology', 'business'],
-        notifications: true,
-        newsletter: true
-      }
-    };
-  },
+import { api } from './api';
 
-  updateUserProfile: async (userId, userData) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    return {
-      id: userId,
-      ...userData,
-      updatedAt: new Date().toISOString()
-    };
-  },
+// Get current user profile
+export const getMe = async () => {
+  try {
+    const response = await api.get('/user/me');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
 
-  getUserEvents: async (userId, status = 'all') => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 700));
-    
-    const userEvents = [
-      {
-        id: 1,
-        title: 'Tech Conference 2025',
-        date: '2025-03-15',
-        status: 'upcoming',
-        ticketType: 'Premium'
-      },
-      {
-        id: 2,
-        title: 'Digital Marketing Workshop',
-        date: '2024-12-28',
-        status: 'completed',
-        ticketType: 'Standard'
-      }
-    ];
-    
-    if (status === 'all') return userEvents;
-    return userEvents.filter(event => event.status === status);
-  },
+// Get user profile by ID
+export const getUserProfile = async (userId) => {
+  try {
+    const response = await api.get(`/user/${userId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
 
-  updateNotificationSettings: async (userId, settings) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return {
-      userId,
-      settings,
-      updatedAt: new Date().toISOString()
-    };
+// Update user details
+export const updateDetails = async (userData) => {
+  try {
+    const response = await api.put('/user/updatedetails', userData);
+    if (response.data.data) {
+      // Update localStorage user data
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const updatedUser = { ...currentUser, ...response.data.data };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Update password
+export const updatePassword = async (passwords) => {
+  try {
+    const response = await api.put('/user/updatepassword', passwords);
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+    }
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Update organizer profile
+export const updateOrganizerProfile = async (profileData) => {
+  try {
+    const response = await api.put('/user/organizer/profile', profileData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Delete user account
+export const deleteAccount = async () => {
+  try {
+    const response = await api.delete('/user/delete');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Get events for a user by ID
+export const getUserEvents = async (userId) => {
+  try {
+    const response = await api.get(`/user/${userId}/events`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
   }
 };

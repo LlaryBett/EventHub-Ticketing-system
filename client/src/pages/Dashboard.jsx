@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
-import { userService } from '../services/userService';
-import { cartService } from '../services/cartService';
+import { getUserProfile, getUserEvents } from '../services/userService';
+import cartService from '../services/cartService';
 import { formatPrice, formatDate } from '../utils/formatDate';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Button from '../components/common/Button';
@@ -18,6 +18,8 @@ const Dashboard = () => {
   const [orderHistory, setOrderHistory] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
 
+  console.log('Dashboard user data:', user);
+
   useEffect(() => {
     if (location.state?.orderConfirmation) {
       showSuccess('Your order has been confirmed! Check your email for tickets.');
@@ -28,13 +30,13 @@ const Dashboard = () => {
     const fetchUserData = async () => {
       try {
         const [profile, events, orders] = await Promise.all([
-          userService.getUserProfile(user.id),
-          userService.getUserEvents(user.id),
-          cartService.getOrderHistory(user.id)
+          getUserProfile(user.data.id),
+          getUserEvents(user.data.id),
+          cartService.getOrderHistory(user.data.id)
         ]);
         
         setUserProfile(profile);
-        setUserEvents(events);
+        setUserEvents(events.data || []);
         setOrderHistory(orders);
       } catch (error) {
         console.error('Failed to fetch user data:', error);
