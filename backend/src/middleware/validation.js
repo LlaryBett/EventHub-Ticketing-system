@@ -25,22 +25,15 @@ const validateEvent = [
     .notEmpty()
     .withMessage('Time is required'),
 
-  body('venue') // Changed from 'location' to 'venue'
+  body('venue')
     .trim()
     .notEmpty()
     .withMessage('Venue is required'),
 
-  // REMOVE the single price validation
-  // body('price')
-  //   .isFloat({ min: 0 })
-  //   .withMessage('Valid price is required'),
-
-  // ADD validation for tickets array
   body('tickets')
     .isArray({ min: 1 })
     .withMessage('At least one ticket type is required')
     .custom((tickets) => {
-      // If tickets is a string, try to parse it as JSON
       if (typeof tickets === 'string') {
         try {
           tickets = JSON.parse(tickets);
@@ -48,22 +41,21 @@ const validateEvent = [
           throw new Error('Tickets must be a valid JSON array');
         }
       }
-      
-      // Validate each ticket object
+
       for (const ticket of tickets) {
         if (!ticket.type || typeof ticket.type !== 'string' || ticket.type.trim() === '') {
           throw new Error('Each ticket must have a valid type');
         }
-        
+
         if (typeof ticket.price !== 'number' || ticket.price < 0) {
           throw new Error('Each ticket must have a valid price (number >= 0)');
         }
-        
+
         if (typeof ticket.quantity !== 'number' || ticket.quantity < 1) {
           throw new Error('Each ticket must have a valid quantity (number >= 1)');
         }
       }
-      
+
       return true;
     }),
 
@@ -75,13 +67,9 @@ const validateEvent = [
   body('organizer')
     .trim()
     .notEmpty()
-    .withMessage('Organizer is required'),
-
-  // REMOVE capacity validation since it's now calculated from tickets
-  // body('capacity')
-  //   .isInt({ min: 1 })
-  //   .withMessage('Capacity must be at least 1')
+    .withMessage('Organizer is required')
 ];
+
 // Category validation
 const validateCategory = [
   body('name')
@@ -131,6 +119,7 @@ const validateUpdateCartItem = [
     .isInt({ min: 1 })
     .withMessage('Quantity must be at least 1')
 ];
+
 // Ticket validation
 const validateTicket = [
   body('type')
@@ -152,11 +141,65 @@ const validateReservation = [
     .withMessage('Quantity must be at least 1')
 ];
 
+// Checkout validation
+const validateCheckout = (method) => {
+  switch (method) {
+    case 'processCheckout':
+      return [
+        body('billingAddress.firstName').notEmpty().withMessage('First name is required'),
+        body('billingAddress.lastName').notEmpty().withMessage('Last name is required'),
+        body('billingAddress.email').isEmail().withMessage('Valid email is required'),
+        body('billingAddress.phone').notEmpty().withMessage('Phone number is required'),
+
+        // Optional address fields if you want them
+        body('billingAddress.address').optional().notEmpty().withMessage('Address is required'),
+        body('billingAddress.city').optional().notEmpty().withMessage('City is required'),
+        body('billingAddress.state').optional().notEmpty().withMessage('State is required'),
+        body('billingAddress.zipCode').optional().notEmpty().withMessage('ZIP code is required'),
+        body('billingAddress.country').optional().notEmpty().withMessage('Country is required'),
+
+        // Payment validation
+        body('paymentMethod')
+          .isIn(['card', 'paypal', 'apple'])
+          .withMessage('Valid payment method is required'),
+
+        body('paymentDetails.nameOnCard')
+          .if(body('paymentMethod').equals('card'))
+          .notEmpty().withMessage('Name on card is required for card payments'),
+
+        body('paymentDetails.cardNumber')
+          .if(body('paymentMethod').equals('card'))
+          .isLength({ min: 13, max: 19 })
+          .withMessage('Valid card number is required'),
+
+        body('paymentDetails.expiryDate')
+          .if(body('paymentMethod').equals('card'))
+          .matches(/^(0[1-9]|1[0-2])\/?([0-9]{2,4})$/)
+          .withMessage('Valid expiry date is required (MM/YY or MM/YYYY)'),
+
+        body('paymentDetails.cvv')
+          .if(body('paymentMethod').equals('card'))
+          .isLength({ min: 3, max: 4 })
+          .withMessage('Valid CVV is required')
+      ];
+
+    case 'applyDiscount':
+      return [
+        body('code').notEmpty().withMessage('Discount code is required')
+      ];
+
+    default:
+      return [];
+  }
+};
+
+
 module.exports = {
   validateEvent,
   validateCategory,
   validateAddToCart,
   validateUpdateCartItem,
   validateTicket,
-  validateReservation
+  validateReservation,
+  validateCheckout,
 };

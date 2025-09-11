@@ -9,16 +9,32 @@ const EventCard = ({ event }) => {
   const { addToCart } = useCart();
   const { showSuccess } = useUI();
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = (e, ticket) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(event);
+
+    if (!ticket) {
+      showSuccess('No tickets available for this event.');
+      return;
+    }
+
+    const payload = {
+      eventId: event.id,
+      ticketType: ticket.type,
+      quantity: 1
+    };
+
+    addToCart(payload);
     showSuccess(`${event.title} added to cart!`);
   };
 
   const daysUntil = getDaysUntilEvent(event.date);
   const isUpcoming = daysUntil >= 0;
   const spotsLeft = event.capacity - event.registered;
+
+  const firstTicket = Array.isArray(event.tickets) && event.tickets.length > 0
+    ? event.tickets[0]
+    : null;
 
   return (
     <Link
@@ -46,7 +62,7 @@ const EventCard = ({ event }) => {
           )}
           <div className="absolute top-4 right-4">
             <span className="bg-white bg-opacity-90 text-gray-900 px-2 py-1 rounded-full text-xs font-medium">
-              {formatPrice(event.price)}
+              {firstTicket ? formatPrice(firstTicket.price) : 'N/A'}
             </span>
           </div>
           {!isUpcoming && (
@@ -78,7 +94,6 @@ const EventCard = ({ event }) => {
             {event.description}
           </p>
 
-          {/* Only show critical availability info */}
           <div className="mb-2 h-4">
             {spotsLeft <= 10 && spotsLeft > 0 && (
               <span className="text-orange-600 font-medium text-sm">
@@ -93,7 +108,6 @@ const EventCard = ({ event }) => {
           </div>
         </div>
 
-        {/* Bottom actions: See More Details + Action Button */}
         <div className="px-4 pb-4 flex items-center justify-between mt-auto gap-2">
           <Link
             to={`/events/${event.id}`}
@@ -111,18 +125,15 @@ const EventCard = ({ event }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </Link>
+
           {isUpcoming ? (
-            spotsLeft > 0 ? (
+            firstTicket ? (
               <Button
                 fullWidth={false}
-                onClick={e => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleAddToCart(e);
-                }}
+                onClick={e => handleAddToCart(e, firstTicket)}
                 className="group-hover:bg-primary-700 min-w-[140px]"
               >
-                • {formatPrice(event.price)}
+                • {formatPrice(firstTicket.price)}
               </Button>
             ) : (
               <Button fullWidth={false} disabled variant="secondary" className="min-w-[100px]">

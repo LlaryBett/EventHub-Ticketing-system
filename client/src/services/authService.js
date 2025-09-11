@@ -14,6 +14,55 @@ export const registerAttendee = async (userData) => {
   }
 };
 
+// Register user during checkout (minimal info)
+export const registerAtCheckout = async (userData) => {
+  try {
+    const response = await api.post('/auth/register/checkout', userData);
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Login user during checkout
+export const loginAtCheckout = async (credentials) => {
+  try {
+    const response = await api.post('/auth/login/checkout', credentials);
+    
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      
+      // Map "data" to "user" to match your frontend expectation
+      const userData = response.data.data || response.data.user;
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      // Return the formatted response that your AuthContext expects
+      return {
+        token: response.data.token,
+        user: userData,
+        message: response.data.message || 'Login successful'
+      };
+    }
+    
+    throw new Error('No token received from server');
+    
+  } catch (error) {
+    console.error('Login at checkout API error:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Login failed';
+    const formattedError = new Error(errorMessage);
+    
+    if (error.response) {
+      formattedError.response = error.response;
+    }
+    
+    throw formattedError;
+  }
+};
+
 // Register an organizer - Step 1
 export const registerOrganizerStep1 = async (userData) => {
   try {
@@ -128,7 +177,7 @@ export const getCurrentUser = () => {
 // Get user role
 export const getUserRole = () => {
   const user = getCurrentUser();
-  return user ? user.role : null;
+  return user ? user.userType || user.role : null;
 };
 
 // Check if user is an organizer
@@ -141,4 +190,24 @@ export const isOrganizer = () => {
 export const isAttendee = () => {
   const role = getUserRole();
   return role === 'attendee';
+};
+
+// Verify email
+export const verifyEmail = async (verificationToken) => {
+  try {
+    const response = await api.get(`/auth/verify-email/${verificationToken}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Resend verification email
+export const resendVerificationEmail = async (email) => {
+  try {
+    const response = await api.post('/auth/resend-verification', { email });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
 };

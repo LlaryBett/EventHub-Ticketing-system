@@ -18,6 +18,7 @@ const categoryRoutes = require('./src/routes/categories');
 const cartRoutes = require('./src/routes/cart');
 const ticketRoutes = require('./src/routes/ticket');
 const userRoutes = require('./src/routes/user');
+const checkoutRoutes = require('./src/routes/checkout');
 
 // Import database connection
 const connectDB = require('./src/config/database');
@@ -130,6 +131,7 @@ app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/cart', cartRoutes);
 app.use('/api/v1/ticket', ticketRoutes);
 app.use('/api/v1/user', userRoutes);
+app.use('/api/v1/checkout', checkoutRoutes);
 
 // Health check endpoint
 app.get('/api/v1/health', (req, res) => {

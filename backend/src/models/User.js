@@ -1,4 +1,3 @@
-// backend/src/models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
@@ -6,7 +5,6 @@ const crypto = require('crypto');
 const UserSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Please add a name'],
     trim: true,
     maxlength: [50, 'Name cannot be more than 50 characters']
   },
@@ -22,13 +20,11 @@ const UserSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Please add a password'],
     minlength: [8, 'Password must be at least 8 characters'],
     select: false
   },
   phone: {
     type: String,
-    required: [true, 'Please add a phone number'],
     match: [/^(\+\d{1,3}[- ]?)?\d{10}$/, 'Please add a valid phone number']
   },
   userType: {
@@ -47,13 +43,7 @@ const UserSchema = new mongoose.Schema({
   },
   acceptTerms: {
     type: Boolean,
-    required: true,
-    validate: {
-      validator: function(v) {
-        return v === true;
-      },
-      message: 'You must accept the terms and conditions'
-    }
+    default: false
   },
   marketingConsent: {
     type: Boolean,
@@ -71,6 +61,11 @@ const UserSchema = new mongoose.Schema({
   loginCount: {
     type: Number,
     default: 0
+  },
+  // New field to track if user was created through checkout
+  createdThroughCheckout: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,
@@ -107,12 +102,14 @@ UserSchema.virtual('orders', {
 
 // Encrypt password using bcrypt
 UserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    next();
+  // Only hash the password if it's modified or new
+  if (!this.isModified('password') || !this.password) {
+    return next();
   }
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+  next();
 });
 
 // Update last login and increment login count
@@ -124,6 +121,9 @@ UserSchema.methods.updateLoginStats = function() {
 
 // Match user entered password to hashed password in database
 UserSchema.methods.matchPassword = async function(enteredPassword) {
+  if (!this.password) {
+    return false;
+  }
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

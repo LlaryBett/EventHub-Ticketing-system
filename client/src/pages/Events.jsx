@@ -38,22 +38,27 @@ const Events = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto container-padding py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+      {/* Hero Section */}
+      <section className="bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 text-white py-16">
+        <div className="max-w-7xl mx-auto container-padding text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Discover Amazing Events
           </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-blue-100 max-w-3xl mx-auto">
             Find and book tickets to the best events happening near you. From conferences to concerts, we've got you covered.
           </p>
         </div>
+      </section>
 
-        {/* Filters */}
-        <EventFilter 
-          onFilterChange={handleFilterChange} 
-          currentFilters={filters}
-        />
+      <div className="max-w-7xl mx-auto container-padding py-8">
+
+        {/* Compact Filters */}
+        <div className="mb-6">
+          <EventFilter 
+            onFilterChange={handleFilterChange} 
+            currentFilters={filters}
+          />
+        </div>
 
         {/* Results */}
         {loading ? (

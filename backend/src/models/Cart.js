@@ -6,6 +6,11 @@ const CartItemSchema = new mongoose.Schema({
     ref: 'Event',
     required: true
   },
+  ticket: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Ticket',
+    required: true
+  },
   ticketType: {
     type: String,
     required: true
@@ -50,6 +55,22 @@ CartSchema.pre('save', function(next) {
 CartSchema.virtual('total').get(function() {
   return this.items.reduce((total, item) => total + (item.price * item.quantity), 0);
 });
+
+// Add instance method to get total (more reliable than virtual field)
+CartSchema.methods.getTotal = function() {
+  return this.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+};
+
+// Add instance method to find item by ID
+CartSchema.methods.findItemById = function(itemId) {
+  return this.items.id(itemId);
+};
+
+// Add instance method to clear cart
+CartSchema.methods.clearCart = function() {
+  this.items = [];
+  return this.save();
+};
 
 // Ensure virtual fields are serialized
 CartSchema.set('toJSON', { virtuals: true });

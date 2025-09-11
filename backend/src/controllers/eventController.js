@@ -129,7 +129,7 @@ const getEventById = async (req, res) => {
     const event = await Event.findById(req.params.id)
       .populate('tickets') // ✅ populate ticket refs
       .populate('category', 'name icon color') // get extra info if needed
-      .populate('organizer', 'name email');    // match createEvent
+      .populate('organizer', 'organizationName businessType logo'); // ✅ fixed
 
     if (!event) {
       return res.status(404).json({
@@ -168,8 +168,9 @@ const getEventById = async (req, res) => {
       } : null,
       organizer: event.organizer ? {
         id: event.organizer._id,
-        name: event.organizer.name,
-        email: event.organizer.email
+        organizationName: event.organizer.organizationName,
+        businessType: event.organizer.businessType,
+        logo: event.organizer.logo
       } : null,
       capacity: event.capacity,
       registered: event.registered,

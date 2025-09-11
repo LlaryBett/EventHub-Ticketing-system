@@ -31,11 +31,13 @@ export const getDaysUntilEvent = (dateString) => {
 };
 
 export const formatPrice = (price) => {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-KE', {
     style: 'currency',
-    currency: 'USD'
+    currency: 'KES',
+    minimumFractionDigits: 0 // KES usually doesn't show cents
   }).format(price);
 };
+
 
 export const formatRelativeTime = (dateString) => {
   const date = new Date(dateString);

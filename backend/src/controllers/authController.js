@@ -1,10 +1,11 @@
-// backend/src/controllers/authController.js
 const User = require('../models/User');
 const Organizer = require('../models/Organizer');
+const Order = require('../models/Order'); // Assuming you have an Order model
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
 const { sendEmail } = require('../utils/emailService');
+const crypto = require('crypto');
 
 // Generate JWT Token
 const generateToken = (id, userType) => {
@@ -34,6 +35,178 @@ const sendTokenResponse = (user, statusCode, res, userType) => {
     data: user,
     userType
   });
+};
+
+// @desc    Register attendee during checkout
+// @route   POST /api/auth/register/checkout
+// @access  Public
+exports.registerAtCheckout = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { email, password } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      // If user exists, they should login instead
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists with this email. Please log in.'
+      });
+    }
+
+    // Create user with minimal required fields
+    const user = await User.create({
+      email,
+      password,
+      userType: 'attendee',
+      status: 'active'
+    });
+
+    // If there's a temporary order associated with this email, link it to the new user
+    if (req.body.tempOrderId) {
+      await Order.updateOne(
+        { _id: req.body.tempOrderId, customerEmail: email },
+        { userId: user._id, isGuestOrder: false }
+      );
+    }
+
+    sendTokenResponse(user, 201, res, 'attendee');
+  } catch (error) {
+    console.error('Register at checkout error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Login user during checkout
+// @route   POST /api/auth/login/checkout
+// @access  Public
+exports.loginAtCheckout = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { email, password, tempOrderId } = req.body;
+
+    // Check if user exists
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Check if password matches
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Check if account is active
+    if (user.status !== 'active') {
+      return res.status(401).json({
+        success: false,
+        message: 'Your account is not active. Please contact support.'
+      });
+    }
+
+    // If there's a temporary order associated with this email, link it to the user
+    if (tempOrderId) {
+      await Order.updateOne(
+        { _id: tempOrderId, customerEmail: email },
+        { userId: user._id, isGuestOrder: false }
+      );
+    }
+
+    sendTokenResponse(user, 200, res, user.userType);
+  } catch (error) {
+    console.error('Login at checkout error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Convert guest order to registered account
+// @route   POST /api/auth/claim-account
+// @access  Public
+exports.claimAccount = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { email, password, orderId } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists with this email. Please log in.'
+      });
+    }
+
+    // Find the guest order
+    const order = await Order.findOne({ 
+      _id: orderId, 
+      customerEmail: email, 
+      isGuestOrder: true 
+    });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'No guest order found with this email and order ID'
+      });
+    }
+
+    // Create user account
+    const user = await User.create({
+      email,
+      password,
+      name: order.customerName, // If you collected name during checkout
+      userType: 'attendee',
+      status: 'active'
+    });
+
+    // Link the order to the new user account
+    order.userId = user._id;
+    order.isGuestOrder = false;
+    await order.save();
+
+    sendTokenResponse(user, 201, res, 'attendee');
+  } catch (error) {
+    console.error('Claim account error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
 };
 
 // @desc    Register attendee
@@ -68,7 +241,7 @@ exports.registerAttendee = async (req, res, next) => {
       phone,
       userType: 'attendee',
       acceptTerms,
-      marketingConsent,
+      marketingConsent: marketingConsent || false,
       status: 'active'
     });
 
@@ -81,6 +254,109 @@ exports.registerAttendee = async (req, res, next) => {
     });
   }
 };
+
+// @desc    Send account claim email
+// @route   POST /api/auth/send-claim-email
+// @access  Public
+exports.sendClaimEmail = async (req, res, next) => {
+  try {
+    const { email, orderId } = req.body;
+
+    // Find the guest order
+    const order = await Order.findOne({ 
+      _id: orderId, 
+      customerEmail: email, 
+      isGuestOrder: true 
+    });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'No guest order found with this email and order ID'
+      });
+    }
+
+    // Generate claim token
+    const claimToken = crypto.randomBytes(20).toString('hex');
+    
+    // Set claim token and expiration (24 hours)
+    order.accountClaimToken = claimToken;
+    order.accountClaimExpires = Date.now() + 24 * 60 * 60 * 1000;
+    await order.save();
+
+    // Create claim URL
+    const claimUrl = `${req.protocol}://${req.get('host')}/claim-account?token=${claimToken}&email=${email}`;
+
+    // Email message
+    const message = `
+      <h2>Claim Your EventHub Account</h2>
+      <p>Thank you for your purchase! To access your tickets and manage your orders, please create an account using the link below:</p>
+      <a href="${claimUrl}" style="display: inline-block; padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;">Create Account</a>
+      <p>This link will expire in 24 hours.</p>
+      <p>If you did not make this purchase, please ignore this email.</p>
+    `;
+
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Claim Your EventHub Account',
+        html: message
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Account claim email sent successfully'
+      });
+    } catch (error) {
+      console.error('Email send error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Email could not be sent'
+      });
+    }
+  } catch (error) {
+    console.error('Send claim email error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Validate account claim token
+// @route   GET /api/auth/validate-claim-token
+// @access  Public
+exports.validateClaimToken = async (req, res, next) => {
+  try {
+    const { token, email } = req.query;
+
+    const order = await Order.findOne({
+      customerEmail: email,
+      accountClaimToken: token,
+      accountClaimExpires: { $gt: Date.now() }
+    });
+
+    if (!order) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired claim token'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Token is valid',
+      data: { orderId: order._id, email }
+    });
+  } catch (error) {
+    console.error('Validate claim token error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
 
 // @desc    Register organizer (step 1 - personal info)
 // @route   POST /api/auth/register/organizer/step1
