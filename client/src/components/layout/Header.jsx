@@ -137,7 +137,7 @@ const Header = () => {
                     e.target.style.backgroundColor = '#2563EB';
                   }}
                 >
-                  Get Started
+                Create Events
                 </Link>
               </div>
             )}

@@ -1,3 +1,4 @@
+// backend/src/middleware/auth.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
@@ -19,8 +20,7 @@ exports.protect = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Not authorized to access this route',
-        isAuthError: true
+        message: 'Not authorized to access this route'
       });
     }
 
@@ -34,8 +34,7 @@ exports.protect = async (req, res, next) => {
       if (!req.user) {
         return res.status(401).json({
           success: false,
-          message: 'Not authorized to access this route',
-          isAuthError: true
+          message: 'Not authorized to access this route'
         });
       }
 
@@ -47,8 +46,7 @@ exports.protect = async (req, res, next) => {
       console.error('Token verification error:', error);
       return res.status(401).json({
         success: false,
-        message: 'Not authorized to access this route',
-        isAuthError: true
+        message: 'Not authorized to access this route'
       });
     }
   } catch (error) {
@@ -63,14 +61,6 @@ exports.protect = async (req, res, next) => {
 // Grant access to specific roles
 exports.authorize = (...roles) => {
   return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Not authorized to access this route',
-        isAuthError: true
-      });
-    }
-    
     if (!roles.includes(req.user.userType)) {
       return res.status(403).json({
         success: false,
@@ -106,22 +96,6 @@ exports.optionalAuth = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Optional auth middleware error:', error);
-    next();
-  }
-};
-
-// Guest checkout middleware - allows guest orders
-exports.guestCheckout = async (req, res, next) => {
-  try {
-    // If no user is authenticated, we'll allow guest checkout
-    if (!req.user) {
-      req.isGuest = true;
-    } else {
-      req.isGuest = false;
-    }
-    next();
-  } catch (error) {
-    console.error('Guest checkout middleware error:', error);
     next();
   }
 };

@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
-import { applyDiscount, processCheckout, createGuestOrder } from '../services/checkoutService';
+import { applyDiscount, processCheckout } from '../services/checkoutService';
 import { formatPrice } from '../utils/formatDate';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -11,58 +10,52 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { cartItems, getTotalPrice, clearCart } = useCart();
-  const { user, login } = useAuth();
+  const location = useLocation();
+  const { user } = useAuth();
   const { showSuccess, showError } = useUI();
-  
+  console.log('Checkout user data:', user);
+
+  // Grab ticket from navigation state instead of cart
+  const ticketItem = location.state?.item;
+
+  const userData = user?.data || {};
+
   const [loading, setLoading] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
   const [discount, setDiscount] = useState(null);
   const [applyingDiscount, setApplyingDiscount] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
-  const [tempOrderId, setTempOrderId] = useState(null);
-  const [currentStep, setCurrentStep] = useState(1); // 1: Order info, 2: Payment, 3: Auth if needed
-  
-  const [orderInfo, setOrderInfo] = useState({
-    firstName: user?.name?.split(' ')[0] || '',
-    lastName: user?.name?.split(' ')[1] || '',
-    email: user?.email || '',
-    phone: ''
-  });
 
-  const [mpesaInfo, setMpesaInfo] = useState({
-    phone: orderInfo.phone || ''
+  // Updated form with full name field
+  const [paymentInfo, setPaymentInfo] = useState({
+    fullName: userData.name || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || '',
+    phoneNumber: userData.phone || '',
+    email: userData.email || ''
   });
-
-  useEffect(() => {
-    // Pre-fill form if user is logged in
-    if (user) {
-      setOrderInfo(prev => ({
-        ...prev,
-        firstName: user.name?.split(' ')[0] || prev.firstName,
-        lastName: user.name?.split(' ')[1] || prev.lastName,
-        email: user.email || prev.email
-      }));
-    }
-  }, [user]);
 
   const handleInputChange = (field, value) => {
-    setOrderInfo(prev => ({ ...prev, [field]: value }));
-    if (field === 'phone') {
-      setMpesaInfo(prev => ({ ...prev, phone: value }));
-    }
+    setPaymentInfo(prev => ({ ...prev, [field]: value }));
   };
 
-  const proceedToPayment = () => {
-    // Validate required fields
-    if (!orderInfo.firstName || !orderInfo.lastName || !orderInfo.email || !orderInfo.phone) {
-      showError('Please fill in all required fields');
-      return;
-    }
+  // Format phone number for M-Pesa (254XXXXXXXXX format)
+  const formatMpesaPhone = (phone) => {
+    // Remove any non-digit characters
+    const cleaned = phone.replace(/\D/g, '');
     
-    // Check if email is already registered (in a real app, this would be an API call)
-    setCurrentStep(2);
+    // Handle different input formats
+    if (cleaned.startsWith('254')) {
+      return cleaned;
+    } else if (cleaned.startsWith('0')) {
+      return '254' + cleaned.substring(1);
+    } else if (cleaned.length === 9) {
+      return '254' + cleaned;
+    }
+    return cleaned;
+  };
+
+  const validateMpesaPhone = (phone) => {
+    const formatted = formatMpesaPhone(phone);
+    // M-Pesa phone numbers should be 12 digits starting with 254
+    return /^254[17]\d{8}$/.test(formatted);
   };
 
   const applyDiscountCode = async () => {
@@ -95,9 +88,18 @@ const Checkout = () => {
   };
 
   const calculateTotal = () => {
-    const subtotal = getTotalPrice();
+    if (!ticketItem) {
+      return {
+        subtotal: 0,
+        discountAmount: 0,
+        tax: 0,
+        total: 0
+      };
+    }
+    
+    const subtotal = ticketItem.price * ticketItem.quantity;
     const discountAmount = discount ? (subtotal * discount.percentage) / 100 : 0;
-    const tax = (subtotal - discountAmount) * 0.08;
+    const tax = (subtotal - discountAmount) * 0.16; // Kenya VAT is 16%
     const total = subtotal - discountAmount + tax;
     
     return {
@@ -108,38 +110,36 @@ const Checkout = () => {
     };
   };
 
-  const handleCheckoutAsGuest = async () => {
-    try {
-      const guestOrder = await createGuestOrder({
-        customerEmail: orderInfo.email,
-        customerName: `${orderInfo.firstName} ${orderInfo.lastName}`,
-        items: cartItems
-      });
-      if (guestOrder.success === false && guestOrder.message) {
-        showError(guestOrder.message);
-        return;
-      }
-      setTempOrderId(guestOrder._id);
-      setShowAuthPrompt(false);
-      setCurrentStep(2);
-      showSuccess(guestOrder.message || 'Continue with your purchase');
-    } catch (error) {
-      showError(error?.message || 'Failed to create guest order. Please try again.');
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (cartItems.length === 0) {
-      showError('Your cart is empty');
+    // Removed login requirement
+    // if (!user) {
+    //   showError('Please log in to complete your purchase');
+    //   navigate('/login');
+    //   return;
+    // }
+
+    if (!ticketItem) {
+      showError('No ticket selected for purchase');
       navigate('/events');
       return;
     }
 
-    // If user is not authenticated and hasn't chosen guest checkout
-    if (!user && !tempOrderId) {
-      setShowAuthPrompt(true);
+    // Validate full name
+    if (!paymentInfo.fullName.trim()) {
+      showError('Please enter your full name');
+      return;
+    }
+
+    // Validate M-Pesa phone number
+    if (!validateMpesaPhone(paymentInfo.phoneNumber)) {
+      showError('Please enter a valid M-Pesa phone number (e.g., 0712345678)');
+      return;
+    }
+
+    // Validate email
+    if (!paymentInfo.email.trim()) {
+      showError('Please enter your email address');
       return;
     }
 
@@ -147,48 +147,64 @@ const Checkout = () => {
 
     try {
       const totals = calculateTotal();
+      const formattedPhone = formatMpesaPhone(paymentInfo.phoneNumber);
+      
       const checkoutData = {
-        items: cartItems.map(item => ({
-          eventId: item.id,
-          quantity: item.quantity,
-          price: item.price,
-          title: item.title
-        })),
-        billingAddress: {
-          firstName: orderInfo.firstName,
-          lastName: orderInfo.lastName,
-          email: orderInfo.email,
-          phone: mpesaInfo.phone
+        items: [{
+          eventId: ticketItem.eventId,
+          quantity: ticketItem.quantity,
+          price: ticketItem.price,
+          title: ticketItem.title
+        }],
+        customerInfo: {
+          fullName: paymentInfo.fullName,
+          email: paymentInfo.email,
+          phone: formattedPhone,
+          userId: user?.id || null, // Handle null user
+          name: paymentInfo.fullName // Use the full name from the form
         },
         paymentMethod: 'mpesa',
-        paymentDetails: {
-          phone: mpesaInfo.phone
-        },
+        mpesaPhone: formattedPhone,
         discountCode: discount ? discount.code : undefined,
         totals
       };
 
       const order = await processCheckout(checkoutData);
-      clearCart();
-      showSuccess(order?.message || 'Order placed successfully!');
-      setShowSuccessModal(true);
+      
+      // Show success message with M-Pesa prompt info
+      showSuccess('M-Pesa payment request sent! Please check your phone and enter your PIN to complete the payment.');
+      
+      // Navigate to payment confirmation page
+      navigate('/payment-confirmation', { 
+        state: { 
+          orderId: order.id,
+          orderData: order,
+          mpesaPhone: formattedPhone,
+          total: totals.total
+        } 
+      });
     } catch (error) {
-      showError(error?.message || error?.response?.data?.message || 'Failed to process payment. Please try again.');
-      console.error('Checkout error:', error);
+      if (error.isAuthError) {
+        showError('Your session has expired. Please log in again.');
+        navigate('/login');
+        return;
+      }
+      showError(error.message || 'Failed to initiate M-Pesa payment. Please try again.');
+      console.error('M-Pesa checkout error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  if (cartItems.length === 0) {
+  if (!ticketItem) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 7.5L5.5 20.5M7 13l-2-5m8 5a1 1 0 100 2 1 1 0 000-2zm-8 0a1 1 0 100 2 1 1 0 000-2z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Your cart is empty</h2>
-          <p className="text-gray-600 mb-6">Add some events to your cart to proceed with checkout.</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">No ticket selected</h2>
+          <p className="text-gray-600 mb-6">Please select a ticket to proceed with checkout.</p>
           <Button onClick={() => navigate('/events')}>
             Browse Events
           </Button>
@@ -199,282 +215,138 @@ const Checkout = () => {
 
   const totals = calculateTotal();
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        {/* Header Section */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6" />
-            </svg>
-          </div>
-          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-            Secure Checkout
-          </h1>
-          <p className="text-lg text-gray-600 mt-3 max-w-2xl mx-auto">
-            You're just one step away from securing your tickets. Complete your purchase with confidence.
-          </p>
-        </div>
+  // Show M-Pesa section only if all required fields are filled
+  const showMpesaSection = paymentInfo.fullName.trim() && paymentInfo.email.trim() && paymentInfo.phoneNumber.trim();
 
-        {/* Progress Steps */}
-        <div className="flex justify-center mb-12">
-          <div className="flex items-center">
-            <div className={`flex flex-col items-center ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                1
-              </div>
-              <span className="mt-2 text-sm font-medium">Order Details</span>
-            </div>
-            <div className={`w-24 h-1 mx-4 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-            <div className={`flex flex-col items-center ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                2
-              </div>
-              <span className="mt-2 text-sm font-medium">Payment</span>
-            </div>
-            <div className={`w-24 h-1 mx-4 ${currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-            <div className={`flex flex-col items-center ${currentStep >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${currentStep >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                3
-              </div>
-              <span className="mt-2 text-sm font-medium">Complete</span>
-            </div>
-          </div>
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto container-padding">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Checkout</h1>
+          <p className="text-gray-600 mt-2">Pay securely with M-Pesa to secure your event tickets</p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
-            {/* Main Content */}
-            <div className="xl:col-span-3 space-y-8">
-              {/* Order Information - Step 1 */}
-              {currentStep === 1 && (
-                <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-white/50">
-                  <div className="flex items-center mb-6">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-4">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-900">Order Details</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Payment Information */}
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="flex items-center mb-6">
+                  <div className="bg-green-100 p-3 rounded-full mr-4">
+                    <svg className="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">First Name *</label>
-                      <input
-                        type="text"
-                        value={orderInfo.firstName}
-                        onChange={(e) => handleInputChange('firstName', e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors bg-white/70"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Last Name *</label>
-                      <input
-                        type="text"
-                        value={orderInfo.lastName}
-                        onChange={(e) => handleInputChange('lastName', e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors bg-white/70"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Email Address *</label>
-                      <input
-                        type="email"
-                        value={orderInfo.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors bg-white/70 disabled:bg-gray-100"
-                        required
-                        disabled={!!user}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">Phone Number *</label>
-                      <input
-                        type="tel"
-                        value={orderInfo.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none transition-colors bg-white/70"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={proceedToPayment}
-                      className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all duration-200"
-                    >
-                      Continue to Payment
-                    </button>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">M-Pesa Payment</h2>
+                    <p className="text-sm text-gray-500">Safe, secure, and instant</p>
                   </div>
                 </div>
-              )}
 
-              {/* Payment Information - Step 2 */}
-              {currentStep === 2 && (
-                <>
-                  {/* Authentication Prompt - Only shown if not logged in and not a guest */}
-                  {showAuthPrompt && (
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 mb-8 border border-gray-100">
-                      <div className="text-center mb-8">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Secure Your Order</h2>
-                        <p className="text-gray-600">Protect your purchase and access your tickets anytime</p>
-                      </div>
-                      
-                      <div className="mb-6 p-4 bg-blue-50 rounded-xl">
-                        <p className="text-sm text-blue-700">
-                          We'll use <strong>{orderInfo.email}</strong> for your order confirmation and ticket delivery.
-                        </p>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="group relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-6 text-center hover:border-green-400 hover:shadow-xl transition-all duration-300 cursor-pointer">
-                          <div className="absolute inset-0 bg-gradient-to-br from-green-400/10 to-emerald-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          <div className="relative">
-                            <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
-                            </div>
-                            <h3 className="font-bold text-gray-900 mb-2">Welcome Back</h3>
-                            <p className="text-sm text-gray-600 mb-4">Already have an account?</p>
-                            <Link to="/login" state={{ from: 'checkout', email: orderInfo.email }}>
-                              <button className="w-full py-3 bg-green-500 text-white rounded-xl font-medium hover:bg-green-600 transition-colors">
-                                Sign In
-                              </button>
-                            </Link>
-                          </div>
-                        </div>
-                        
-                        <div className="group relative overflow-hidden bg-gradient-to-br from-purple-50 to-violet-50 border-2 border-purple-200 rounded-2xl p-6 text-center hover:border-purple-400 hover:shadow-xl transition-all duration-300 cursor-pointer">
-                          <div className="absolute inset-0 bg-gradient-to-br from-purple-400/10 to-violet-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                          <div className="relative">
-                            <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                              </svg>
-                            </div>
-                            <h3 className="font-bold text-gray-900 mb-2">Register & Pay</h3>
-                            <p className="text-sm text-gray-600 mb-4">Create your account for exclusive benefits</p>
-                            <Link to="/register" state={{ from: 'checkout', email: orderInfo.email, firstName: orderInfo.firstName, lastName: orderInfo.lastName }}>
-                              <button className="w-full py-3 bg-purple-500 text-white rounded-xl font-medium hover:bg-purple-600 transition-colors">
-                                Sign Up & Pay
-                              </button>
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="mt-6 text-center">
-                        <button 
-                          className="text-blue-600 hover:text-blue-800 font-medium underline"
-                          onClick={handleCheckoutAsGuest}
-                        >
-                          Continue as guest without an account
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                <div className="space-y-4">
+                  <Input
+                    label="Full Name"
+                    type="text"
+                    placeholder="Enter your full name"
+                    value={paymentInfo.fullName}
+                    onChange={(e) => handleInputChange('fullName', e.target.value)}
+                    required
+                    help="Enter your full name as it appears on your ID"
+                  />
+                  
+                  <Input
+                    label="Email Address"
+                    type="email"
+                    placeholder="your@email.com"
+                    value={paymentInfo.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    required
+                    help="Receipt will be sent to this email"
+                  />
 
-                  {/* Payment Information */}
-                  <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-white/50">
-                    <div className="flex items-center mb-6">
-                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-4">
-                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                      <h2 className="text-2xl font-bold text-gray-900">M-Pesa Payment</h2>
-                    </div>
-                    
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 mb-6">
-                      <div className="flex items-center mb-3">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/M-PESA_LOGO-01.svg/1200px-M-PESA_LOGO-01.svg.png" alt="M-Pesa" className="h-8 mr-3" />
-                        <span className="font-semibold text-gray-900">Secure Mobile Payment</span>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        Pay safely using M-Pesa. You'll receive a payment prompt on your mobile device to complete the transaction.
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-gray-700">M-Pesa Phone Number</label>
-                      <input
-                        type="tel"
-                        value={mpesaInfo.phone}
-                        onChange={e => handleInputChange('phone', e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:outline-none transition-colors bg-white/70"
-                        placeholder="254712345678"
-                        required
-                      />
-                      <p className="text-xs text-gray-500">
-                        Enter your M-Pesa registered phone number to receive the payment prompt.
-                      </p>
+                  <Input
+                    label="M-Pesa Phone Number"
+                    type="tel"
+                    placeholder="0712345678"
+                    value={paymentInfo.phoneNumber}
+                    onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
+                    required
+                    help="Enter your M-Pesa registered phone number"
+                  />
+                </div>
+
+                <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <svg className="w-5 h-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    <div className="text-sm text-green-700">
+                      <p className="font-medium mb-1">How M-Pesa payment works:</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li>Click "Pay with M-Pesa" below</li>
+                        <li>You'll receive an M-Pesa prompt on your phone</li>
+                        <li>Enter your M-Pesa PIN to complete payment</li>
+                        <li>Your tickets will be confirmed instantly</li>
+                      </ul>
                     </div>
                   </div>
-                </>
-              )}
+                </div>
+              </div>
             </div>
 
             {/* Order Summary */}
-            <div className="xl:col-span-2">
-              <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-8 border border-white/50 sticky top-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Order Summary</h2>
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg shadow-md p-6 sticky top-8">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">Order Summary</h2>
 
-                {/* Cart Items */}
+                {/* Ticket Item */}
                 <div className="space-y-4 mb-6">
-                  {cartItems.map((item) => (
-                    <div key={item.id} className="flex items-center p-4 bg-gray-50/70 rounded-2xl">
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="w-16 h-16 rounded-xl object-cover shadow-md"
-                      />
-                      <div className="flex-1 ml-4">
-                        <p className="font-semibold text-gray-900 text-sm leading-tight mb-1">
-                          {item.title}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {item.quantity} × {formatPrice(item.price)}
-                        </p>
-                      </div>
+                  <div className="flex items-center space-x-3">
+                    <img
+                      src={ticketItem.image}
+                      alt={ticketItem.title}
+                      className="w-12 h-12 rounded-lg object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 text-sm line-clamp-2">
+                        {ticketItem.title}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Qty: {ticketItem.quantity} × {formatPrice(ticketItem.price)}
+                      </p>
                     </div>
-                  ))}
+                  </div>
                 </div>
 
                 {/* Discount Code */}
-                <div className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl">
-                  <div className="flex space-x-3 mb-3">
+                <div className="mb-6">
+                  <div className="flex space-x-2">
                     <input
                       type="text"
-                      placeholder="Enter promo code"
+                      placeholder="Discount code"
                       value={discountCode}
                       onChange={(e) => setDiscountCode(e.target.value)}
-                      className="flex-1 px-4 py-3 border-2 border-orange-200 rounded-xl focus:outline-none focus:border-orange-400 transition-colors bg-white/80"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
                       onClick={applyDiscountCode}
-                      disabled={!discountCode.trim() || discount || applyingDiscount}
-                      className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-medium hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                      loading={applyingDiscount}
+                      disabled={!discountCode.trim() || discount}
                     >
-                      {applyingDiscount ? '...' : 'Apply'}
-                    </button>
+                      Apply
+                    </Button>
                   </div>
                   {discount && (
-                    <div className="flex items-center justify-between bg-green-100 border border-green-300 rounded-xl p-3">
-                      <span className="text-sm font-medium text-green-700">
+                    <div className="mt-2 flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-2">
+                      <span className="text-sm text-green-600">
                         {discount.description}
                       </span>
                       <button
                         type="button"
                         onClick={removeDiscount}
-                        className="text-green-600 hover:text-green-800 font-bold text-lg"
+                        className="text-green-600 hover:text-green-800"
                       >
                         ×
                       </button>
@@ -483,104 +355,54 @@ const Checkout = () => {
                 </div>
 
                 {/* Totals */}
-                <div className="space-y-3 border-t-2 border-gray-200 pt-6 mb-6">
-                  <div className="flex justify-between text-gray-600">
+                <div className="space-y-2 border-t pt-6">
+                  <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span className="font-medium">{formatPrice(totals.subtotal)}</span>
+                    <span>{formatPrice(totals.subtotal)}</span>
                   </div>
                   {discount && (
                     <div className="flex justify-between text-green-600">
                       <span>Discount ({discount.percentage}%):</span>
-                      <span className="font-medium">-{formatPrice(totals.discountAmount)}</span>
+                      <span>-{formatPrice(totals.discountAmount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-gray-600">
-                    <span>Tax:</span>
-                    <span className="font-medium">{formatPrice(totals.tax)}</span>
+                  <div className="flex justify-between">
+                    <span>VAT (16%):</span>
+                    <span>{formatPrice(totals.tax)}</span>
                   </div>
-                  <div className="flex justify-between text-2xl font-bold text-gray-900 border-t-2 border-gray-300 pt-3">
+                  <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total:</span>
-                    <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      {formatPrice(totals.total)}
-                    </span>
+                    <span className="text-primary-600">{formatPrice(totals.total)}</span>
                   </div>
                 </div>
 
                 {/* Submit Button */}
-                {currentStep === 2 && (
-                  <button
+                <div className="mt-6">
+                  <Button
                     type="submit"
-                    disabled={loading || (showAuthPrompt && !user && !tempOrderId)}
-                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg font-bold rounded-2xl shadow-xl hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300"
+                    fullWidth
+                    size="large"
+                    loading={loading}
+                    disabled={loading || !showMpesaSection || !paymentInfo.phoneNumber.trim()}
+                    className="bg-green-600 hover:bg-green-700 text-white disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
-                    {loading ? (
-                      <div className="flex items-center justify-center">
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Processing Payment...
-                      </div>
-                    ) : (
-                      `Complete Purchase • ${formatPrice(totals.total)}`
-                    )}
-                  </button>
-                )}
-
-                {currentStep === 1 && (
-                  <button
-                    type="button"
-                    onClick={proceedToPayment}
-                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg font-bold rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
-                  >
-                    Continue to Payment
-                  </button>
-                )}
+                    {loading ? 'Sending M-Pesa Request...' : 
+                     !showMpesaSection ? 'Complete personal information first' :
+                     !paymentInfo.phoneNumber.trim() ? 'Enter M-Pesa phone number' :
+                     `Pay with M-Pesa • ${formatPrice(totals.total)}`}
+                  </Button>
+                </div>
 
                 {/* Security Notice */}
-                <div className="mt-6 text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl">
-                  <div className="flex items-center justify-center mb-2">
-                    <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                    </svg>
-                    <span className="font-semibold text-green-700">Secure Payment</span>
-                  </div>
-                  <p className="text-xs text-green-600">
-                    Your payment information is protected with enterprise-grade encryption
+                <div className="mt-4 text-center">
+                  <p className="text-xs text-gray-500">
+                    🔒 Powered by Safaricom M-Pesa - Safe & Secure
                   </p>
                 </div>
               </div>
             </div>
           </div>
         </form>
-
-        {/* Success Modal */}
-        {showSuccessModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-lg w-full mx-4 text-center transform animate-pulse">
-              <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4" />
-                </svg>
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-3">Payment Successful! 🎉</h2>
-              <p className="text-gray-600 mb-6 text-lg">Your tickets have been secured successfully.</p>
-              {!user && (
-                <div className="bg-blue-50 rounded-2xl p-4 mb-6">
-                  <p className="text-sm text-blue-700 font-medium">
-                    📧 Check your email to claim your account and access your tickets anytime!
-                  </p>
-                </div>
-              )}
-              <button 
-                className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg font-bold rounded-2xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
-                onClick={() => { setShowSuccessModal(false); navigate('/events'); }}
-              >
-                Continue to Events
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

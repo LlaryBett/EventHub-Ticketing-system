@@ -1,3 +1,4 @@
+// backend/src/routes/auth.js
 const express = require('express');
 const { body } = require('express-validator');
 const {
@@ -7,12 +8,7 @@ const {
   login,
   logout,
   forgotPassword,
-  resetPassword,
-  registerAtCheckout,
-  loginAtCheckout,
-  claimAccount,
-  sendClaimEmail,
-  validateClaimToken
+  resetPassword
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 
@@ -39,53 +35,6 @@ const attendeeValidation = [
   body('acceptTerms')
     .equals('true')
     .withMessage('You must accept the terms and conditions')
-];
-
-const checkoutRegisterValidation = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email'),
-  body('password')
-    .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters long')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number')
-];
-
-const checkoutLoginValidation = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email'),
-  body('password')
-    .notEmpty()
-    .withMessage('Password is required')
-];
-
-const claimAccountValidation = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email'),
-  body('password')
-    .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters long')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
-  body('orderId')
-    .notEmpty()
-    .withMessage('Order ID is required')
-];
-
-const sendClaimEmailValidation = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email'),
-  body('orderId')
-    .notEmpty()
-    .withMessage('Order ID is required')
 ];
 
 const organizerStep1Validation = [
@@ -174,14 +123,6 @@ router.post('/register/attendee', attendeeValidation, registerAttendee);
 router.post('/register/organizer/step1', organizerStep1Validation, registerOrganizerStep1);
 router.post('/register/organizer/step2', organizerStep2Validation, registerOrganizerStep2);
 router.post('/login', loginValidation, login);
-
-// New checkout authentication routes
-router.post('/register/checkout', checkoutRegisterValidation, registerAtCheckout);
-router.post('/login/checkout', checkoutLoginValidation, loginAtCheckout);
-router.post('/claim-account', claimAccountValidation, claimAccount);
-router.post('/send-claim-email', sendClaimEmailValidation, sendClaimEmail);
-router.get('/validate-claim-token', validateClaimToken);
-
 router.post('/forgotpassword', forgotPasswordValidation, forgotPassword);
 router.put('/resetpassword/:resettoken', resetPasswordValidation, resetPassword);
 

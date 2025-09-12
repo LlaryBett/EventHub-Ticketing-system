@@ -14,10 +14,20 @@ const guestOrderSchema = new mongoose.Schema({
     trim: true
   },
   items: [{
-    eventId: {
+    event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Event',
       required: true
+    },
+    ticket: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Ticket',
+      required: true
+    },
+    ticketType: {
+      type: String,
+      required: true,
+      trim: true
     },
     quantity: {
       type: Number,
@@ -29,9 +39,12 @@ const guestOrderSchema = new mongoose.Schema({
       required: true,
       min: 0
     },
-    title: {
+    eventTitle: {
       type: String,
       required: true
+    },
+    eventImage: {
+      type: String
     }
   }],
   status: {
@@ -55,7 +68,7 @@ const guestOrderSchema = new mongoose.Schema({
 guestOrderSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Check if order is expired
-guestOrderSchema.methods.isExpired = function() {
+guestOrderSchema.methods.isExpired = function () {
   return new Date() > this.expiresAt;
 };
 

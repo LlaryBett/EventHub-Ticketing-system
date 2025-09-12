@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { eventService } from '../services/eventService';
 import { useCart } from '../context/CartContext';
 import { useUI } from '../context/UIContext';
@@ -15,6 +15,7 @@ const EventDetails = () => {
   const [selectedTicketIndex, setSelectedTicketIndex] = useState(0);
   const { addToCart } = useCart();
   const { showSuccess, showError } = useUI();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -431,17 +432,18 @@ const EventDetails = () => {
 
                   <Button fullWidth size="large" onClick={() => {
                     const ticket = tickets[selectedTicketIndex] || {};
-                    addToCart({
-                      eventId: event._id || event.id,
-                      eventName: event.title,
-                      eventImage: event.image,
-                      ticketId: ticket._id || ticket.id,
-                      ticketType: ticket.type,
-                      price: ticket.price || 0,
-                      quantity: selectedQuantity
-                    }, selectedQuantity);
-                    showSuccess(`${selectedQuantity} ticket(s) for ${event.title} (${ticket.type}) added to cart!`);
-                    window.location.href = '/checkout';
+                    navigate('/checkout', {
+                      state: {
+                        item: {
+                          eventId: event._id || event.id,
+                          title: event.title,
+                          price: ticket.price || 0,
+                          quantity: selectedQuantity,
+                          image: event.image,
+                          type: ticket.type,
+                        }
+                      }
+                    });
                   }}>
                     Buy Your ticket
                   </Button>

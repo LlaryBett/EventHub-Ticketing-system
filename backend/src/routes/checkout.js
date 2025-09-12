@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const checkoutController = require('../controllers/checkoutController');
-const { optionalAuth, guestCheckout } = require('../middleware/auth');
+const { protect, optionalAuth } = require('../middleware/auth');
 const { validateCheckout } = require('../middleware/validation');
 const rateLimit = require('express-rate-limit');
 
@@ -26,61 +26,37 @@ const discountLimiter = rateLimit({
   }
 });
 
-// Guest order endpoints - don't require authentication
-router.post(
-  '/guest-order',
-  guestCheckout,
-  validateCheckout('createGuestOrder'),
-  checkoutController.createGuestOrder
-);
+// ---------------------- ROUTES ---------------------- //
 
+// ✅ Authenticated users only
 router.get(
-  '/guest-order/:orderId',
-  guestCheckout,
-  checkoutController.getGuestOrder
+  '/summary',
+  protect, // still require login here
+  checkoutController.getCheckoutSummary
 );
 
-router.get(
-  '/guest-orders',
-  guestCheckout,
-  checkoutController.getGuestOrdersByEmail
-);
-
-router.patch(
-  '/guest-order/:orderId/convert',
-  guestCheckout,
-  checkoutController.convertGuestToUserOrder
-);
-
+// ✅ Guests OR authenticated can checkout
 router.post(
-  '/send-claim-email',
-  guestCheckout,
-  checkoutController.sendClaimEmail
+  '/process',
+  optionalAuth, // 👈 allows both guest + logged in
+  checkoutLimiter,
+  validateCheckout('processCheckout'),
+  checkoutController.processCheckout
 );
 
-router.get(
-  '/validate-claim-token',
-  guestCheckout,
-  checkoutController.validateClaimToken
-);
-
-router.post(
-  '/claim-account',
-  guestCheckout,
-  checkoutController.claimAccount
-);
-
-// Apply discount doesn't require auth initially
+// ✅ Guests OR authenticated can apply discount
 router.post(
   '/apply-discount',
+  optionalAuth, // 👈 either guest or logged in
   discountLimiter,
   validateCheckout('applyDiscount'),
   checkoutController.applyDiscount
 );
 
-// Checkout validation doesn't require auth initially
+// ✅ Guests OR authenticated can pre-validate
 router.post(
   '/validate',
+  optionalAuth, // 👈 optional auth
   validateCheckout('validateCheckout'),
   async (req, res) => {
     res.json({
@@ -89,23 +65,6 @@ router.post(
       validated: true
     });
   }
-);
-
-// These endpoints require authentication
-router.use(optionalAuth);
-
-// GET /api/checkout/summary - Get checkout summary
-router.get(
-  '/summary',
-  checkoutController.getCheckoutSummary
-);
-
-// POST /api/checkout/process - Process checkout
-router.post(
-  '/process',
-  checkoutLimiter,
-  validateCheckout('processCheckout'),
-  checkoutController.processCheckout
 );
 
 module.exports = router;

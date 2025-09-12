@@ -1,11 +1,22 @@
 const nodemailer = require('nodemailer');
 
-// Create transporter
+// Create transporter for Brevo
 const transporter = nodemailer.createTransport({
-  service: process.env.EMAIL_SERVICE || 'gmail',
+  host: process.env.EMAIL_HOST || 'smtp-relay.brevo.com',
+  port: process.env.EMAIL_PORT || 587,
+  secure: false, // Use TLS
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
+  }
+});
+
+// Verify connection configuration
+transporter.verify(function(error, success) {
+  if (error) {
+    console.log('❌ Email server connection error:', error);
+  } else {
+    console.log('✅ Email server is ready to take our messages');
   }
 });
 
@@ -13,11 +24,10 @@ const transporter = nodemailer.createTransport({
 const sendEmail = async ({ to, subject, html, text }) => {
   try {
     const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@youreventplatform.com',
+      from: process.env.EMAIL_FROM || 'llarykiplangat@gmail.com',
       to,
       subject,
       html,
-      // fallback to plain text by stripping HTML tags if no text provided
       text: text || html.replace(/<[^>]*>/g, '')
     };
 

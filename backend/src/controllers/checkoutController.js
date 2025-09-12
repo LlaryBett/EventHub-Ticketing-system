@@ -2,19 +2,77 @@ const Order = require('../models/Order');
 const GuestOrder = require('../models/GuestOrder');
 const Event = require('../models/Event');
 const User = require('../models/User');
+const Ticket = require('../models/Ticket');
 const { validationResult } = require('express-validator');
 const { sendEmail } = require('../utils/emailService');
 const jwt = require('jsonwebtoken');
+
+// Helper function to process M-Pesa payments
+const processMpesaPayment = async (order, paymentDetails) => {
+  try {
+    console.log('Processing M-Pesa payment for order:', order._id);
+    
+    // Implement your M-Pesa integration here
+    // This is a mock implementation - replace with actual M-Pesa API calls
+    
+    // Simulate payment processing
+    const paymentSuccess = Math.random() > 0.2; // 80% success rate for demo
+    
+    if (paymentSuccess) {
+      console.log('M-Pesa payment successful for order:', order._id);
+      return true;
+    } else {
+      console.log('M-Pesa payment failed for order:', order._id);
+      return false;
+    }
+  } catch (error) {
+    console.error('M-Pesa payment processing error:', error);
+    return false;
+  }
+};
+
+// Helper function to process card payments
+const processCardPayment = async (order, paymentDetails) => {
+  try {
+    console.log('Processing card payment for order:', order._id);
+    
+    // Implement your card payment integration here
+    // This is a mock implementation - replace with actual payment gateway API calls
+    
+    // Simulate payment processing
+    const paymentSuccess = Math.random() > 0.1; // 90% success rate for demo
+    
+    if (paymentSuccess) {
+      console.log('Card payment successful for order:', order._id);
+      return true;
+    } else {
+      console.log('Card payment failed for order:', order._id);
+      return false;
+    }
+  } catch (error) {
+    console.error('Card payment processing error:', error);
+    return false;
+  }
+};
 
 const checkoutController = {
   // Create guest order
   createGuestOrder: async (req, res) => {
     try {
+      console.log('📥 Received guest order request body:', req.body);
+
       const { customerEmail, customerName, items } = req.body;
+
+      console.log('➡️ Parsed data:', {
+        customerEmail,
+        customerName,
+        itemsCount: items?.length || 0
+      });
 
       // Check if email already has an account
       const existingUser = await User.findOne({ email: customerEmail.toLowerCase() });
       if (existingUser) {
+        console.log(`⚠️ Account already exists for email: ${customerEmail}`);
         return res.status(400).json({
           success: false,
           message: 'An account already exists with this email. Please sign in.',
@@ -24,20 +82,49 @@ const checkoutController = {
 
       // Validate items
       for (const item of items) {
-        const event = await Event.findById(item.eventId);
+        console.log(`🔍 Validating item:`, item);
+
+        // Validate event
+        const event = await Event.findById(item.event);
         if (!event) {
+          console.log(`❌ Event not found for ID: ${item.event}`);
           return res.status(400).json({
             success: false,
-            message: `Event not found: ${item.title}`
+            message: `Event not found: ${item.eventTitle || 'Unknown'}`
           });
         }
-        
-        if (event.availableTickets < item.quantity) {
+
+        // Validate ticket (if provided)
+        const ticket = await Ticket.findById(item.ticket);
+        if (!ticket) {
+          console.log(`❌ Ticket not found for ID: ${item.ticket}`);
           return res.status(400).json({
             success: false,
-            message: `Not enough tickets available for ${event.title}`
+            message: `Ticket not found for event ${event.title}`
           });
         }
+
+        // Check ticket belongs to this event
+        if (ticket.event.toString() !== event._id.toString()) {
+          console.log(`❌ Ticket ${ticket._id} does not belong to event ${event._id}`);
+          return res.status(400).json({
+            success: false,
+            message: `Ticket does not belong to the selected event`
+          });
+        }
+
+        // Check ticket availability
+        if (ticket.quantity < item.quantity) {
+          console.log(
+            `❌ Not enough tickets of type "${ticket.type}". Requested: ${item.quantity}, Available: ${ticket.quantity}`
+          );
+          return res.status(400).json({
+            success: false,
+            message: `Not enough tickets available for type ${ticket.type}`
+          });
+        }
+
+        console.log(`✅ Event & Ticket validated: ${event.title}, ${ticket.type}, Quantity OK`);
       }
 
       // Create temporary guest order
@@ -49,6 +136,7 @@ const checkoutController = {
       });
 
       await guestOrder.save();
+      console.log('📝 Guest order saved:', guestOrder._id);
 
       res.status(201).json({
         success: true,
@@ -57,7 +145,7 @@ const checkoutController = {
       });
 
     } catch (error) {
-      console.error('Create guest order error:', error);
+      console.error('💥 Create guest order error:', error);
       res.status(500).json({
         success: false,
         message: 'Failed to create guest order'
@@ -331,91 +419,121 @@ const checkoutController = {
   },
 
   // Process checkout (updated for both authenticated and guest users)
-  processCheckout: async (req, res) => {
-    try {
-      console.log('Checkout payload received from frontend:', req.body);
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
+ // Process checkout (updated to handle frontend payload structure)
+processCheckout: async (req, res) => {
+  try {
+    console.log('Checkout payload received from frontend:', req.body);
+
+    // 🔹 Transform frontend payload to match validation expectations
+    const checkoutData = req.body;
+    
+    // Create billingAddress object from customerInfo
+    if (checkoutData.customerInfo) {
+      const [firstName, ...rest] = checkoutData.customerInfo.fullName.split(" ");
+      req.body.billingAddress = {
+        firstName: firstName || '',
+        lastName: rest.join(" ") || '',
+        email: checkoutData.customerInfo.email,
+        phone: checkoutData.customerInfo.phone
+      };
+    }
+
+    // Create paymentDetails object for M-Pesa
+    if (checkoutData.mpesaPhone) {
+      req.body.paymentDetails = {
+        phone: checkoutData.mpesaPhone
+      };
+    }
+
+    // 🔹 Run validation AFTER reshaping the request body
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const user = req.user || null;
+const isGuest = !user; // assume guest if no authenticated user
+
+
+    // Validate items and ticket availability
+    for (const item of checkoutData.items) {
+      const event = await Event.findById(item.eventId);
+      if (!event) {
         return res.status(400).json({
           success: false,
-          message: 'Validation failed',
-          errors: errors.array()
+          message: `Event not found: ${item.title}`
         });
       }
-
-      const checkoutData = req.body;
-      const isGuest = req.isGuest;
-      const user = req.user;
-
-      // Validate items and ticket availability
-      for (const item of checkoutData.items) {
-        const event = await Event.findById(item.eventId);
-        if (!event) {
-          return res.status(400).json({
-            success: false,
-            message: `Event not found: ${item.title}`
-          });
-        }
-        
-        if (event.availableTickets < item.quantity) {
-          return res.status(400).json({
-            success: false,
-            message: `Not enough tickets available for ${event.title}`
-          });
-        }
-      }
-
-      let order;
-
-      if (isGuest && checkoutData.guestOrderId) {
-        // Process guest order
-        const guestOrder = await GuestOrder.findById(checkoutData.guestOrderId);
-        if (!guestOrder) {
-          return res.status(404).json({
-            success: false,
-            message: 'Guest order not found'
-          });
-        }
-
-        // Create final order from guest order
-        order = new Order({
-          customerEmail: guestOrder.customerEmail,
-          customerName: guestOrder.customerName,
-          items: guestOrder.items,
-          billingAddress: checkoutData.billingAddress,
-          paymentMethod: checkoutData.paymentMethod,
-          paymentDetails: checkoutData.paymentDetails,
-          discountCode: checkoutData.discountCode,
-          totals: checkoutData.totals,
-          isGuestOrder: true,
-          status: 'completed'
-        });
-
-        // Update guest order status
-        guestOrder.status = 'completed';
-        await guestOrder.save();
-
-      } else if (user) {
-        // Process authenticated user order
-        order = new Order({
-          userId: user._id,
-          customerEmail: user.email,
-          customerName: user.name,
-          items: checkoutData.items,
-          billingAddress: checkoutData.billingAddress,
-          paymentMethod: checkoutData.paymentMethod,
-          paymentDetails: checkoutData.paymentDetails,
-          discountCode: checkoutData.discountCode,
-          totals: checkoutData.totals,
-          isGuestOrder: false,
-          status: 'completed'
-        });
-      } else {
+      
+      if (event.availableTickets < item.quantity) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid checkout request'
+          message: `Not enough tickets available for ${event.title}`
         });
       }
+    }
+
+    let order;
+
+    if (isGuest) {
+      // Handle guest checkout
+      order = new Order({
+        customerEmail: checkoutData.customerInfo.email,
+        customerName: checkoutData.customerInfo.fullName,
+        items: checkoutData.items,
+        billingAddress: req.body.billingAddress, // Use the transformed billingAddress
+        paymentMethod: checkoutData.paymentMethod,
+        paymentDetails: req.body.paymentDetails, // Use the transformed paymentDetails
+        discountCode: checkoutData.discountCode,
+        totals: checkoutData.totals,
+        isGuestOrder: true,
+        status: 'pending'
+      });
+    } else if (user) {
+      // Process authenticated user order
+      order = new Order({
+        userId: user._id,
+        customerEmail: user.email,
+        customerName: user.name,
+        items: checkoutData.items,
+        billingAddress: req.body.billingAddress, // Use the transformed billingAddress
+        paymentMethod: checkoutData.paymentMethod,
+        paymentDetails: req.body.paymentDetails, // Use the transformed paymentDetails
+        discountCode: checkoutData.discountCode,
+        totals: checkoutData.totals,
+        isGuestOrder: false,
+        status: 'pending'
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid checkout request'
+      });
+    }
+
+    // Save order first to get order ID
+    await order.save();
+
+    // Process payment based on payment method
+    let paymentSuccess = false;
+    
+    if (checkoutData.paymentMethod === 'mpesa') {
+      paymentSuccess = await processMpesaPayment(order, req.body.paymentDetails);
+    } else if (checkoutData.paymentMethod === 'card') {
+      paymentSuccess = await processCardPayment(order, req.body.paymentDetails);
+    } else {
+      paymentSuccess = true; // Assume success for other methods
+    }
+    
+    if (paymentSuccess) {
+      // Update order status to completed
+      order.status = 'completed';
+      await order.save();
 
       // Update event ticket counts
       for (const item of order.items) {
@@ -429,9 +547,6 @@ const checkoutController = {
           }
         );
       }
-
-      // Save order
-      await order.save();
 
       // Send confirmation email
       await sendEmail({
@@ -455,15 +570,25 @@ const checkoutController = {
           isGuestOrder: order.isGuestOrder
         }
       });
-
-    } catch (error) {
-      console.error('Checkout error:', error);
-      res.status(500).json({
+    } else {
+      // Payment failed
+      order.status = 'failed';
+      await order.save();
+      
+      res.status(400).json({
         success: false,
-        message: 'Failed to process payment. Please try again.'
+        message: 'Payment processing failed. Please try again.'
       });
     }
-  },
+
+  } catch (error) {
+    console.error('Checkout error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process payment. Please try again.'
+    });
+  }
+},
 
   // Apply discount code
   applyDiscount: async (req, res) => {

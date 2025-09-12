@@ -48,6 +48,13 @@ const billingInfoSchema = new mongoose.Schema({
     type: String, 
     required: true,
     trim: true
+  },
+  address: {
+    street: { type: String, trim: true },
+    city: { type: String, trim: true },
+    state: { type: String, trim: true },
+    country: { type: String, trim: true },
+    zipCode: { type: String, trim: true }
   }
 });
 
@@ -93,6 +100,29 @@ const discountSchema = new mongoose.Schema({
   }
 });
 
+const totalsSchema = new mongoose.Schema({
+  subtotal: { 
+    type: Number, 
+    required: true, 
+    min: 0 
+  },
+  discountAmount: { 
+    type: Number, 
+    default: 0, 
+    min: 0 
+  },
+  tax: { 
+    type: Number, 
+    required: true, 
+    min: 0 
+  },
+  total: { 
+    type: Number, 
+    required: true, 
+    min: 0 
+  }
+});
+
 const orderSchema = new mongoose.Schema({
   // User can be null for guest orders
   userId: {
@@ -133,15 +163,10 @@ const orderSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  totals: {
-    subtotal: { type: Number, required: true, min: 0 },
-    discountAmount: { type: Number, default: 0, min: 0 },
-    tax: { type: Number, required: true, min: 0 },
-    total: { type: Number, required: true, min: 0 }
-  },
+  totals: totalsSchema,
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'processing', 'completed', 'cancelled', 'refunded'],
+    enum: ['pending', 'confirmed', 'processing', 'completed', 'cancelled', 'refunded', 'failed'],
     default: 'pending',
     index: true
   },
@@ -164,6 +189,15 @@ const orderSchema = new mongoose.Schema({
   convertedToUser: {
     type: Boolean,
     default: false
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'processing', 'completed', 'failed', 'refunded'],
+    default: 'pending'
+  },
+  paymentGatewayResponse: {
+    type: Map,
+    of: mongoose.Schema.Types.Mixed
   }
 }, {
   timestamps: true
@@ -173,6 +207,18 @@ const orderSchema = new mongoose.Schema({
 orderSchema.index({ customerEmail: 1, createdAt: -1 });
 orderSchema.index({ isGuestOrder: 1, status: 1 });
 orderSchema.index({ claimToken: 1 });
+orderSchema.index({ paymentStatus: 1 });
+orderSchema.index({ 'paymentDetails.phone': 1 }); // For M-Pesa lookups
+
+// Virtual for formatted order total
+orderSchema.virtual('formattedTotal').get(function() {
+  return `KES ${this.totals.total.toLocaleString()}`;
+});
+
+// Virtual for order age
+orderSchema.virtual('ageInDays').get(function() {
+  return Math.floor((Date.now() - this.createdAt) / (1000 * 60 * 60 * 24));
+});
 
 // Generate order number before saving
 orderSchema.pre('save', function(next) {
@@ -185,6 +231,15 @@ orderSchema.pre('save', function(next) {
   // Generate guest order ID for guest orders
   if (this.isNew && this.isGuestOrder && !this.guestOrderId) {
     this.guestOrderId = `GUEST-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+  }
+  
+  // Update payment status based on order status
+  if (this.isModified('status')) {
+    if (this.status === 'completed') {
+      this.paymentStatus = 'completed';
+    } else if (this.status === 'cancelled' || this.status === 'failed') {
+      this.paymentStatus = 'failed';
+    }
   }
   
   next();
@@ -203,6 +258,28 @@ orderSchema.methods.generateClaimToken = function() {
   return this.claimToken;
 };
 
+orderSchema.methods.updatePaymentStatus = function(status, gatewayResponse = {}) {
+  this.paymentStatus = status;
+  this.paymentGatewayResponse = gatewayResponse;
+  
+  if (status === 'completed') {
+    this.status = 'completed';
+  } else if (status === 'failed') {
+    this.status = 'failed';
+  }
+  
+  return this.save();
+};
+
+orderSchema.methods.getPaymentMethodDisplay = function() {
+  const methodMap = {
+    'mpesa': 'M-Pesa',
+    'card': 'Credit/Debit Card',
+    'paypal': 'PayPal'
+  };
+  return methodMap[this.paymentMethod] || this.paymentMethod;
+};
+
 // Static methods
 orderSchema.statics.findGuestOrdersByEmail = function(email) {
   return this.find({ 
@@ -210,6 +287,27 @@ orderSchema.statics.findGuestOrdersByEmail = function(email) {
     isGuestOrder: true,
     convertedToUser: false 
   }).sort({ createdAt: -1 });
+};
+
+orderSchema.statics.findByOrderNumber = function(orderNumber) {
+  return this.findOne({ orderNumber });
+};
+
+orderSchema.statics.findByPaymentTransactionId = function(transactionId) {
+  return this.findOne({ 'paymentDetails.transactionId': transactionId });
+};
+
+// Query helpers
+orderSchema.query.byStatus = function(status) {
+  return this.where({ status });
+};
+
+orderSchema.query.byPaymentMethod = function(method) {
+  return this.where({ paymentMethod: method });
+};
+
+orderSchema.query.byCustomerEmail = function(email) {
+  return this.where({ customerEmail: email.toLowerCase() });
 };
 
 module.exports = mongoose.model('Order', orderSchema);

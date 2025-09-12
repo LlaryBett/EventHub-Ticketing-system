@@ -10,78 +10,30 @@ export const getCheckoutSummary = async () => {
   }
 };
 
-// Process checkout (for both authenticated and guest users)
+// Process checkout (works for both M-Pesa & others)
 export const processCheckout = async (checkoutData) => {
   try {
-    const response = await api.post('/checkout/process', checkoutData);
-    return response.data;
-  } catch (error) {
-    // Add isAuthError flag for auth-related errors
-    if (error.response?.data?.isAuthError) {
-      error.isAuthError = true;
-    }
-    throw error.response?.data || error.message;
-  }
-};
-
-// Create guest order (temporary order before payment)
-export const createGuestOrder = async (orderData) => {
-  try {
-    const response = await api.post('/checkout/guest-order', orderData);
-    return response.data;
-  } catch (error) {
-    // Check if email already has account
-    if (error.response?.data?.hasAccount) {
-      error.hasAccount = true;
-    }
-    throw error.response?.data || error.message;
-  }
-};
-
-// Get guest order by ID
-export const getGuestOrder = async (orderId) => {
-  try {
-    const response = await api.get(`/checkout/guest-order/${orderId}`);
+    const response = await api.post('/checkout/process', checkoutData); // single route for all payments
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
   }
 };
 
-// Get guest orders by email
-export const getGuestOrdersByEmail = async (email) => {
+// Check M-Pesa payment status
+export const checkMpesaPaymentStatus = async (transactionId) => {
   try {
-    const response = await api.get(`/checkout/guest-orders?email=${encodeURIComponent(email)}`);
+    const response = await api.get(`/checkout/mpesa/status/${transactionId}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
   }
 };
 
-// Send account claim email
-export const sendClaimEmail = async (email, orderId) => {
+// Initiate M-Pesa STK Push
+export const initiateMpesaSTKPush = async (paymentData) => {
   try {
-    const response = await api.post('/checkout/send-claim-email', { email, orderId });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Validate claim token
-export const validateClaimToken = async (token, email) => {
-  try {
-    const response = await api.get(`/checkout/validate-claim-token?token=${token}&email=${encodeURIComponent(email)}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Claim account from guest order
-export const claimAccount = async (claimData) => {
-  try {
-    const response = await api.post('/checkout/claim-account', claimData);
+    const response = await api.post('/checkout/mpesa/stk-push', paymentData);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -108,220 +60,10 @@ export const validateCheckout = async (checkoutData) => {
   }
 };
 
-// Convert guest order to registered user order (after account creation)
-export const convertGuestOrderToUser = async (orderId, userId) => {
+// Validate M-Pesa phone number
+export const validateMpesaPhone = async (phoneNumber) => {
   try {
-    const response = await api.patch(`/checkout/guest-order/${orderId}/convert`, { userId });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Get user orders (for authenticated users)
-export const getUserOrders = async (limit = 10, skip = 0) => {
-  try {
-    const response = await api.get(`/orders?limit=${limit}&skip=${skip}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Get order by ID
-export const getOrderById = async (orderId) => {
-  try {
-    const response = await api.get(`/orders/${orderId}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Get order by order number
-export const getOrderByNumber = async (orderNumber) => {
-  try {
-    const response = await api.get(`/orders/number/${orderNumber}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Cancel order
-export const cancelOrder = async (orderId) => {
-  try {
-    const response = await api.post(`/orders/${orderId}/cancel`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Request refund
-export const requestRefund = async (orderId, reason) => {
-  try {
-    const response = await api.post(`/orders/${orderId}/refund`, { reason });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Send order confirmation email
-export const sendOrderConfirmation = async (orderId) => {
-  try {
-    const response = await api.post(`/orders/${orderId}/send-confirmation`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Check ticket availability
-export const checkTicketAvailability = async (eventId, ticketType, quantity) => {
-  try {
-    const response = await api.post('/checkout/check-availability', {
-      eventId,
-      ticketType,
-      quantity
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Get event ticket info
-export const getEventTicketInfo = async (eventId) => {
-  try {
-    const response = await api.get(`/events/${eventId}/ticket-info`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Verify payment status
-export const verifyPaymentStatus = async (orderId) => {
-  try {
-    const response = await api.get(`/checkout/${orderId}/payment-status`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Resend payment confirmation
-export const resendPaymentConfirmation = async (orderId) => {
-  try {
-    const response = await api.post(`/checkout/${orderId}/resend-confirmation`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Get payment methods
-export const getPaymentMethods = async () => {
-  try {
-    const response = await api.get('/checkout/payment-methods');
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Save payment method
-export const savePaymentMethod = async (paymentMethodData) => {
-  try {
-    const response = await api.post('/checkout/payment-methods', paymentMethodData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Remove payment method
-export const removePaymentMethod = async (paymentMethodId) => {
-  try {
-    const response = await api.delete(`/checkout/payment-methods/${paymentMethodId}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Set default payment method
-export const setDefaultPaymentMethod = async (paymentMethodId) => {
-  try {
-    const response = await api.patch(`/checkout/payment-methods/${paymentMethodId}/default`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Process M-Pesa payment
-export const processMpesaPayment = async (paymentData) => {
-  try {
-    const response = await api.post('/checkout/mpesa-payment', paymentData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Check M-Pesa payment status
-export const checkMpesaPaymentStatus = async (transactionId) => {
-  try {
-    const response = await api.get(`/checkout/mpesa-status/${transactionId}`);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Process card payment
-export const processCardPayment = async (paymentData) => {
-  try {
-    const response = await api.post('/checkout/card-payment', paymentData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Process PayPal payment
-export const processPayPalPayment = async (paymentData) => {
-  try {
-    const response = await api.post('/checkout/paypal-payment', paymentData);
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Create payment intent
-export const createPaymentIntent = async (amount, currency = 'USD') => {
-  try {
-    const response = await api.post('/checkout/create-payment-intent', {
-      amount,
-      currency
-    });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
-  }
-};
-
-// Confirm payment intent
-export const confirmPaymentIntent = async (paymentIntentId, paymentMethodId) => {
-  try {
-    const response = await api.post('/checkout/confirm-payment-intent', {
-      paymentIntentId,
-      paymentMethodId
-    });
+    const response = await api.post('/checkout/mpesa/validate-phone', { phoneNumber });
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
@@ -338,125 +80,96 @@ export const getCheckoutSession = async (sessionId) => {
   }
 };
 
-// Create checkout session
-export const createCheckoutSession = async (sessionData) => {
+// Update checkout details
+export const updateCheckoutDetails = async (checkoutData) => {
   try {
-    const response = await api.post('/checkout/create-session', sessionData);
+    const response = await api.put('/checkout/details', checkoutData);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
   }
 };
 
-// Expire checkout session
-export const expireCheckoutSession = async (sessionId) => {
+// Remove discount code
+export const removeDiscount = async () => {
   try {
-    const response = await api.post(`/checkout/session/${sessionId}/expire`);
+    const response = await api.delete('/checkout/discount');
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
   }
 };
 
-// Get abandoned carts
-export const getAbandonedCarts = async (hours = 24) => {
+// Get available payment methods (now includes M-Pesa)
+export const getPaymentMethods = async () => {
   try {
-    const response = await api.get(`/checkout/abandoned-carts?hours=${hours}`);
+    const response = await api.get('/checkout/payment-methods');
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
   }
 };
 
-// Recover abandoned cart
-export const recoverAbandonedCart = async (cartId) => {
+// Get shipping options (if needed for physical tickets)
+export const getShippingOptions = async (address) => {
   try {
-    const response = await api.post(`/checkout/recover-cart/${cartId}`);
+    const response = await api.post('/checkout/shipping-options', address);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
   }
 };
 
-// Get checkout analytics
-export const getCheckoutAnalytics = async (startDate, endDate) => {
+// M-Pesa callback verification (for webhook handling)
+export const verifyMpesaCallback = async (callbackData) => {
   try {
-    const response = await api.get(`/checkout/analytics?startDate=${startDate}&endDate=${endDate}`);
+    const response = await api.post('/checkout/mpesa/callback-verify', callbackData);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
   }
 };
 
-// Get conversion rates
-export const getConversionRates = async (period = '30d') => {
+// Get M-Pesa transaction details
+export const getMpesaTransactionDetails = async (checkoutRequestId) => {
   try {
-    const response = await api.get(`/checkout/conversion-rates?period=${period}`);
+    const response = await api.get(`/checkout/mpesa/transaction/${checkoutRequestId}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
   }
 };
 
-// Get average order value
-export const getAverageOrderValue = async (period = '30d') => {
+// Cancel M-Pesa transaction (if supported)
+export const cancelMpesaTransaction = async (transactionId) => {
   try {
-    const response = await api.get(`/checkout/average-order-value?period=${period}`);
+    const response = await api.post('/checkout/mpesa/cancel', { transactionId });
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
   }
 };
 
-// Get checkout performance metrics
-export const getCheckoutPerformance = async () => {
-  try {
-    const response = await api.get('/checkout/performance');
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
+// Helper function to format M-Pesa phone numbers
+export const formatMpesaPhoneNumber = (phoneNumber) => {
+  // Remove any non-digit characters
+  const cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // Handle different input formats
+  if (cleaned.startsWith('254')) {
+    return cleaned;
+  } else if (cleaned.startsWith('0')) {
+    return '254' + cleaned.substring(1);
+  } else if (cleaned.length === 9) {
+    return '254' + cleaned;
   }
+  return cleaned;
 };
 
-export default {
-  getCheckoutSummary,
-  processCheckout,
-  createGuestOrder,
-  getGuestOrder,
-  getGuestOrdersByEmail,
-  sendClaimEmail,
-  validateClaimToken,
-  claimAccount,
-  applyDiscount,
-  validateCheckout,
-  convertGuestOrderToUser,
-  getUserOrders,
-  getOrderById,
-  getOrderByNumber,
-  cancelOrder,
-  requestRefund,
-  sendOrderConfirmation,
-  checkTicketAvailability,
-  getEventTicketInfo,
-  verifyPaymentStatus,
-  resendPaymentConfirmation,
-  getPaymentMethods,
-  savePaymentMethod,
-  removePaymentMethod,
-  setDefaultPaymentMethod,
-  processMpesaPayment,
-  checkMpesaPaymentStatus,
-  processCardPayment,
-  processPayPalPayment,
-  createPaymentIntent,
-  confirmPaymentIntent,
-  getCheckoutSession,
-  createCheckoutSession,
-  expireCheckoutSession,
-  getAbandonedCarts,
-  recoverAbandonedCart,
-  getCheckoutAnalytics,
-  getConversionRates,
-  getAverageOrderValue,
-  getCheckoutPerformance
+// Helper function to validate M-Pesa phone numbers
+export const isValidMpesaPhone = (phoneNumber) => {
+  const formatted = formatMpesaPhoneNumber(phoneNumber);
+  // M-Pesa phone numbers should be 12 digits starting with 254
+  // and the next digit should be 1 or 7 (Safaricom networks)
+  return /^254[17]\d{8}$/.test(formatted);
 };
