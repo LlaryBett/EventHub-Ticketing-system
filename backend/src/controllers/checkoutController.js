@@ -153,6 +153,53 @@ const checkoutController = {
     }
   },
 
+
+  // In checkoutController.js
+
+// Get order by ID
+// Get order by ID
+getOrderById: async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    // ✅ Check if this email is already linked to a registered user
+    let hasAccount = false;
+    let userId = null;
+
+    if (order.customerEmail) {
+      const existingUser = await User.findOne({ email: order.customerEmail });
+      if (existingUser) {
+        hasAccount = true;
+        userId = existingUser._id;
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      order: {
+        ...order.toObject(),
+        hasAccount,
+        userId
+      }
+    });
+  } catch (error) {
+    console.error('Get order by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch order details'
+    });
+  }
+},
+
+
   // Get guest order
   getGuestOrder: async (req, res) => {
     try {
@@ -420,6 +467,7 @@ const checkoutController = {
 
   // Process checkout (updated for both authenticated and guest users)
  // Process checkout (updated to handle frontend payload structure)
+// Process checkout (updated to handle frontend payload structure)
 processCheckout: async (req, res) => {
   try {
     console.log('Checkout payload received from frontend:', req.body);
@@ -457,8 +505,7 @@ processCheckout: async (req, res) => {
     }
 
     const user = req.user || null;
-const isGuest = !user; // assume guest if no authenticated user
-
+    const isGuest = !user; // assume guest if no authenticated user
 
     // Validate items and ticket availability
     for (const item of checkoutData.items) {
@@ -548,6 +595,12 @@ const isGuest = !user; // assume guest if no authenticated user
         );
       }
 
+      // Check if account already exists (for guest orders)
+      let existingUser = null;
+      if (order.isGuestOrder) {
+        existingUser = await User.findOne({ email: order.customerEmail.toLowerCase() });
+      }
+
       // Send confirmation email
       await sendEmail({
         to: order.customerEmail,
@@ -561,15 +614,33 @@ const isGuest = !user; // assume guest if no authenticated user
         `
       });
 
-      res.status(201).json({
-        success: true,
-        message: 'Order placed successfully!',
-        order: {
-          id: order._id,
-          orderNumber: order.orderNumber,
-          isGuestOrder: order.isGuestOrder
-        }
-      });
+      // Prepare response with user info if account exists
+     // Prepare response with user info if account exists
+const responseData = {
+  success: true,
+  message: 'Order placed successfully!',
+  order: {
+    id: order._id,
+    orderNumber: order.orderNumber,
+    isGuestOrder: order.isGuestOrder,
+    hasAccount: !!existingUser,
+    ...(existingUser ? {
+      user: {
+        id: existingUser._id,
+        name: existingUser.name,
+        email: existingUser.email,
+        phone: existingUser.phone // Add this line
+      }
+    } : {
+      guestInfo: {
+        name: order.customerName,
+        email: order.customerEmail,
+        phone: order.billingAddress?.phone // Add this line too for consistency
+      }
+    })
+  }
+};
+      res.status(201).json(responseData);
     } else {
       // Payment failed
       order.status = 'failed';

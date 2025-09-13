@@ -150,6 +150,41 @@ export const cancelMpesaTransaction = async (transactionId) => {
   }
 };
 
+// Get order by ID
+export const getOrderById = async (orderId) => {
+  try {
+    const response = await api.get(`/checkout/order/${orderId}`);
+    return response.data;
+  } catch (error) {
+    // Handle different error scenarios
+    if (error.response?.status === 404) {
+      throw { 
+        message: 'Order not found', 
+        code: 'ORDER_NOT_FOUND',
+        status: 404
+      };
+    } else if (error.response?.status === 401) {
+      throw { 
+        message: 'Authentication required', 
+        code: 'UNAUTHORIZED',
+        status: 401
+      };
+    } else if (error.response?.status === 403) {
+      throw { 
+        message: 'Access denied', 
+        code: 'FORBIDDEN',
+        status: 403
+      };
+    } else {
+      throw { 
+        message: error.response?.data?.message || 'Failed to fetch order details', 
+        code: 'FETCH_ERROR',
+        status: error.response?.status || 500
+      };
+    }
+  }
+};
+
 // Helper function to format M-Pesa phone numbers
 export const formatMpesaPhoneNumber = (phoneNumber) => {
   // Remove any non-digit characters
@@ -172,4 +207,14 @@ export const isValidMpesaPhone = (phoneNumber) => {
   // M-Pesa phone numbers should be 12 digits starting with 254
   // and the next digit should be 1 or 7 (Safaricom networks)
   return /^254[17]\d{8}$/.test(formatted);
+};
+
+// Optional: Helper function to extract order ID from URL or location state
+export const getOrderIdFromLocation = (location, params) => {
+  return params.orderId || location.state?.orderId;
+};
+
+// Optional: Validation function for order IDs
+export const isValidOrderId = (orderId) => {
+  return orderId && typeof orderId === 'string' && orderId.trim().length > 0;
 };

@@ -53,6 +53,9 @@ router.post(
   checkoutController.applyDiscount
 );
 
++ router.get('/order/:orderId', checkoutController.getOrderById);
+
+
 // ✅ Guests OR authenticated can pre-validate
 router.post(
   '/validate',

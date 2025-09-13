@@ -18,6 +18,7 @@ import Login from '../pages/Login';
 import Register from '../pages/Register';
 import NotFound from '../pages/NotFound';
 import HowItWorks from '../pages/HowItWorks'; // 👈 added import
+import PaymentConfirmation from '../pages/PaymentConfirmation';
 
 const AppRoutes = () => {
   return (
@@ -44,6 +45,7 @@ const AppRoutes = () => {
       
       {/* 404 Route */}
       <Route path="*" element={<NotFound />} />
+      <Route path="/payment-confirmation/:orderId?" element={<Layout><PaymentConfirmation /></Layout>} />
     </Routes>
   );
 };
