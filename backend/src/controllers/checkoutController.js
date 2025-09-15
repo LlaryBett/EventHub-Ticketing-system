@@ -6,6 +6,14 @@ const Ticket = require('../models/Ticket');
 const { validationResult } = require('express-validator');
 const { sendEmail } = require('../utils/emailService');
 const jwt = require('jsonwebtoken');
+const {
+  validateTicketAvailability,
+  reserveTickets,
+  confirmTicketPurchase,
+  releaseReservedTickets,
+  createIssuedTickets,
+  sendTicketsEmail
+} = require('../utils/helpers');
 
 // Helper function to process M-Pesa payments
 const processMpesaPayment = async (order, paymentDetails) => {
@@ -95,6 +103,7 @@ const checkoutController = {
         }
 
         // Validate ticket (if provided)
+        console.log('Ticket id for validation:', item.ticket); // Log the ticket id being used
         const ticket = await Ticket.findById(item.ticket);
         if (!ticket) {
           console.log(`❌ Ticket not found for ID: ${item.ticket}`);
@@ -472,10 +481,9 @@ processCheckout: async (req, res) => {
   try {
     console.log('Checkout payload received from frontend:', req.body);
 
-    // 🔹 Transform frontend payload to match validation expectations
+    // 🔹 Transform frontend payload
     const checkoutData = req.body;
     
-    // Create billingAddress object from customerInfo
     if (checkoutData.customerInfo) {
       const [firstName, ...rest] = checkoutData.customerInfo.fullName.split(" ");
       req.body.billingAddress = {
@@ -486,17 +494,15 @@ processCheckout: async (req, res) => {
       };
     }
 
-    // Create paymentDetails object for M-Pesa
     if (checkoutData.mpesaPhone) {
       req.body.paymentDetails = {
         phone: checkoutData.mpesaPhone
       };
     }
 
-    // 🔹 Run validation AFTER reshaping the request body
+    // 🔹 Validation
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.log('Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         message: 'Validation failed',
@@ -505,158 +511,189 @@ processCheckout: async (req, res) => {
     }
 
     const user = req.user || null;
-    const isGuest = !user; // assume guest if no authenticated user
+    const isGuest = !user;
 
-    // Validate items and ticket availability
-    for (const item of checkoutData.items) {
-      const event = await Event.findById(item.eventId);
-      if (!event) {
-        return res.status(400).json({
-          success: false,
-          message: `Event not found: ${item.title}`
-        });
-      }
-      
-      if (event.availableTickets < item.quantity) {
-        return res.status(400).json({
-          success: false,
-          message: `Not enough tickets available for ${event.title}`
-        });
-      }
-    }
+    // 🔹 VALIDATE TICKET AVAILABILITY
+    await validateTicketAvailability(checkoutData.items);
+
+    // 🔹 RESERVE TICKETS TEMPORARILY
+    await reserveTickets(checkoutData.items);
 
     let order;
 
-    if (isGuest) {
-      // Handle guest checkout
-      order = new Order({
-        customerEmail: checkoutData.customerInfo.email,
-        customerName: checkoutData.customerInfo.fullName,
-        items: checkoutData.items,
-        billingAddress: req.body.billingAddress, // Use the transformed billingAddress
-        paymentMethod: checkoutData.paymentMethod,
-        paymentDetails: req.body.paymentDetails, // Use the transformed paymentDetails
-        discountCode: checkoutData.discountCode,
-        totals: checkoutData.totals,
-        isGuestOrder: true,
-        status: 'pending'
-      });
-    } else if (user) {
-      // Process authenticated user order
-      order = new Order({
-        userId: user._id,
-        customerEmail: user.email,
-        customerName: user.name,
-        items: checkoutData.items,
-        billingAddress: req.body.billingAddress, // Use the transformed billingAddress
-        paymentMethod: checkoutData.paymentMethod,
-        paymentDetails: req.body.paymentDetails, // Use the transformed paymentDetails
-        discountCode: checkoutData.discountCode,
-        totals: checkoutData.totals,
-        isGuestOrder: false,
-        status: 'pending'
-      });
-    } else {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid checkout request'
-      });
-    }
+    try {
+      // Create order (your existing code)
+      if (isGuest) {
+        order = new Order({
+          customerEmail: checkoutData.customerInfo.email,
+          customerName: checkoutData.customerInfo.fullName,
+          items: checkoutData.items,
+          billingAddress: req.body.billingAddress,
+          paymentMethod: checkoutData.paymentMethod,
+          paymentDetails: req.body.paymentDetails,
+          discountCode: checkoutData.discountCode,
+          totals: checkoutData.totals,
+          isGuestOrder: true,
+          status: 'pending'
+        });
+      } else {
+        order = new Order({
+          userId: user._id,
+          customerEmail: user.email,
+          customerName: user.name,
+          items: checkoutData.items,
+          billingAddress: req.body.billingAddress,
+          paymentMethod: checkoutData.paymentMethod,
+          paymentDetails: req.body.paymentDetails,
+          discountCode: checkoutData.discountCode,
+          totals: checkoutData.totals,
+          isGuestOrder: false,
+          status: 'pending'
+        });
+      }
 
-    // Save order first to get order ID
-    await order.save();
-
-    // Process payment based on payment method
-    let paymentSuccess = false;
-    
-    if (checkoutData.paymentMethod === 'mpesa') {
-      paymentSuccess = await processMpesaPayment(order, req.body.paymentDetails);
-    } else if (checkoutData.paymentMethod === 'card') {
-      paymentSuccess = await processCardPayment(order, req.body.paymentDetails);
-    } else {
-      paymentSuccess = true; // Assume success for other methods
-    }
-    
-    if (paymentSuccess) {
-      // Update order status to completed
-      order.status = 'completed';
       await order.save();
+      console.log('Order payload being saved:', order);
 
-      // Update event ticket counts
-      for (const item of order.items) {
-        await Event.findByIdAndUpdate(
-          item.eventId,
-          { 
-            $inc: { 
-              availableTickets: -item.quantity,
-              ticketsSold: item.quantity
+      // Process payment
+      let paymentSuccess = false;
+      
+      if (checkoutData.paymentMethod === 'mpesa') {
+        paymentSuccess = await processMpesaPayment(order, req.body.paymentDetails);
+      } else if (checkoutData.paymentMethod === 'card') {
+        paymentSuccess = await processCardPayment(order, req.body.paymentDetails);
+      } else {
+        paymentSuccess = true;
+      }
+      
+      if (paymentSuccess) {
+        // 🔹 PAYMENT SUCCESSFUL
+        order.status = 'completed';
+        await order.save();
+
+        // 🔹 CONFIRM TICKET PURCHASE
+        await confirmTicketPurchase(order.items);
+
+        const currentDate = new Date();
+        let eventsAttendedIncrement = 0;
+        let upcomingEventsIncrement = 0;
+
+        // Update event ticket counts
+        for (const item of order.items) {
+          await Event.findByIdAndUpdate(
+            item.eventId,
+            { 
+              $inc: { 
+                availableTickets: -item.quantity,
+                ticketsSold: item.quantity
+              }
+            }
+          );
+
+          // Calculate event stats for authenticated users
+          if (user) {
+            const event = await Event.findById(item.eventId);
+            const eventDate = new Date(event.date);
+            const isPastEvent = eventDate < currentDate;
+            
+            if (isPastEvent) {
+              eventsAttendedIncrement += 1;
+            } else {
+              upcomingEventsIncrement += 1;
             }
           }
-        );
+        }
+
+        // Update user event counts if authenticated
+        if (user && (eventsAttendedIncrement > 0 || upcomingEventsIncrement > 0)) {
+          await User.findByIdAndUpdate(
+            user._id,
+            {
+              $inc: {
+                eventsAttended: eventsAttendedIncrement,
+                upcomingEvents: upcomingEventsIncrement
+              }
+            }
+          );
+        }
+
+        // 🔹 CREATE ISSUED TICKETS
+        const issuedTickets = await createIssuedTickets(order, user);
+        console.log('Constructed issuedTickets:', issuedTickets);
+
+        // Check if account already exists for guest orders
+        let existingUser = null;
+        if (order.isGuestOrder) {
+          existingUser = await User.findOne({ email: order.customerEmail.toLowerCase() });
+        }
+
+        // 🔹 SEND TICKETS EMAIL
+        await sendTicketsEmail(order, user || existingUser, issuedTickets);
+
+        // Get updated user data if authenticated
+        let updatedUser = null;
+        if (user) {
+          updatedUser = await User.findById(user._id);
+        }
+
+        // Prepare response
+        const responseData = {
+          success: true,
+          message: 'Order placed successfully!',
+          order: {
+            id: order._id,
+            orderNumber: order.orderNumber,
+            isGuestOrder: order.isGuestOrder,
+            hasAccount: !!existingUser || !!user,
+            ticketCount: issuedTickets.length,
+            ...((existingUser || user) ? {
+              user: {
+                id: (user || existingUser)._id,
+                name: (user || existingUser).name,
+                email: (user || existingUser).email,
+                phone: (user || existingUser).phone,
+                eventsAttended: updatedUser?.eventsAttended || existingUser?.eventsAttended || 0,
+                upcomingEvents: updatedUser?.upcomingEvents || existingUser?.upcomingEvents || 0
+              }
+            } : {
+              guestInfo: {
+                name: order.customerName,
+                email: order.customerEmail,
+                phone: order.billingAddress?.phone
+              }
+            })
+          }
+        };
+
+        res.status(201).json(responseData);
+
+      } else {
+        // 🔹 PAYMENT FAILED - RELEASE RESERVED TICKETS
+        order.status = 'failed';
+        await order.save();
+        await releaseReservedTickets(order.items);
+        
+        res.status(400).json({
+          success: false,
+          message: 'Payment processing failed. Please try again.'
+        });
       }
 
-      // Check if account already exists (for guest orders)
-      let existingUser = null;
-      if (order.isGuestOrder) {
-        existingUser = await User.findOne({ email: order.customerEmail.toLowerCase() });
-      }
-
-      // Send confirmation email
-      await sendEmail({
-        to: order.customerEmail,
-        subject: 'Order Confirmation',
-        html: `
-          <h2>Thank you for your order!</h2>
-          <p>Your order #${order.orderNumber} has been confirmed.</p>
-          ${order.isGuestOrder ? `
-          <p>You checked out as a guest. <a href="${process.env.FRONTEND_URL}/claim-account?email=${order.customerEmail}">Claim your account</a> to access your tickets anytime.</p>
-          ` : ''}
-        `
-      });
-
-      // Prepare response with user info if account exists
-     // Prepare response with user info if account exists
-const responseData = {
-  success: true,
-  message: 'Order placed successfully!',
-  order: {
-    id: order._id,
-    orderNumber: order.orderNumber,
-    isGuestOrder: order.isGuestOrder,
-    hasAccount: !!existingUser,
-    ...(existingUser ? {
-      user: {
-        id: existingUser._id,
-        name: existingUser.name,
-        email: existingUser.email,
-        phone: existingUser.phone // Add this line
-      }
-    } : {
-      guestInfo: {
-        name: order.customerName,
-        email: order.customerEmail,
-        phone: order.billingAddress?.phone // Add this line too for consistency
-      }
-    })
-  }
-};
-      res.status(201).json(responseData);
-    } else {
-      // Payment failed
-      order.status = 'failed';
-      await order.save();
-      
-      res.status(400).json({
-        success: false,
-        message: 'Payment processing failed. Please try again.'
-      });
+    } catch (error) {
+      // 🔹 RELEASE TICKETS ON ANY ERROR
+      await releaseReservedTickets(checkoutData.items);
+      throw error;
     }
 
   } catch (error) {
     console.error('Checkout error:', error);
-    res.status(500).json({
+    
+    // Determine appropriate status code
+    const statusCode = error.message.includes('available') ? 400 : 500;
+    
+    res.status(statusCode).json({
       success: false,
-      message: 'Failed to process payment. Please try again.'
+      message: error.message || 'Failed to process payment. Please try again.'
     });
   }
 },

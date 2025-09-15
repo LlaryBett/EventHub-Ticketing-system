@@ -23,24 +23,34 @@ const Login = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    console.log('Login payload:', formData);
-    try {
-      const response = await login(formData.email, formData.password);
-      showSuccess(response?.message || 'Welcome back! You have successfully logged in.');
+  e.preventDefault();
+  setLoading(true);
+  
+  try {
+    const response = await login(formData.email, formData.password);
+    showSuccess(response?.message || 'Welcome back!');
+    // Log the user object for debugging
+    console.log('User object from login response:', response.user);
+    // Use the userType from the user object (nested data)
+    const userType = response?.user?.data?.userType;
+    console.log('Detected userType:', userType);
+    
+    if (userType === 'organizer') {
+      navigate('/organizer-dashboard', { replace: true });
+    } else {
       navigate('/dashboard', { replace: true });
-    } catch (error) {
-      // Check if it's an authentication error from the interceptor
-      if (error.isAuthError) {
-        showError('Session expired. Please login again.');
-      } else {
-        showError(error?.message || (error?.response?.data?.message) || 'Login failed. Please check your credentials.');
-      }
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    // Check if it's an authentication error from the interceptor
+    if (error.isAuthError) {
+      showError('Session expired. Please login again.');
+    } else {
+      showError(error?.message || (error?.response?.data?.message) || 'Login failed. Please check your credentials.');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">

@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import { eventService } from '../services/eventService';
+import { getMe } from '../services/userService';
 import { formatDate, formatPrice } from '../utils/formatDate';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 
 const OrganizerDashboard = () => {
-  const { user } = useAuth();
   const { showSuccess, showError } = useUI();
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
   const [organizerEvents, setOrganizerEvents] = useState([]);
   const [analytics, setAnalytics] = useState({
     totalEvents: 0,
@@ -24,18 +24,18 @@ const OrganizerDashboard = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
-    const fetchOrganizerData = async () => {
+    const fetchUserAndData = async () => {
       try {
-        // Mock organizer events - in real app, filter by organizer
+        const userData = await getMe();
+        setUser(userData);
         const allEvents = await eventService.getAllEvents();
-        const userEvents = allEvents.filter(event => event.organizer === user.name);
+        const organizerId = userData.data.organizerProfile?.id || userData.data.organizerProfile?._id || userData.data.id || userData.data._id;
+        const userEvents = allEvents.data.filter(event => String(event.organizer) === String(organizerId));
         setOrganizerEvents(userEvents);
-
         // Calculate analytics
         const totalRevenue = userEvents.reduce((sum, event) => sum + (event.price * event.registered), 0);
         const totalAttendees = userEvents.reduce((sum, event) => sum + event.registered, 0);
         const upcomingEvents = userEvents.filter(event => new Date(event.date) > new Date()).length;
-
         setAnalytics({
           totalEvents: userEvents.length,
           totalRevenue,
@@ -49,15 +49,11 @@ const OrganizerDashboard = () => {
         setLoading(false);
       }
     };
-
-    if (user) {
-      fetchOrganizerData();
-    }
-  }, [user, showError]);
+    fetchUserAndData();
+  }, [showError]);
 
   const handleDeleteEvent = async () => {
     if (!selectedEvent) return;
-
     try {
       await eventService.deleteEvent(selectedEvent.id);
       setOrganizerEvents(prev => prev.filter(event => event.id !== selectedEvent.id));
@@ -76,7 +72,7 @@ const OrganizerDashboard = () => {
     { id: 'settings', label: 'Settings', icon: '⚙️' }
   ];
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <LoadingSpinner size="large" />
@@ -99,10 +95,10 @@ const OrganizerDashboard = () => {
             <div className="bg-white rounded-lg shadow-md p-6">
               <div className="flex items-center mb-6">
                 <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
-                  {user.name?.charAt(0)}
+                  {user.data.name?.charAt(0)}
                 </div>
                 <div className="ml-4">
-                  <h2 className="font-semibold text-gray-900">{user.name}</h2>
+                  <h2 className="font-semibold text-gray-900">{user.data.name}</h2>
                   <p className="text-sm text-gray-500">Event Organizer</p>
                 </div>
               </div>
@@ -239,7 +235,7 @@ const OrganizerDashboard = () => {
                   {organizerEvents.length === 0 ? (
                     <div className="text-center py-8">
                       <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                       <p className="text-gray-500 mb-4">You haven't created any events yet.</p>
                       <Link to="/organizer">
@@ -368,7 +364,7 @@ const OrganizerDashboard = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Organization Name</label>
                       <input
                         type="text"
-                        defaultValue={user.name}
+                        defaultValue={user.data.name}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
@@ -376,7 +372,7 @@ const OrganizerDashboard = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Contact Email</label>
                       <input
                         type="email"
-                        defaultValue={user.email}
+                        defaultValue={user.data.email}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>

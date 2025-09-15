@@ -15,7 +15,7 @@ const generateToken = (id, userType) => {
 };
 
 // Send response with token
-const sendTokenResponse = (user, statusCode, res, userType) => {
+const sendTokenResponse = (user, statusCode, res, userType, migratedCount = 0) => {
   const token = generateToken(user._id, userType);
 
   const options = {
@@ -26,16 +26,21 @@ const sendTokenResponse = (user, statusCode, res, userType) => {
     secure: process.env.NODE_ENV === 'production',
   };
 
-  // Remove password from output
+  // Remove sensitive data
   user.password = undefined;
 
   res.status(statusCode).cookie('token', token, options).json({
     success: true,
     token,
-    data: user,
-    userType
+    userType,
+    migratedCount, // 🔄 how many guest orders were linked
+    data: {
+      ...user._doc,   // includes all mongoose fields
+      id: user._id    // add plain `id` for frontend convenience
+    }
   });
 };
+
 
 // @desc    Register attendee during checkout
 // @route   POST /api/auth/register/checkout
@@ -542,6 +547,7 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
 // @access  Public
 exports.login = async (req, res, next) => {
   try {
+    // ✅ Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -552,7 +558,7 @@ exports.login = async (req, res, next) => {
 
     const { email, password } = req.body;
 
-    // Check if user exists
+    // 🔍 Check if user exists
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
       return res.status(401).json({
@@ -561,7 +567,7 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Check if password matches
+    // 🔑 Check if password matches
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       return res.status(401).json({
@@ -570,18 +576,19 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Check if organizer account is approved (if organizer)
+    // 👤 If organizer, check approval
     if (user.userType === 'organizer') {
       const organizer = await Organizer.findOne({ userId: user._id });
       if (organizer && organizer.approvalStatus !== 'approved') {
         return res.status(401).json({
           success: false,
-          message: 'Your organizer account is pending approval. Please wait for admin verification.'
+          message:
+            'Your organizer account is pending approval. Please wait for admin verification.'
         });
       }
     }
 
-    // Check if account is active
+    // 🚫 Check account status
     if (user.status !== 'active') {
       return res.status(401).json({
         success: false,
@@ -589,7 +596,45 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    sendTokenResponse(user, 200, res, user.userType);
+    // 🔗 Guest order migration (safe for both attendees & organizers)
+    let migratedCount = 0;
+    const guestOrders = await Order.find({
+      customerEmail: email,
+      isGuestOrder: true,
+      convertedToUser: false
+    });
+
+    if (guestOrders.length > 0) {
+      await Promise.all(
+        guestOrders.map(async (order) => {
+          console.log(`➡️ Migrating guest order ${order.orderNumber} for ${email}`);
+
+          order.isGuestOrder = false;
+          order.convertedToUser = true;
+          order.userId = user._id;
+          order.hasAccount = true; // keep consistent
+
+          const updated = await order.save();
+          console.log(`✅ Migrated order ${updated.orderNumber}, now linked to user ${user._id}`);
+          return updated;
+        })
+      );
+      migratedCount = guestOrders.length;
+    }
+
+    // 🔍 Fetch ALL orders for this email or userId
+    const allOrders = await Order.find({
+      $or: [
+        { customerEmail: email },
+        { userId: user._id }
+      ]
+    });
+
+    console.log(`📦 Orders for ${email}:`, allOrders);
+
+    // 🎟️ Send token + include migrated orders info
+    sendTokenResponse(user, 200, res, user.userType, migratedCount);
+
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({
@@ -598,6 +643,9 @@ exports.login = async (req, res, next) => {
     });
   }
 };
+
+
+
 
 
 

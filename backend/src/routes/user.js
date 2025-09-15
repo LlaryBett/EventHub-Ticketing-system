@@ -1,4 +1,3 @@
-// backend/src/routes/users.js
 const express = require('express');
 const { body } = require('express-validator');
 const {
@@ -8,7 +7,9 @@ const {
   updatePassword,
   updateOrganizerProfile,
   deleteAccount,
-  getUserEvents
+  getUserEvents,
+  getUserOrderHistory, // ⬅️ import new controller
+   getUserTickets // ⬅️ import new controller
 } = require('../controllers/userController');
 const { protect } = require('../middleware/auth');
 
@@ -81,6 +82,8 @@ const organizerProfileValidation = [
 router.get('/me', protect, getMe);
 router.get('/:id', getUserProfile);
 router.get('/:id/events', protect, getUserEvents);
+router.get('/:id/orders', protect, getUserOrderHistory);  // ⬅️ NEW route
+router.get('/:id/tickets', protect, getUserTickets); // ⬅️ NEW route
 router.put('/updatedetails', protect, updateDetailsValidation, updateDetails);
 router.put('/updatepassword', protect, updatePasswordValidation, updatePassword);
 router.put('/organizer/profile', protect, organizerProfileValidation, updateOrganizerProfile);

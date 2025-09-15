@@ -31,13 +31,15 @@ const Register = () => {
   // Initialize isAttendee based on URL parameters
   const [isAttendee, setIsAttendee] = useState(getRegistrationTypeFromURL);
 
+  const prefill = location.state?.prefill || {};
+
   const [formData, setFormData] = useState({
     // Personal Info
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    phone: '',
+    name: prefill.name || '',
+    email: prefill.email || '',
+    password: prefill.password || '',
+    confirmPassword: prefill.confirmPassword || '',
+    phone: prefill.phone || '',
     
     // Organization Info
     organizationName: '',
@@ -436,7 +438,17 @@ const Register = () => {
                   {currentStep === 1 && (
                     <div className="space-y-4">
                       <h2 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h2>
-                      
+                      {/* Show summary if step1Response exists */}
+                      {step1Response && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                          <p className="text-green-700 text-sm font-medium mb-1">Personal info saved:</p>
+                          <ul className="text-xs text-green-700 list-disc list-inside">
+                            <li>Name: {step1Response.name || formData.name}</li>
+                            <li>Email: {step1Response.email || formData.email}</li>
+                            <li>Phone: {step1Response.phone || formData.phone}</li>
+                          </ul>
+                        </div>
+                      )}
                       <Input
                         label="Full Name *"
                         placeholder="Enter your full name"

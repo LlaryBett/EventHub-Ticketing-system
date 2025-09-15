@@ -97,6 +97,15 @@ TicketSchema.methods.releaseTickets = function(quantity) {
   return this.save();
 };
 
+// Method to confirm ticket purchase (permanent)
+TicketSchema.methods.confirmPurchase = function(quantity) {
+  if (!this.canPurchase(quantity)) {
+    throw new Error(`Cannot confirm purchase of ${quantity} tickets`);
+  }
+  this.available -= quantity;
+  return this.save();
+};
+
 // Static method to get available tickets for an event
 TicketSchema.statics.getAvailableTickets = function(eventId) {
   return this.find({

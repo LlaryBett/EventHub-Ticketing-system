@@ -152,6 +152,7 @@ const Checkout = () => {
     const checkoutData = {
       items: [{
         eventId: ticketItem.eventId,
+        ticket: ticketItem._id || ticketItem.id, // Ensure ticket id is always passed
         quantity: ticketItem.quantity,
         price: ticketItem.price,
         title: ticketItem.title
@@ -168,6 +169,7 @@ const Checkout = () => {
       discountCode: discount ? discount.code : undefined,
       totals
     };
+    console.log('Ticket ID being passed to backend:', checkoutData.items[0].ticket);
 
     const order = await processCheckout(checkoutData);
     // Show success message with M-Pesa prompt info

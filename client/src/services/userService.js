@@ -6,7 +6,8 @@ export const getMe = async () => {
     const response = await api.get('/user/me');
     return response.data;
   } catch (error) {
-    throw error.response?.data || error.message;
+    const errorMessage = error.response?.data?.message || error.message;
+    throw new Error(errorMessage);
   }
 };
 
@@ -16,7 +17,8 @@ export const getUserProfile = async (userId) => {
     const response = await api.get(`/user/${userId}`);
     return response.data;
   } catch (error) {
-    throw error.response?.data || error.message;
+    const errorMessage = error.response?.data?.message || error.message;
+    throw new Error(errorMessage);
   }
 };
 
@@ -32,7 +34,12 @@ export const updateDetails = async (userData) => {
     }
     return response.data;
   } catch (error) {
-    throw error.response?.data || error.message;
+    // Handle validation errors specifically
+    if (error.response?.data?.errors) {
+      throw new Error(error.response.data.errors.map(err => err.msg).join(', '));
+    }
+    const errorMessage = error.response?.data?.message || error.message;
+    throw new Error(errorMessage);
   }
 };
 
@@ -45,7 +52,11 @@ export const updatePassword = async (passwords) => {
     }
     return response.data;
   } catch (error) {
-    throw error.response?.data || error.message;
+    if (error.response?.data?.errors) {
+      throw new Error(error.response.data.errors.map(err => err.msg).join(', '));
+    }
+    const errorMessage = error.response?.data?.message || error.message;
+    throw new Error(errorMessage);
   }
 };
 
@@ -55,7 +66,11 @@ export const updateOrganizerProfile = async (profileData) => {
     const response = await api.put('/user/organizer/profile', profileData);
     return response.data;
   } catch (error) {
-    throw error.response?.data || error.message;
+    if (error.response?.data?.errors) {
+      throw new Error(error.response.data.errors.map(err => err.msg).join(', '));
+    }
+    const errorMessage = error.response?.data?.message || error.message;
+    throw new Error(errorMessage);
   }
 };
 
@@ -67,16 +82,94 @@ export const deleteAccount = async () => {
     localStorage.removeItem('user');
     return response.data;
   } catch (error) {
-    throw error.response?.data || error.message;
+    const errorMessage = error.response?.data?.message || error.message;
+    throw new Error(errorMessage);
   }
 };
 
 // Get events for a user by ID
 export const getUserEvents = async (userId) => {
   try {
-    const response = await api.get(`/user/${userId}/events`);
+    console.log('[getUserEvents] userId:', userId); // log the incoming userId
+
+    const url = `/user/${userId}/events`;
+    console.log('[getUserEvents] Requesting URL:', url); // log the URL being requested
+
+    const response = await api.get(url);
+
+    console.log('[getUserEvents] Response data:', response.data); // log response from backend
+
     return response.data;
   } catch (error) {
-    throw error.response?.data || error.message;
+    const errorMessage = error.response?.data?.message || error.message;
+    console.error('[getUserEvents] Error:', errorMessage); // log the error
+    throw new Error(errorMessage);
   }
+};
+// ✅ Get order history for a user
+export const getOrderHistory = async (userId) => {
+  try {
+    console.log('[getOrderHistory] userId:', userId);
+
+    // Match backend route → /user/:id/orders
+    const url = `/user/${userId}/orders`;
+    console.log('[getOrderHistory] Requesting URL:', url);
+
+    const response = await api.get(url);
+
+    console.log('[getOrderHistory] Response data:', response.data);
+
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || error.message;
+    console.error('[getOrderHistory] Error:', errorMessage);
+    throw new Error(errorMessage);
+  }
+};
+
+// Get all issued tickets for a user
+export const getUserTickets = async (userId) => {
+  try {
+    console.log('[getUserTickets] userId:', userId);
+
+    // Backend route: /user/:id/tickets
+    const url = `/user/${userId}/tickets`;
+    console.log('[getUserTickets] Requesting URL:', url);
+
+    const response = await api.get(url);
+
+    console.log('[getUserTickets] Response data:', response.data);
+
+    // Should return { success: true, data: [ ...tickets ] } or similar
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || error.message;
+    console.error('[getUserTickets] Error:', errorMessage);
+    throw new Error(errorMessage);
+  }
+};
+ 
+
+// Placeholder: Get event recommendations for a user
+export const getEventRecommendations = async (userId) => {
+  // TODO: Implement actual logic or API call
+  return [];
+};
+
+// Placeholder: Get attendee networking list for a user
+export const getAttendeeNetworkingList = async (userId) => {
+  // TODO: Implement actual logic or API call
+  return [];
+};
+
+// Placeholder: Get event photos for a user
+export const getEventPhotos = async (userId) => {
+  // TODO: Implement actual logic or API call
+  return [];
+};
+
+// Placeholder: Get spending analytics for a user
+export const getSpendingAnalytics = async (userId) => {
+  // TODO: Implement actual logic or API call
+  return {};
 };

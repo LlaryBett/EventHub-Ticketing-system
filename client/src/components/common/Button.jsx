@@ -15,13 +15,14 @@ const Button = ({
 const baseClasses = 'font-medium rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
 
   
-  const variantClasses = {
+ const variantClasses = {
   primary: 'bg-primary-600 hover:bg-primary-700 text-white focus:ring-primary-500',
   secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-800 focus:ring-gray-500',
-  outline: 'border-2 border-white text-white hover:bg-white hover:text-primary-600 focus:ring-white',
+  outline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-blue-500',
   danger: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
   success: 'bg-green-600 hover:bg-green-700 text-white focus:ring-green-500'
 };
+
 
   
   const sizeClasses = {

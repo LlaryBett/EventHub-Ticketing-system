@@ -6,6 +6,11 @@ const orderItemSchema = new mongoose.Schema({
     ref: 'Event',
     required: true
   },
+  ticket: { // <-- Add this field
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Ticket',
+    required: true
+  },
   quantity: {
     type: Number,
     required: true,

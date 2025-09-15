@@ -66,6 +66,15 @@ const UserSchema = new mongoose.Schema({
   createdThroughCheckout: {
     type: Boolean,
     default: false
+  },
+  // Add these two fields for event tracking
+  eventsAttended: {
+    type: Number,
+    default: 0
+  },
+  upcomingEvents: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true,
@@ -73,6 +82,7 @@ const UserSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
+// ... rest of the schema remains exactly the same ...
 // Index for better query performance
 UserSchema.index({ email: 1 });
 UserSchema.index({ userType: 1 });

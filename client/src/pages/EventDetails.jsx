@@ -441,6 +441,7 @@ const EventDetails = () => {
                           quantity: selectedQuantity,
                           image: event.image,
                           type: ticket.type,
+                          _id: ticket.id // Use ticket.id for _id
                         }
                       }
                     });
