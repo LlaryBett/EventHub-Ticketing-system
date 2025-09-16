@@ -106,7 +106,8 @@ export const getUserEvents = async (userId) => {
     throw new Error(errorMessage);
   }
 };
-// ✅ Get order history for a user
+
+// Get order history for a user
 export const getOrderHistory = async (userId) => {
   try {
     console.log('[getOrderHistory] userId:', userId);
@@ -148,7 +149,112 @@ export const getUserTickets = async (userId) => {
     throw new Error(errorMessage);
   }
 };
- 
+
+// ===== ORGANIZER ATTENDEE MANAGEMENT FUNCTIONS =====
+
+// Get all attendees for organizer's events
+export const getOrganizerAttendees = async () => {
+  try {
+    console.log('[getOrganizerAttendees] Fetching all attendees for organizer');
+
+    const response = await api.get('/user/organizer/attendees');
+
+    console.log('[getOrganizerAttendees] Response data:', response.data);
+
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || error.message;
+    console.error('[getOrganizerAttendees] Error:', errorMessage);
+    throw new Error(errorMessage);
+  }
+};
+
+// Get attendees for a specific event
+export const getEventAttendees = async (eventId) => {
+  try {
+    console.log('[getEventAttendees] eventId:', eventId);
+
+    const url = `/user/organizer/events/${eventId}/attendees`;
+    console.log('[getEventAttendees] Requesting URL:', url);
+
+    const response = await api.get(url);
+
+    console.log('[getEventAttendees] Response data:', response.data);
+
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || error.message;
+    console.error('[getEventAttendees] Error:', errorMessage);
+    throw new Error(errorMessage);
+  }
+};
+
+// Export attendees data for an event
+export const exportEventAttendees = async (eventId, format = 'csv') => {
+  try {
+    console.log('[exportEventAttendees] eventId:', eventId, 'format:', format);
+
+    const url = `/user/organizer/events/${eventId}/attendees/export?format=${format}`;
+    console.log('[exportEventAttendees] Requesting URL:', url);
+
+    const response = await api.get(url, {
+      responseType: 'blob' // Important for file downloads
+    });
+
+    console.log('[exportEventAttendees] Export successful');
+
+    return response; // Return full response for file handling
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || error.message;
+    console.error('[exportEventAttendees] Error:', errorMessage);
+    throw new Error(errorMessage);
+  }
+};
+
+// Check in an attendee
+export const checkInAttendee = async (ticketId) => {
+  try {
+    console.log('[checkInAttendee] ticketId:', ticketId);
+
+    const url = `/user/organizer/tickets/${ticketId}/checkin`;
+    console.log('[checkInAttendee] Requesting URL:', url);
+
+    const response = await api.post(url);
+
+    console.log('[checkInAttendee] Response data:', response.data);
+
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || error.message;
+    console.error('[checkInAttendee] Error:', errorMessage);
+    throw new Error(errorMessage);
+  }
+};
+
+// Utility function to handle CSV download
+export const downloadAttendeesCSV = async (eventId, eventTitle) => {
+  try {
+    const response = await exportEventAttendees(eventId, 'csv');
+    
+    // Create blob link and trigger download
+    const blob = new Blob([response.data], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${eventTitle || 'event'}-attendees.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    console.log('[downloadAttendeesCSV] Download triggered successfully');
+  } catch (error) {
+    console.error('[downloadAttendeesCSV] Error:', error);
+    throw error;
+  }
+};
+
+// ===== PLACEHOLDER FUNCTIONS =====
 
 // Placeholder: Get event recommendations for a user
 export const getEventRecommendations = async (userId) => {

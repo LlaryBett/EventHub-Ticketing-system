@@ -35,6 +35,7 @@ const EventCard = ({ event }) => {
   const firstTicket = Array.isArray(event.tickets) && event.tickets.length > 0
     ? event.tickets[0]
     : null;
+  const hasPrice = firstTicket && typeof firstTicket.price === 'number';
 
   return (
     <Link
@@ -62,7 +63,7 @@ const EventCard = ({ event }) => {
           )}
           <div className="absolute top-4 right-4">
             <span className="bg-white bg-opacity-90 text-gray-900 px-2 py-1 rounded-full text-xs font-medium">
-              {firstTicket ? formatPrice(firstTicket.price) : 'N/A'}
+              {hasPrice ? formatPrice(firstTicket.price) : 'N/A'}
             </span>
           </div>
           {!isUpcoming && (
@@ -77,7 +78,7 @@ const EventCard = ({ event }) => {
         <div className="p-4 flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm text-primary-600 font-medium capitalize">
-              {event.category}
+              {event.category?.icon} {event.category?.name}
             </span>
             {isUpcoming && daysUntil <= 7 && (
               <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">
@@ -127,7 +128,7 @@ const EventCard = ({ event }) => {
           </Link>
 
           {isUpcoming ? (
-            firstTicket ? (
+            hasPrice ? (
               <Button
                 fullWidth={false}
                 onClick={e => handleAddToCart(e, firstTicket)}

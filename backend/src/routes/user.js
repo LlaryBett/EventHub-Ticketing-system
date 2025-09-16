@@ -8,8 +8,13 @@ const {
   updateOrganizerProfile,
   deleteAccount,
   getUserEvents,
-  getUserOrderHistory, // ⬅️ import new controller
-   getUserTickets // ⬅️ import new controller
+  getUserOrderHistory,
+  getUserTickets,
+  // Organizer-specific imports
+  getOrganizerAttendees,
+  getEventAttendees,
+  exportEventAttendees,
+  checkInAttendee
 } = require('../controllers/userController');
 const { protect } = require('../middleware/auth');
 
@@ -78,15 +83,23 @@ const organizerProfileValidation = [
     .withMessage('Please provide a valid website URL')
 ];
 
-// Protected routes
+// User profile routes
 router.get('/me', protect, getMe);
 router.get('/:id', getUserProfile);
 router.get('/:id/events', protect, getUserEvents);
-router.get('/:id/orders', protect, getUserOrderHistory);  // ⬅️ NEW route
-router.get('/:id/tickets', protect, getUserTickets); // ⬅️ NEW route
+router.get('/:id/orders', protect, getUserOrderHistory);
+router.get('/:id/tickets', protect, getUserTickets);
+
+// User account management
 router.put('/updatedetails', protect, updateDetailsValidation, updateDetails);
 router.put('/updatepassword', protect, updatePasswordValidation, updatePassword);
 router.put('/organizer/profile', protect, organizerProfileValidation, updateOrganizerProfile);
 router.delete('/delete', protect, deleteAccount);
+
+// Organizer attendee management routes
+router.get('/organizer/attendees', protect, getOrganizerAttendees);
+router.get('/organizer/events/:eventId/attendees', protect, getEventAttendees);
+router.get('/organizer/events/:eventId/attendees/export', protect, exportEventAttendees);
+router.post('/organizer/tickets/:ticketId/checkin', protect, checkInAttendee);
 
 module.exports = router;

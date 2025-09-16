@@ -314,6 +314,100 @@ const validateCheckout = (method) => {
 };
 
 
+
+
+// Notification preferences validation
+const validateNotificationPreferences = [
+  body('emailNotifications')
+    .optional()
+    .isBoolean()
+    .withMessage('Email notifications must be a boolean value'),
+  
+  body('eventReminders')
+    .optional()
+    .isBoolean()
+    .withMessage('Event reminders must be a boolean value'),
+  
+  body('ticketUpdates')
+    .optional()
+    .isBoolean()
+    .withMessage('Ticket updates must be a boolean value'),
+  
+  body('eventUpdates')
+    .optional()
+    .isBoolean()
+    .withMessage('Event updates must be a boolean value'),
+  
+  body('promotionalEmails')
+    .optional()
+    .isBoolean()
+    .withMessage('Promotional emails must be a boolean value'),
+  
+  body('smsNotifications')
+    .optional()
+    .isBoolean()
+    .withMessage('SMS notifications must be a boolean value'),
+  
+  body('pushNotifications')
+    .optional()
+    .isBoolean()
+    .withMessage('Push notifications must be a boolean value'),
+  
+  body('showAttendance')
+    .optional()
+    .isBoolean()
+    .withMessage('Show attendance must be a boolean value'),
+  
+  body('allowOrganizerContact')
+    .optional()
+    .isBoolean()
+    .withMessage('Allow organizer contact must be a boolean value'),
+  
+  body('includeInNetworking')
+    .optional()
+    .isBoolean()
+    .withMessage('Include in networking must be a boolean value')
+];
+
+// Create notification validation (for internal use)
+const validateNotification = [
+  body('userId')
+    .notEmpty()
+    .withMessage('User ID is required')
+    .isMongoId()
+    .withMessage('Invalid User ID format'),
+  
+  body('type')
+    .notEmpty()
+    .withMessage('Notification type is required')
+    .isIn(['event_reminder', 'ticket_update', 'event_update', 'system', 'promotional'])
+    .withMessage('Invalid notification type'),
+  
+  body('title')
+    .trim()
+    .notEmpty()
+    .withMessage('Notification title is required')
+    .isLength({ max: 100 })
+    .withMessage('Title cannot be more than 100 characters'),
+  
+  body('message')
+    .trim()
+    .notEmpty()
+    .withMessage('Notification message is required')
+    .isLength({ max: 500 })
+    .withMessage('Message cannot be more than 500 characters'),
+  
+  body('relatedEvent')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid Event ID format'),
+  
+  body('relatedTicket')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid Ticket ID format')
+];
+
 module.exports = {
   validateEvent,
   validateCategory,
@@ -322,4 +416,6 @@ module.exports = {
   validateTicket,
   validateReservation,
   validateCheckout,
+  validateNotificationPreferences, // Add this
+  validateNotification // Add this
 };

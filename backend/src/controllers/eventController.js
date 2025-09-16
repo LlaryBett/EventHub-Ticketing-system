@@ -2,6 +2,7 @@
 const Event = require('../models/Event');
 const Organizer = require('../models/Organizer');
 const Category = require('../models/Category');
+const Ticket = require('../models/Ticket');
 const { validationResult } = require('express-validator');
 const { uploadImage, deleteImage } = require('../utils/helpers');
 
@@ -33,20 +34,20 @@ const getAllEvents = async (req, res) => {
     // Filter by featured
     if (featured !== undefined) filter.featured = featured === 'true';
 
-    // Filter by organizer (id or name)
+    // Filter by organizer (id or organizationName)
     if (organizer) {
       if (/^[0-9a-fA-F]{24}$/.test(organizer)) {
         // Organizer is an ObjectId
         filter.organizer = organizer;
         const organizerDoc = await Organizer.findById(organizer);
         if (organizerDoc) {
-          console.log("🔎 Matched organizer by ID:", organizerDoc._id, "=>", organizerDoc.name);
+          console.log("🔎 Matched organizer by ID:", organizerDoc._id, "=>", organizerDoc.organizationName);
         } else {
           console.log("⚠️ Organizer ID not found:", organizer);
         }
       } else {
         // Organizer is a name
-        const organizerDoc = await Organizer.findOne({ name: organizer });
+        const organizerDoc = await Organizer.findOne({ organizationName: organizer });
         if (organizerDoc) {
           filter.organizer = organizerDoc._id;
           console.log("🔎 Matched organizer by name:", organizer, "=>", organizerDoc._id);
@@ -70,33 +71,59 @@ const getAllEvents = async (req, res) => {
     const sort = {};
     sort[sortBy] = order === 'desc' ? -1 : 1;
 
-    // Query events
+    // Query events (✅ always populate tickets)
     const events = await Event.find(filter)
-      .populate('category', 'name')
-      .populate('organizer', 'name')
+      .populate('category', 'name icon color')
+      .populate('organizer', 'organizationName businessType logo')
+      .populate('tickets') // <-- ensures tickets always have full details
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
 
-    // Transform to new format
-    const transformedEvents = events.map(event => {
-      return {
-        id: event._id,
-        title: event.title,
-        description: event.description,
-        image: event.image,
-        date: event.date.toISOString().split('T')[0],
-        time: event.time,
-        venue: event.venue,
-        tickets: event.tickets,
-        category: event.category?.name || null,
-        organizer: event.organizer?.name || null,
-        capacity: event.capacity,
-        registered: event.registered,
-        featured: event.featured,
-        tags: event.tags
-      };
-    });
+    // Transform to consistent format
+    const transformedEvents = events.map(event => ({
+      id: event._id.toString(),
+      title: event.title,
+      description: event.description,
+      image: event.image,
+      date: event.date ? event.date.toISOString().split('T')[0] : null,
+      time: event.time || null,
+      venue: event.venue || null,
+      tickets: (event.tickets || []).map(ticket => ({
+        id: ticket._id.toString(),
+        type: ticket.type,
+        price: ticket.price,
+        quantity: ticket.quantity,
+        available: ticket.available,
+        description: ticket.description || null,
+        benefits: ticket.benefits || [],
+        minOrder: ticket.minOrder,
+        maxOrder: ticket.maxOrder,
+        salesStart: ticket.salesStart,
+        salesEnd: ticket.salesEnd,
+        isActive: ticket.isActive
+      })),
+      category: event.category
+        ? {
+            id: event.category._id,
+            name: event.category.name,
+            icon: event.category.icon,
+            color: event.category.color
+          }
+        : null,
+      organizer: event.organizer
+        ? {
+            id: event.organizer._id,
+            organizationName: event.organizer.organizationName,
+            businessType: event.organizer.businessType,
+            logo: event.organizer.logo
+          }
+        : null,
+      capacity: event.capacity,
+      registered: event.registered,
+      featured: event.featured,
+      tags: event.tags || []
+    }));
 
     const total = await Event.countDocuments(filter);
 
@@ -119,6 +146,9 @@ const getAllEvents = async (req, res) => {
     });
   }
 };
+
+
+
 
 
 
@@ -205,6 +235,7 @@ const getEventById = async (req, res) => {
 // Create a new event
 const createEvent = async (req, res) => {
   try {
+    // 1️⃣ Validate request
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -214,88 +245,88 @@ const createEvent = async (req, res) => {
       });
     }
 
-    // Ensure category exists
+    // 2️⃣ Check category
     const category = await Category.findById(req.body.category);
     if (!category) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid category ID'
-      });
+      return res.status(400).json({ success: false, message: 'Invalid category ID' });
     }
 
-    // Ensure organizer exists
+    // 3️⃣ Check organizer
     const organizer = await Organizer.findById(req.body.organizer);
     if (!organizer) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid organizer ID'
-      });
+      return res.status(400).json({ success: false, message: 'Invalid organizer ID' });
     }
 
-    // Handle image upload if present
+    // 4️⃣ Handle image upload
     if (req.file) {
       const imageUrl = await uploadImage(req.file, 'events');
       req.body.image = imageUrl;
     }
 
-    // Parse and validate tickets
-    let tickets = [];
+    // 5️⃣ Parse tickets
+    let ticketsInput = [];
     if (req.body.tickets) {
-      try {
-        // If tickets is a JSON string, parse it
-        tickets = typeof req.body.tickets === 'string' 
-          ? JSON.parse(req.body.tickets) 
-          : req.body.tickets;
-        
-        // Validate each ticket
-        for (const ticket of tickets) {
-          if (!ticket.type || !ticket.price || !ticket.quantity) {
-            return res.status(400).json({
-              success: false,
-              message: 'Each ticket must have type, price, and quantity'
-            });
-          }
-          
-          if (ticket.price < 0) {
-            return res.status(400).json({
-              success: false,
-              message: 'Ticket price cannot be negative'
-            });
-          }
-          
-          if (ticket.quantity < 0) {
-            return res.status(400).json({
-              success: false,
-              message: 'Ticket quantity cannot be negative'
-            });
-          }
+      ticketsInput = typeof req.body.tickets === 'string'
+        ? JSON.parse(req.body.tickets)
+        : req.body.tickets;
+
+      // Validate each ticket
+      for (const ticket of ticketsInput) {
+        if (!ticket.type || ticket.price == null || ticket.quantity == null) {
+          return res.status(400).json({
+            success: false,
+            message: 'Each ticket must have type, price, and quantity'
+          });
         }
-      } catch (error) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid tickets format'
-        });
+        if (ticket.price < 0) {
+          return res.status(400).json({ success: false, message: 'Ticket price cannot be negative' });
+        }
+        if (ticket.quantity < 0) {
+          return res.status(400).json({ success: false, message: 'Ticket quantity cannot be negative' });
+        }
+
+        // ✅ Normalize benefits into an array
+        if (ticket.benefits && !Array.isArray(ticket.benefits)) {
+          ticket.benefits = ticket.benefits
+            .split(',')
+            .map(b => b.trim())
+            .filter(Boolean);
+        }
       }
     }
 
-    // Calculate total capacity from tickets
-    const capacity = tickets.reduce((total, ticket) => total + ticket.quantity, 0);
+    // 6️⃣ Calculate capacity
+    const capacity = ticketsInput.reduce((total, t) => total + t.quantity, 0);
 
-    // Create event with category and organizer IDs
+    // 7️⃣ Create event first without tickets
     const eventData = {
       ...req.body,
-      tickets: tickets,
-      capacity: capacity, // Set capacity as sum of all ticket quantities
+      tickets: [],
+      capacity,
       category: category._id,
       organizer: organizer._id
     };
-
-    // Remove the old single price field if it exists
-    delete eventData.price;
+    delete eventData.price; // remove old price if exists
 
     const event = new Event(eventData);
     await event.save();
 
+    // 8️⃣ Create ticket documents and link them to event
+    const ticketDocs = await Promise.all(
+      ticketsInput.map(ticket => Ticket.create({
+        ...ticket,
+        event: event._id,
+        available: ticket.quantity,
+        salesStart: ticket.salesStart || new Date(),
+        salesEnd: ticket.salesEnd || new Date('2100-01-01')
+      }))
+    );
+
+    // 9️⃣ Update event with ticket ObjectIds
+    event.tickets = ticketDocs.map(t => t._id);
+    await event.save();
+
+    // 🔟 Populate category and organizer for response
     await event.populate('category', 'name');
     await event.populate('organizer', 'name');
 
@@ -304,10 +335,21 @@ const createEvent = async (req, res) => {
       title: event.title,
       description: event.description,
       image: event.image,
-      date: event.date.toISOString().split('T')[0],
+      date: event.date?.toISOString().split('T')[0],
       time: event.time,
-      venue: event.venue, // Changed from location to venue
-      tickets: event.tickets, // Include tickets array instead of single price
+      venue: event.venue,
+      tickets: ticketDocs.map(t => ({
+        id: t._id,
+        type: t.type,
+        price: t.price,
+        quantity: t.quantity,
+        available: t.available,
+        benefits: t.benefits, // ✅ included in response
+        salesStart: t.salesStart,
+        salesEnd: t.salesEnd,
+        minOrder: t.minOrder,
+        maxOrder: t.maxOrder
+      })),
       category: event.category.name,
       organizer: event.organizer.name,
       capacity: event.capacity,
@@ -321,7 +363,9 @@ const createEvent = async (req, res) => {
       message: 'Event created successfully',
       data: transformedEvent
     });
+
   } catch (error) {
+    console.error('🔥 createEvent error:', error);
     res.status(500).json({
       success: false,
       message: 'Server Error',
@@ -329,6 +373,7 @@ const createEvent = async (req, res) => {
     });
   }
 };
+
 
 
 // Update an event

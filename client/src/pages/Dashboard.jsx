@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import { getUserProfile, getUserEvents, getOrderHistory, getUserTickets } from '../services/userService';
+import { getUserNotifications, markAllAsRead } from '../services/notificationService';
 import { formatPrice, formatDate } from '../utils/formatDate';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Button from '../components/common/Button';
@@ -55,27 +56,19 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const [profile, events, orders, tickets] = await Promise.all([
+        const [profile, events, orders, ticketsResponse, notificationsData] = await Promise.all([
           getUserProfile(user.data.id),
           getUserEvents(user.data.id),
           getOrderHistory(user.data.id),
-          getUserTickets(user.data.id)
+          getUserTickets(user.data.id),
+          getUserNotifications(user.data.id)
         ]);
+
         setUserProfile(profile);
         setUserEvents(events.data || []);
         setOrderHistory(Array.isArray(orders) ? orders : (orders?.data || []));
-        setUserTickets(tickets.data || []);
-        
-        // Mock data for new features
-        setNotifications([
-          { id: 1, type: 'reminder', message: 'Tech Give event starts in 2 hours', time: '2 hours ago', read: false },
-          { id: 2, type: 'update', message: 'Venue changed for Startup Pitch Competition', time: '1 day ago', read: true }
-        ]);
-        
-        setSavedPaymentMethods([
-          { id: 1, type: 'visa', last4: '4242', expiry: '12/25' },
-          { id: 2, type: 'mastercard', last4: '8888', expiry: '06/26' }
-        ]);
+        setUserTickets(ticketsResponse.data || []);
+        setNotifications(notificationsData.data || []);
         
       } catch (error) {
         console.error('Failed to fetch user data:', error);
@@ -88,6 +81,16 @@ const Dashboard = () => {
       fetchUserData();
     }
   }, [user]);
+
+  const handleMarkAllNotificationsRead = async () => {
+    try {
+      await markAllAsRead(user.data.id);
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      showSuccess('All notifications marked as read');
+    } catch (error) {
+      console.error('Failed to mark notifications as read:', error);
+    }
+  };
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: <BarChart3 size={20} /> },
@@ -286,9 +289,6 @@ const Dashboard = () => {
   
   <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
     <div className="flex items-center">
-      <div className="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
-        <Heart className="w-6 h-6 text-white" />
-      </div>
       <div className="ml-4">
         <p className="text-sm text-slate-500 font-medium">Total Spent</p>
         <p className="text-3xl font-bold text-slate-900">{formatPrice(totalSpent)}</p>
