@@ -23,10 +23,14 @@ const UserSchema = new mongoose.Schema({
     minlength: [8, 'Password must be at least 8 characters'],
     select: false
   },
-  phone: {
-    type: String,
-    match: [/^(\+\d{1,3}[- ]?)?\d{10}$/, 'Please add a valid phone number']
-  },
+ phone: {
+  type: String,
+  match: [
+    /^(?:\+254|254|0)(?:7\d{8}|11\d{7})$/,
+    'Please add a valid Kenyan phone number'
+  ]
+},
+
   userType: {
     type: String,
     enum: ['attendee', 'organizer', 'admin'],

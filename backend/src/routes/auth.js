@@ -30,8 +30,8 @@ const attendeeValidation = [
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
     .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
   body('phone')
-    .matches(/^(\+\d{1,3}[- ]?)?\d{10}$/)
-    .withMessage('Please provide a valid phone number'),
+    .matches(/^(?:254|\+254|0)?(?:7|1[0-1])?[0-9]{8}$/)
+    .withMessage('Please provide a valid Kenyan phone number (e.g., 0712345678, 254712345678, or 0110123456)'),
   body('acceptTerms')
     .equals('true')
     .withMessage('You must accept the terms and conditions')
@@ -52,8 +52,8 @@ const organizerStep1Validation = [
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
     .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
   body('phone')
-    .matches(/^(\+\d{1,3}[- ]?)?\d{10}$/)
-    .withMessage('Please provide a valid phone number')
+    .matches(/^(?:254|\+254|0)?(?:7|1[0-1])?[0-9]{8}$/)
+    .withMessage('Please provide a valid Kenyan phone number (e.g., 0712345678, 254712345678, or 0110123456)')
 ];
 
 const organizerStep2Validation = [

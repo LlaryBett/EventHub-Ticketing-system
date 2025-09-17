@@ -34,8 +34,8 @@ const updateDetailsValidation = [
     .withMessage('Please provide a valid email'),
   body('phone')
     .optional()
-    .matches(/^(\+\d{1,3}[- ]?)?\d{10}$/)
-    .withMessage('Please provide a valid phone number')
+    .matches(/^(?:254|\+254|0)?(?:7|1[0-1])?[0-9]{8}$/)
+    .withMessage('Please provide a valid Kenyan phone number (e.g., 0712345678, 254712345678, or 0110123456)')
 ];
 
 const updatePasswordValidation = [

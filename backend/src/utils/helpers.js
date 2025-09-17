@@ -30,23 +30,64 @@ const generateQRCode = async (ticketCode) => {
 
 // Validate ticket availability
 const validateTicketAvailability = async (items) => {
+  console.log("👉 Validating tickets for items:", items);
+
   for (const item of items) {
+    console.log("🔍 Checking item:", item);
+
     if (!item.ticket) {
+      console.error(`❌ Missing ticket for item: ${item.title || 'unknown'}`);
       throw new Error(`Missing ticket for item: ${item.title || 'unknown'}`);
     }
 
     const ticket = await Ticket.findById(item.ticket);
+    console.log("📦 Fetched ticket:", ticket);
+
     if (!ticket) {
+      console.error(`❌ Ticket not found for: ${item.title || 'unknown'}`);
       throw new Error(`Ticket not found: ${item.title || 'unknown'}`);
     }
 
-    if (!ticket.canPurchase(item.quantity)) {
+    // Check ticket availability
+    const canPurchase = ticket.available >= item.quantity;
+    console.log(
+      `🛒 Checking availability: need ${item.quantity}, available=${ticket.available}, canPurchase=${canPurchase}`
+    );
+
+    if (!canPurchase) {
+      console.error(
+        `❌ Not enough ${ticket.type} tickets available for ${item.title}`
+      );
       throw new Error(
         `Not enough ${ticket.type} tickets available for ${item.title}`
       );
     }
+
+    // Check min order
+    if (ticket.minOrder && item.quantity < ticket.minOrder) {
+      console.error(
+        `❌ Minimum order for ${ticket.type} tickets is ${ticket.minOrder}`
+      );
+      throw new Error(
+        `You must order at least ${ticket.minOrder} ${ticket.type} tickets for ${item.title}`
+      );
+    }
+
+    // Check max order
+    if (ticket.maxOrder && item.quantity > ticket.maxOrder) {
+      console.error(
+        `❌ Maximum order for ${ticket.type} tickets is ${ticket.maxOrder}`
+      );
+      throw new Error(
+        `You cannot order more than ${ticket.maxOrder} ${ticket.type} tickets for ${item.title}`
+      );
+    }
   }
+
+  console.log("✅ All tickets validated successfully");
 };
+
+
 
 // Reserve tickets temporarily
 const reserveTickets = async (items) => {

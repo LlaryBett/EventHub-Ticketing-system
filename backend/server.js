@@ -20,6 +20,7 @@ const ticketRoutes = require('./src/routes/ticket');
 const userRoutes = require('./src/routes/user');
 const checkoutRoutes = require('./src/routes/checkout');
 const notificationRoutes = require('./src/routes/notification');
+const contactRoutes = require('./src/routes/contact');
 
 // Import database connection
 const connectDB = require('./src/config/database');
@@ -134,6 +135,7 @@ app.use('/api/v1/ticket', ticketRoutes);
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/checkout', checkoutRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/contact', contactRoutes);
 
 // Health check endpoint
 app.get('/api/v1/health', (req, res) => {

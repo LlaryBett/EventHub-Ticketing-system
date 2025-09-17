@@ -158,7 +158,8 @@ const validateCheckout = (method) => {
         
         body('customerInfo.phone')
           .notEmpty().withMessage('Phone number is required')
-          .trim(),
+          .matches(/^(?:254|\+254|0)?(?:7|1[0-1])?[0-9]{8}$/)
+          .withMessage('Please provide a valid Kenyan phone number (e.g., 0712345678, 254712345678, or 0110123456)'),
 
         // Items validation
         body('items')
@@ -182,11 +183,12 @@ const validateCheckout = (method) => {
           .isIn(['mpesa', 'card', 'paypal'])
           .withMessage('Valid payment method is required (mpesa, card, or paypal)'),
 
-        // M-Pesa phone validation (frontend format)
+        // M-Pesa phone validation
         body('mpesaPhone')
           .if(body('paymentMethod').equals('mpesa'))
           .notEmpty().withMessage('Phone number is required for M-Pesa payments')
-          .trim(),
+          .matches(/^(?:254|\+254|0)?(?:7|1[0-1])?[0-9]{8}$/)
+          .withMessage('Please provide a valid Kenyan M-Pesa number (e.g., 0712345678, 254712345678, or 0110123456)'),
 
         // Card payment validation (if needed - frontend would need to send this format)
         body('cardDetails.nameOnCard')
