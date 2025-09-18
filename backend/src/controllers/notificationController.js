@@ -148,33 +148,42 @@ exports.markAllAsRead = async (req, res, next) => {
 };
 
 // Delete notification
+// Delete notification
 exports.deleteNotification = async (req, res, next) => {
   try {
+    console.log("🟡 Delete request received for notification ID:", req.params.id);
+    console.log("🟡 Authenticated user ID:", req.user?.id);
+
     const notification = await Notification.findById(req.params.id);
-    
+    console.log("🔎 Found notification:", notification);
+
     if (!notification) {
+      console.log("❌ Notification not found in DB for ID:", req.params.id);
       return res.status(404).json({
         success: false,
         message: 'Notification not found'
       });
     }
-    
-    // Check if user is authorized to delete this notification
+
+    // Check if user is authorized
     if (notification.user.toString() !== req.user.id) {
+      console.log("🚫 Unauthorized delete attempt. Notification belongs to:", notification.user.toString());
       return res.status(403).json({
         success: false,
         message: 'Not authorized to delete this notification'
       });
     }
-    
+
     await notification.deleteOne();
-    
+    console.log("✅ Notification deleted:", req.params.id);
+
     res.status(200).json({
       success: true,
       message: 'Notification deleted successfully',
       data: {}
     });
   } catch (error) {
+    console.error("🔥 Delete notification error:", error);
     next(error);
   }
 };

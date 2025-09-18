@@ -3,7 +3,13 @@ import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import { getUserProfile, getUserEvents, getOrderHistory, getUserTickets } from '../services/userService';
-import { getUserNotifications, markAllAsRead } from '../services/notificationService';
+import { 
+  getUserNotifications, 
+  markAsRead, 
+  markAllAsRead, 
+  deleteNotification,
+  clearAllNotifications 
+} from '../services/notificationService';
 import { formatPrice, formatDate } from '../utils/formatDate';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Button from '../components/common/Button';
@@ -26,15 +32,17 @@ import {
   Smartphone,
   Wallet,
   BarChart3,  // For overview/dashboard
-  Ticket,     // For tickets
+  Ticket, 
+  X,    // For tickets
   FileText,   // For orders/history
-  User        // For profile
+  User, 
+  Trash2     // For delete notification
 } from 'lucide-react';
 
 const Dashboard = () => {
   const location = useLocation();
   const { user } = useAuth();
-  const { showSuccess } = useUI();
+  const { showSuccess, showError } = useUI();
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
   const [userEvents, setUserEvents] = useState([]);
@@ -89,6 +97,51 @@ const Dashboard = () => {
       showSuccess('All notifications marked as read');
     } catch (error) {
       console.error('Failed to mark notifications as read:', error);
+      showError('Failed to mark notifications as read');
+    }
+  };
+
+  const handleClearAllNotifications = async () => {
+    try {
+      await clearAllNotifications(user.data.id);
+      setNotifications([]);
+      showSuccess('All notifications cleared');
+    } catch (error) {
+      console.error('Failed to clear notifications:', error);
+      showError('Failed to clear notifications');
+    }
+  };
+
+  const handleMarkNotificationRead = async (notificationId) => {
+    try {
+      console.log('Marking notification as read:', notificationId);
+      await markAsRead(notificationId);
+      setNotifications(prev =>
+        prev.map(n => n._id === notificationId ? { ...n, read: true } : n)
+      );
+      showSuccess('Notification marked as read');
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+      showError('Failed to mark notification as read');
+    }
+  };
+
+  const handleDeleteNotification = async (notificationId) => {
+    try {
+      // Log the notification ID to debug
+      console.log('Deleting notification with ID:', notificationId);
+      
+      if (!notificationId) {
+        showError('Invalid notification ID');
+        return;
+      }
+
+      await deleteNotification(notificationId);
+      setNotifications(prev => prev.filter(n => n._id !== notificationId));
+      showSuccess('Notification deleted');
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
+      showError('Failed to delete notification');
     }
   };
 
@@ -518,27 +571,76 @@ const Dashboard = () => {
                 <div className="p-6 border-b">
                   <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold text-slate-900">Notifications 🔔</h2>
-                    <Button size="small" variant="outline" className="border-2 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50">Mark All Read</Button>
+                    <div className="flex space-x-3">
+                      <Button 
+                        size="small" 
+                        variant="outline" 
+                        className="border-2 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50"
+                        onClick={handleMarkAllNotificationsRead}
+                      >
+                        Mark All Read
+                      </Button>
+                      <Button 
+                        size="small" 
+                        variant="outline" 
+                        className="border-2 border-red-200 hover:border-red-300 hover:bg-red-50 hover:text-red-600"
+                        onClick={handleClearAllNotifications}
+                      >
+                        Clear All
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 <div className="divide-y">
                   {notifications.map((notification) => (
-                    <div key={notification.id} className={`p-6 transition-all duration-200 hover:bg-slate-50 ${!notification.read ? 'bg-gradient-to-r from-blue-50 to-indigo-50' : ''}`}>
-                      <div className="flex items-start">
-                        <div className={`w-3 h-3 rounded-full mt-2 mr-4 ${!notification.read ? 'bg-blue-500 animate-pulse' : 'bg-slate-300'}`}></div>
-                        <div className="flex-1">
-                          <div className="flex items-center">
-                            <Bell className="w-4 h-4 text-slate-500 mr-2" />
-                            <span className={`text-sm font-semibold ${notification.type === 'reminder' ? 'text-orange-600' : 'text-blue-600'}`}>
-                              {notification.type === 'reminder' ? 'Reminder' : 'Update'}
-                            </span>
+                    <div 
+                      key={notification._id} 
+                      className={`p-6 transition-all duration-200 hover:bg-slate-50 ${
+                        !notification.read ? 'bg-gradient-to-r from-blue-50 to-indigo-50' : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start flex-1">
+                          <button 
+                            className={`w-3 h-3 rounded-full mt-2 mr-4 cursor-pointer transition-colors ${
+                              !notification.read ? 'bg-blue-500 animate-pulse hover:bg-blue-600' : 'bg-slate-300'
+                            }`}
+                            onClick={() => !notification.read && handleMarkNotificationRead(notification._id)}
+                            disabled={notification.read}
+                            title={notification.read ? "Already read" : "Mark as read"}
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center">
+                              <Bell className="w-4 h-4 text-slate-500 mr-2" />
+                              <span className={`text-sm font-semibold ${
+                                notification.type === 'reminder' ? 'text-orange-600' : 'text-blue-600'
+                              }`}>
+                                {notification.type === 'reminder' ? 'Reminder' : 'Update'}
+                              </span>
+                            </div>
+                            <p className="text-slate-900 mt-2 font-medium">{notification.message}</p>
+                            <p className="text-sm text-slate-500 mt-1">{notification.time}</p>
                           </div>
-                          <p className="text-slate-900 mt-2 font-medium">{notification.message}</p>
-                          <p className="text-sm text-slate-500 mt-1">{notification.time}</p>
                         </div>
+                        <button
+                          onClick={() => handleDeleteNotification(notification._id)}
+                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 group flex items-center gap-2"
+                          title="Delete notification"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span className="text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                            Delete
+                          </span>
+                        </button>
                       </div>
                     </div>
                   ))}
+                  {notifications.length === 0 && (
+                    <div className="text-center py-8">
+                      <Bell className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                      <p className="text-slate-500">No notifications yet</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

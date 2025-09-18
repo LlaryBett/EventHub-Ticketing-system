@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const Organizer = require('../models/Organizer');
 const Order = require('../models/Order'); // Assuming you have an Order model
+const IssuedTicket = require('../models/IssuedTicket');
+const Notification = require('../models/Notification');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
@@ -229,9 +231,12 @@ exports.registerAttendee = async (req, res, next) => {
 
     const { name, email, password, phone, acceptTerms, marketingConsent } = req.body;
 
+    console.log('➡️ Registering new attendee:', { name, email, phone });
+
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
+      console.log('⚠️ User already exists with this email:', email);
       return res.status(400).json({
         success: false,
         message: 'User already exists with this email'
@@ -249,16 +254,73 @@ exports.registerAttendee = async (req, res, next) => {
       marketingConsent: marketingConsent || false,
       status: 'active'
     });
+    console.log('✅ User created:', user._id);
 
-    sendTokenResponse(user, 201, res, 'attendee');
+    // Guest order migration
+    let migratedCount = 0;
+    const guestOrders = await Order.find({
+      customerEmail: email,
+      isGuestOrder: true,
+      convertedToUser: false
+    });
+
+    console.log(`🔍 Found ${guestOrders.length} guest orders to migrate for ${email}`);
+
+    if (guestOrders.length > 0) {
+      await Promise.all(
+        guestOrders.map(async (order) => {
+          console.log('📝 Migrating guest order:', order._id);
+          console.log('📦 Order items before migration:', JSON.stringify(order.items, null, 2));
+
+          // Optional: skip orders with missing tickets
+          order.items.forEach((item, index) => {
+            if (!item.ticket) {
+              console.warn(`⚠️ Order ${order._id} item[${index}] missing ticket:`, item);
+            }
+          });
+
+          order.isGuestOrder = false;
+          order.convertedToUser = true;
+          order.userId = user._id;
+          order.hasAccount = true;
+
+          // Save with validation disabled to avoid errors on missing tickets
+          await order.save({ validateBeforeSave: false });
+
+          // Migrate issued tickets
+          await IssuedTicket.updateMany(
+            { orderId: order._id, userId: null },
+            { $set: { userId: user._id } }
+          );
+        })
+      );
+
+      migratedCount = guestOrders.length;
+      console.log(`✅ Migrated ${migratedCount} guest orders for ${email}`);
+
+      // Create notification
+      await Notification.create({
+        user: user._id,
+        type: 'system',
+        title: 'Guest Orders Migrated',
+        message: `We successfully migrated ${migratedCount} of your guest orders to your new account.`,
+        read: false
+      });
+    }
+
+    // Send token response
+    sendTokenResponse(user, 201, res, 'attendee', migratedCount);
+
   } catch (error) {
-    console.error('Register attendee error:', error);
+    console.error('🔥 Register attendee error:', error);
     res.status(500).json({
       success: false,
       message: 'Server Error'
     });
   }
 };
+
+
 
 // @desc    Send account claim email
 // @route   POST /api/auth/send-claim-email
@@ -376,31 +438,51 @@ exports.registerOrganizerStep1 = async (req, res, next) => {
       });
     }
 
-    const { name, email, password, phone } = req.body;
+    const { name, email, password, phone, isUpgrade = false } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists with this email'
-      });
+    // For new registrations, check if user already exists
+    if (!isUpgrade) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'User already exists with this email'
+        });
+      }
+    } else {
+      // For upgrades, verify the user exists and is an attendee
+      const existingUser = await User.findOne({ email, userType: 'attendee' });
+      if (!existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'No attendee account found with this email'
+        });
+      }
+      
+      // Check if user already has an organizer profile
+      const existingOrganizer = await Organizer.findOne({ userId: existingUser._id });
+      if (existingOrganizer) {
+        return res.status(400).json({
+          success: false,
+          message: 'You already have an organizer account'
+        });
+      }
     }
 
-    // Store step 1 data in session or temporary storage
-    // In a real application, you might use Redis or database for multi-step registration
+    // Store step 1 data in session
     req.session.organizerStep1 = {
       name,
       email,
       password,
       phone,
+      isUpgrade,
       timestamp: Date.now()
     };
 
     res.status(200).json({
       success: true,
       message: 'Step 1 completed successfully',
-      data: { email }
+      data: { email, isUpgrade }
     });
   } catch (error) {
     console.error('Organizer step 1 error:', error);
@@ -446,28 +528,50 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
     } = req.body;
 
     const step1Data = req.session.organizerStep1;
+    let user;
 
-    // Check if user already exists (again for safety)
-    const existingUser = await User.findOne({ email: step1Data.email });
-    if (existingUser) {
-      delete req.session.organizerStep1;
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists with this email'
+    if (step1Data.isUpgrade) {
+      // Upgrade scenario: user already exists as attendee
+      user = await User.findOne({ email: step1Data.email, userType: 'attendee' });
+      
+      if (!user) {
+        delete req.session.organizerStep1;
+        return res.status(400).json({
+          success: false,
+          message: 'Attendee account not found'
+        });
+      }
+
+      // Update user to organizer type
+      user.userType = 'organizer';
+      user.acceptTerms = acceptTerms;
+      user.marketingConsent = marketingConsent;
+      user.status = 'pending_verification';
+      await user.save();
+
+    } else {
+      // New registration scenario
+      const existingUser = await User.findOne({ email: step1Data.email });
+      if (existingUser) {
+        delete req.session.organizerStep1;
+        return res.status(400).json({
+          success: false,
+          message: 'User already exists with this email'
+        });
+      }
+
+      // Create new user with organizer role
+      user = await User.create({
+        name: step1Data.name,
+        email: step1Data.email,
+        password: step1Data.password,
+        phone: step1Data.phone,
+        userType: 'organizer',
+        acceptTerms,
+        marketingConsent,
+        status: 'pending_verification'
       });
     }
-
-    // Create user with organizer role
-    const user = await User.create({
-      name: step1Data.name,
-      email: step1Data.email,
-      password: step1Data.password,
-      phone: step1Data.phone,
-      userType: 'organizer',
-      acceptTerms,
-      marketingConsent,
-      status: 'pending_verification' // Organizers need approval
-    });
 
     // Create organizer profile
     const organizer = await Organizer.create({
@@ -481,7 +585,8 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
       taxId: taxId || null,
       website: website || null,
       verificationStatus: 'pending',
-      approvalStatus: 'pending'
+      approvalStatus: 'pending',
+      upgradedFromAttendee: step1Data.isUpgrade
     });
 
     // Send approval notification email to admin
@@ -495,6 +600,7 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
           <p><strong>Contact:</strong> ${step1Data.name} (${step1Data.email})</p>
           <p><strong>Business Type:</strong> ${businessType}</p>
           <p><strong>Address:</strong> ${businessAddress}, ${city}, ${state} ${zipCode}</p>
+          <p><strong>Type:</strong> ${step1Data.isUpgrade ? 'Upgrade from attendee' : 'New registration'}</p>
           <p>Please review this application in the admin panel.</p>
         `
       });
@@ -504,13 +610,22 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
 
     // Send confirmation email to user
     try {
+      const subject = step1Data.isUpgrade 
+        ? 'Organizer Upgrade Application Received'
+        : 'Organizer Application Received';
+
+      const message = step1Data.isUpgrade
+        ? `<p>Dear ${step1Data.name},</p>
+           <p>We've received your application to upgrade your EventHub account to an organizer account for <strong>${organizationName}</strong>.</p>`
+        : `<p>Dear ${step1Data.name},</p>
+           <p>We've received your application to become an EventHub organizer for <strong>${organizationName}</strong>.</p>`;
+
       await sendEmail({
         to: step1Data.email,
-        subject: 'Organizer Application Received',
+        subject: subject,
         html: `
           <h2>Thank you for your application!</h2>
-          <p>Dear ${step1Data.name},</p>
-          <p>We've received your application to become an EventHub organizer for <strong>${organizationName}</strong>.</p>
+          ${message}
           <p>Our team will review your application within 2-3 business days. You'll receive an email notification once your account has been approved.</p>
           <p>If you have any questions, please contact our support team.</p>
           <br>
@@ -526,11 +641,14 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: 'Organizer application submitted successfully. You will receive an email once your account is approved.',
+      message: step1Data.isUpgrade 
+        ? 'Organizer upgrade application submitted successfully. You will receive an email once your account is approved.'
+        : 'Organizer application submitted successfully. You will receive an email once your account is approved.',
       data: {
         userId: user._id,
         organizerId: organizer._id,
-        status: 'pending_verification'
+        status: 'pending_verification',
+        isUpgrade: step1Data.isUpgrade
       }
     });
   } catch (error) {

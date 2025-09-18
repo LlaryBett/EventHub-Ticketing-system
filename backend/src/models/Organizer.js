@@ -1,4 +1,3 @@
-// backend/src/models/Organizer.js
 const mongoose = require('mongoose');
 
 const OrganizerSchema = new mongoose.Schema({
@@ -99,7 +98,7 @@ const OrganizerSchema = new mongoose.Schema({
   },
   commissionRate: {
     type: Number,
-    default: 5, // 5% commission
+    default: 5,
     min: 0,
     max: 50
   },
@@ -138,7 +137,12 @@ const OrganizerSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  featuredExpires: Date
+  featuredExpires: Date,
+  // Add only this one new field to track upgrades
+  upgradedFromAttendee: {
+    type: Boolean,
+    default: false
+  }
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
