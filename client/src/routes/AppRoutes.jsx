@@ -20,6 +20,16 @@ import NotFound from '../pages/NotFound';
 import HowItWorks from '../pages/HowItWorks'; // 👈 added import
 import PaymentConfirmation from '../pages/PaymentConfirmation';
 
+// Admin Pages
+import AdminDashboard from '../pages/Admin/AdminDashboard';
+import AdminOverview from '../pages/Admin/AdminOverview';
+import AdminUsers from '../pages/Admin/AdminUsers';
+import AdminEvents from '../pages/Admin/AdminEvents';
+import AdminCategories from '../pages/Admin/AdminCategories';
+import AdminAnalytics from '../pages/Admin/AdminAnalytics';
+import AdminReports from '../pages/Admin/AdminReports';
+import AdminSettings from '../pages/Admin/AdminSettings';
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -43,6 +53,9 @@ const AppRoutes = () => {
       <Route path="/login" element={<Layout><Login /></Layout>} />
       <Route path="/register" element={<Layout><Register /></Layout>} />
       
+      {/* Admin Routes - No Layout */}
+      <Route path="/admin/*" element={<AdminDashboard />} />
+
       {/* 404 Route */}
       <Route path="*" element={<NotFound />} />
       <Route path="/payment-confirmation/:orderId?" element={<Layout><PaymentConfirmation /></Layout>} />
@@ -51,3 +64,6 @@ const AppRoutes = () => {
 };
 
 export default AppRoutes;
+    
+
+

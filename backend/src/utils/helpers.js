@@ -87,6 +87,21 @@ const validateTicketAvailability = async (items) => {
   console.log("✅ All tickets validated successfully");
 };
 
+// Helper function for login messages
+function getLoginMessage(user, isApprovedOrganizer, canAccessOrganizerFeatures) {
+  if (user.status === 'pending_verification') {
+    if (user.userType === 'organizer') {
+      return 'Login successful. Your account is pending verification. Organizer features will be available after admin approval.';
+    }
+    return 'Login successful. Your account is pending verification.';
+  }
+  
+  if (user.userType === 'organizer' && !canAccessOrganizerFeatures) {
+    return 'Login successful. Organizer features will be available after admin approval.';
+  }
+  
+  return 'Login successful';
+}
 
 
 // Reserve tickets temporarily

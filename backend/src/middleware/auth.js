@@ -1,6 +1,6 @@
-// backend/src/middleware/auth.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Organizer = require('../models/Organizer');
 
 // Protect routes - verify JWT token
 exports.protect = async (req, res, next) => {
@@ -38,8 +38,9 @@ exports.protect = async (req, res, next) => {
         });
       }
 
-      // Add user type to request
+      // Add user type and organizer approval status to request
       req.userType = decoded.userType;
+      req.isApprovedOrganizer = decoded.isApprovedOrganizer || false;
 
       next();
     } catch (error) {
@@ -71,6 +72,43 @@ exports.authorize = (...roles) => {
   };
 };
 
+// Middleware to require approved organizer status
+exports.requireApprovedOrganizer = async (req, res, next) => {
+  try {
+    // Check if user is an organizer
+    if (req.user.userType !== 'organizer') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Organizer role required.'
+      });
+    }
+
+    // Check if organizer is approved (either from token or fresh lookup)
+    let isApproved = req.isApprovedOrganizer;
+    
+    // If not in token, check database
+    if (isApproved === undefined) {
+      const organizer = await Organizer.findOne({ userId: req.user._id });
+      isApproved = organizer && organizer.approvalStatus === 'approved';
+    }
+
+    if (!isApproved) {
+      return res.status(403).json({
+        success: false,
+        message: 'Organizer features disabled pending admin approval. You can still attend events.'
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('Organizer approval check error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error checking organizer status'
+    });
+  }
+};
+
 // Optional auth - doesn't fail if no token, but adds user if available
 exports.optionalAuth = async (req, res, next) => {
   try {
@@ -87,6 +125,7 @@ exports.optionalAuth = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         req.user = await User.findById(decoded.id);
         req.userType = decoded.userType;
+        req.isApprovedOrganizer = decoded.isApprovedOrganizer || false;
       } catch (error) {
         // Token is invalid but we don't want to block the request
         console.log('Optional auth token error:', error.message);

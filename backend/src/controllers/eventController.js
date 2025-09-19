@@ -233,6 +233,7 @@ const getEventById = async (req, res) => {
 
 // Create a new event
 // Create a new event
+// Create a new event
 const createEvent = async (req, res) => {
   try {
     // 1️⃣ Validate request
@@ -251,19 +252,33 @@ const createEvent = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid category ID' });
     }
 
-    // 3️⃣ Check organizer
-    const organizer = await Organizer.findById(req.body.organizer);
+    // 3️⃣ ✅ IMPORTANT: Get organizer from authenticated user, NOT from request body
+    // The middleware already verified this user is an approved organizer
+    const organizer = await Organizer.findOne({ userId: req.user._id });
+    
     if (!organizer) {
-      return res.status(400).json({ success: false, message: 'Invalid organizer ID' });
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Organizer profile not found' 
+      });
     }
 
-    // 4️⃣ Handle image upload
+    // 4️⃣ ✅ Verify the organizer making the request owns the organizer profile
+    // This prevents organizers from creating events for other organizers
+    if (organizer.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Not authorized to create events for this organizer' 
+      });
+    }
+
+    // 5️⃣ Handle image upload
     if (req.file) {
       const imageUrl = await uploadImage(req.file, 'events');
       req.body.image = imageUrl;
     }
 
-    // 5️⃣ Parse tickets
+    // 6️⃣ Parse tickets
     let ticketsInput = [];
     if (req.body.tickets) {
       ticketsInput = typeof req.body.tickets === 'string'
@@ -295,23 +310,24 @@ const createEvent = async (req, res) => {
       }
     }
 
-    // 6️⃣ Calculate capacity
+    // 7️⃣ Calculate capacity
     const capacity = ticketsInput.reduce((total, t) => total + t.quantity, 0);
 
-    // 7️⃣ Create event first without tickets
+    // 8️⃣ Create event first without tickets
     const eventData = {
       ...req.body,
       tickets: [],
       capacity,
       category: category._id,
-      organizer: organizer._id
+      organizer: organizer._id, // Use the organizer ID from the authenticated user
+      status: 'draft' // Set initial status to draft
     };
     delete eventData.price; // remove old price if exists
 
     const event = new Event(eventData);
     await event.save();
 
-    // 8️⃣ Create ticket documents and link them to event
+    // 9️⃣ Create ticket documents and link them to event
     const ticketDocs = await Promise.all(
       ticketsInput.map(ticket => Ticket.create({
         ...ticket,
@@ -322,13 +338,13 @@ const createEvent = async (req, res) => {
       }))
     );
 
-    // 9️⃣ Update event with ticket ObjectIds
+    // 🔟 Update event with ticket ObjectIds
     event.tickets = ticketDocs.map(t => t._id);
     await event.save();
 
-    // 🔟 Populate category and organizer for response
+    // 1️⃣1️⃣ Populate category and organizer for response
     await event.populate('category', 'name');
-    await event.populate('organizer', 'name');
+    await event.populate('organizer', 'organizationName'); // Changed from 'name' to 'organizationName'
 
     const transformedEvent = {
       id: event._id,
@@ -344,18 +360,19 @@ const createEvent = async (req, res) => {
         price: t.price,
         quantity: t.quantity,
         available: t.available,
-        benefits: t.benefits, // ✅ included in response
+        benefits: t.benefits,
         salesStart: t.salesStart,
         salesEnd: t.salesEnd,
         minOrder: t.minOrder,
         maxOrder: t.maxOrder
       })),
       category: event.category.name,
-      organizer: event.organizer.name,
+      organizer: event.organizer.organizationName, // Changed to match Organizer schema
       capacity: event.capacity,
       registered: event.registered,
       featured: event.featured,
-      tags: event.tags
+      tags: event.tags,
+      status: event.status
     };
 
     res.status(201).json({

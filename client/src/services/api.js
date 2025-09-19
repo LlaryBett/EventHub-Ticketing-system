@@ -37,11 +37,21 @@ api.interceptors.response.use(
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       
-      // Instead of redirecting here, throw a specific error
-      const authError = new Error('Authentication failed');
+      // Preserve backend error message if available
+      const authError = new Error(error.response?.data?.message || 'Session expired. Please login again.');
       authError.isAuthError = true;
       return Promise.reject(authError);
     }
+
+    // Preserve backend error structure
+    if (error.response?.data) {
+      return Promise.reject({
+        ...error,
+        message: error.response.data.message,
+        details: error.response.data.details
+      });
+    }
+
     return Promise.reject(error);
   }
 );

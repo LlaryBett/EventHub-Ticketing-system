@@ -425,6 +425,7 @@ exports.validateClaimToken = async (req, res, next) => {
 };
 
 
+
 // @desc    Register organizer (step 1 - personal info)
 // @route   POST /api/auth/register/organizer/step1
 // @access  Public
@@ -438,51 +439,79 @@ exports.registerOrganizerStep1 = async (req, res, next) => {
       });
     }
 
-    const { name, email, password, phone, isUpgrade = false } = req.body;
+    const { name, email, password, phone } = req.body;
 
-    // For new registrations, check if user already exists
-    if (!isUpgrade) {
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'User already exists with this email'
-        });
-      }
-    } else {
-      // For upgrades, verify the user exists and is an attendee
-      const existingUser = await User.findOne({ email, userType: 'attendee' });
-      if (!existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'No attendee account found with this email'
-        });
-      }
-      
-      // Check if user already has an organizer profile
-      const existingOrganizer = await Organizer.findOne({ userId: existingUser._id });
-      if (existingOrganizer) {
+    // Check if user exists with this email
+    const existingUser = await User.findOne({ email });
+    
+    if (existingUser) {
+      // AUTO-DETECT: This is an existing user trying to register
+      if (existingUser.userType === 'organizer') {
         return res.status(400).json({
           success: false,
           message: 'You already have an organizer account'
         });
       }
+      
+      if (existingUser.userType === 'attendee') {
+        // This is an upgrade scenario - validate
+        if (existingUser.name !== name) {
+          return res.status(400).json({
+            success: false,
+            message: 'Name does not match your attendee account'
+          });
+        }
+
+        const existingOrganizer = await Organizer.findOne({ userId: existingUser._id });
+        if (existingOrganizer) {
+          return res.status(400).json({
+            success: false,
+            message: 'You already have an organizer account'
+          });
+        }
+
+        // IGNORE the password since user already exists
+        // Store as upgrade scenario
+        req.session.organizerStep1 = {
+          name,
+          email,
+          password: undefined, // No password needed for existing users
+          phone: phone || existingUser.phone,
+          isUpgrade: true,
+          existingUserId: existingUser._id,
+          timestamp: Date.now()
+        };
+
+        return res.status(200).json({
+          success: true,
+          message: 'Step 1 completed successfully (upgrade from attendee)',
+          data: { email, isUpgrade: true }
+        });
+      }
     }
 
-    // Store step 1 data in session
+    // NEW REGISTRATION: User doesn't exist - require password
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password is required for new registration'
+      });
+    }
+
     req.session.organizerStep1 = {
       name,
       email,
-      password,
+      password, // Store password for new users
       phone,
-      isUpgrade,
+      isUpgrade: false,
+      existingUserId: undefined,
       timestamp: Date.now()
     };
 
     res.status(200).json({
       success: true,
-      message: 'Step 1 completed successfully',
-      data: { email, isUpgrade }
+      message: 'Step 1 completed successfully (new registration)',
+      data: { email, isUpgrade: false }
     });
   } catch (error) {
     console.error('Organizer step 1 error:', error);
@@ -514,6 +543,16 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
       });
     }
 
+    // Add session expiration check (30 minutes)
+    const SESSION_TIMEOUT = 30 * 60 * 1000;
+    if (Date.now() - req.session.organizerStep1.timestamp > SESSION_TIMEOUT) {
+      delete req.session.organizerStep1;
+      return res.status(400).json({
+        success: false,
+        message: 'Session expired. Please start over.'
+      });
+    }
+
     const {
       organizationName,
       businessType,
@@ -531,10 +570,10 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
     let user;
 
     if (step1Data.isUpgrade) {
-      // Upgrade scenario: user already exists as attendee
-      user = await User.findOne({ email: step1Data.email, userType: 'attendee' });
+      // Upgrade scenario: use existing user by ID
+      user = await User.findById(step1Data.existingUserId);
       
-      if (!user) {
+      if (!user || user.userType !== 'attendee') {
         delete req.session.organizerStep1;
         return res.status(400).json({
           success: false,
@@ -547,24 +586,16 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
       user.acceptTerms = acceptTerms;
       user.marketingConsent = marketingConsent;
       user.status = 'pending_verification';
+      user.phone = step1Data.phone; // Update phone if changed
       await user.save();
 
     } else {
-      // New registration scenario
-      const existingUser = await User.findOne({ email: step1Data.email });
-      if (existingUser) {
-        delete req.session.organizerStep1;
-        return res.status(400).json({
-          success: false,
-          message: 'User already exists with this email'
-        });
-      }
-
+      // New registration scenario - NO redundant check needed
       // Create new user with organizer role
       user = await User.create({
         name: step1Data.name,
         email: step1Data.email,
-        password: step1Data.password,
+        password: step1Data.password, // Make sure this is hashed
         phone: step1Data.phone,
         userType: 'organizer',
         acceptTerms,
@@ -660,14 +691,19 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
   }
 };
 
+
+
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
 exports.login = async (req, res, next) => {
   try {
+    console.log("📥 Incoming login request:", req.body);
+
     // ✅ Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log("❌ Validation failed:", errors.array());
       return res.status(400).json({
         success: false,
         errors: errors.array()
@@ -679,48 +715,70 @@ exports.login = async (req, res, next) => {
     // 🔍 Check if user exists
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
+      console.log(`❌ No user found for email: ${email}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
+    console.log(`👤 Found user: ${user._id}, status: ${user.status}, type: ${user.userType}`);
 
     // 🔑 Check if password matches
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
+      console.log(`❌ Invalid password for user: ${user._id}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
       });
     }
+    console.log(`✅ Password match for user: ${user._id}`);
 
-    // 👤 If organizer, check approval
-    if (user.userType === 'organizer') {
-      const organizer = await Organizer.findOne({ userId: user._id });
-      if (organizer && organizer.approvalStatus !== 'approved') {
-        return res.status(401).json({
-          success: false,
-          message:
-            'Your organizer account is pending approval. Please wait for admin verification.'
-        });
-      }
-    }
-
-    // 🚫 Check account status
-    if (user.status !== 'active') {
+    // 🚫 Check account status - ALLOW 'pending_verification' but block suspended/inactive
+    if (user.status === 'suspended' || user.status === 'inactive') {
+      console.log(`🚫 Blocked login: user ${user._id} status is '${user.status}'`);
       return res.status(401).json({
         success: false,
         message: 'Your account is not active. Please contact support.'
       });
     }
 
-    // 🔗 Guest order migration (safe for both attendees & organizers)
+    let isApprovedOrganizer = false;
+    let organizerApprovalStatus = 'not-applicable';
+    let canAccessOrganizerFeatures = false;
+
+    // 👤 If organizer, check approval status
+    if (user.userType === 'organizer') {
+      console.log(`🔍 Checking organizer approval for user ${user._id}`);
+      const organizer = await Organizer.findOne({ userId: user._id });
+      
+      if (organizer) {
+        organizerApprovalStatus = organizer.approvalStatus;
+        isApprovedOrganizer = organizer.approvalStatus === 'approved';
+        
+        // Update user's approval status for JWT token
+        user.isApprovedOrganizer = isApprovedOrganizer;
+        await user.save({ validateBeforeSave: false });
+        
+        // ✅ Organizer can access features only if BOTH conditions are met:
+        // 1. User status is 'active' (not just pending_verification)
+        // 2. Organizer is approved
+        canAccessOrganizerFeatures = (user.status === 'active' && isApprovedOrganizer);
+        
+        console.log(`📌 Organizer ${user._id} - Status: ${user.status}, Approval: ${organizerApprovalStatus}, CanAccessFeatures: ${canAccessOrganizerFeatures}`);
+      } else {
+        console.log(`⚠️ No organizer record found for user ${user._id}`);
+      }
+    }
+
+    // 🔗 Guest order migration
     let migratedCount = 0;
     const guestOrders = await Order.find({
       customerEmail: email,
       isGuestOrder: true,
       convertedToUser: false
     });
+    console.log(`📦 Found ${guestOrders.length} guest orders for ${email}`);
 
     if (guestOrders.length > 0) {
       await Promise.all(
@@ -730,7 +788,7 @@ exports.login = async (req, res, next) => {
           order.isGuestOrder = false;
           order.convertedToUser = true;
           order.userId = user._id;
-          order.hasAccount = true; // keep consistent
+          order.hasAccount = true;
 
           const updated = await order.save();
           console.log(`✅ Migrated order ${updated.orderNumber}, now linked to user ${user._id}`);
@@ -747,20 +805,72 @@ exports.login = async (req, res, next) => {
         { userId: user._id }
       ]
     });
+    console.log(`📦 Total orders for ${email}:`, allOrders.length);
 
-    console.log(`📦 Orders for ${email}:`, allOrders);
+    // 🎟️ Generate JWT (includes isApprovedOrganizer for middleware)
+    const token = user.getSignedJwtToken();
+    console.log(`🔑 JWT generated for user ${user._id}`);
 
-    // 🎟️ Send token + include migrated orders info
-    sendTokenResponse(user, 200, res, user.userType, migratedCount);
+    const options = {
+      expires: new Date(
+        Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000
+      ),
+      httpOnly: true
+    };
+    if (process.env.NODE_ENV === 'production') {
+      options.secure = true;
+    }
+
+    // Update login stats
+    await user.updateLoginStats();
+    console.log(`📊 Updated login stats for user ${user._id}`);
+
+    // ✅ Successful login
+    res
+      .status(200)
+      .cookie('token', token, options)
+      .json({
+        success: true,
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          userType: user.userType,
+          status: user.status, // ← Include user status in response
+          isApprovedOrganizer,
+          organizerApprovalStatus,
+          canAccessOrganizerFeatures // ← New flag for frontend UI control
+        },
+        migratedOrders: migratedCount,
+        message: getLoginMessage(user, isApprovedOrganizer, canAccessOrganizerFeatures)
+      });
 
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('🔥 Login error:', error);
     res.status(500).json({
       success: false,
       message: 'Server Error'
     });
   }
 };
+
+// Helper function for login messages
+function getLoginMessage(user, isApprovedOrganizer, canAccessOrganizerFeatures) {
+  if (user.status === 'pending_verification') {
+    if (user.userType === 'organizer') {
+      return 'Login successful. Your account is pending verification. Organizer features will be available after admin approval.';
+    }
+    return 'Login successful. Your account is pending verification.';
+  }
+  
+  if (user.userType === 'organizer' && !canAccessOrganizerFeatures) {
+    return 'Login successful. Organizer features will be available after admin approval.';
+  }
+  
+  return 'Login successful';
+}
+
 
 
 

@@ -23,34 +23,36 @@ const Login = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  
-  try {
-    const response = await login(formData.email, formData.password);
-    showSuccess(response?.message || 'Welcome back!');
-    // Log the user object for debugging
-    console.log('User object from login response:', response.user);
-    // Use the userType from the user object (nested data)
-    const userType = response?.user?.data?.userType;
-    console.log('Detected userType:', userType);
+    e.preventDefault();
+    setLoading(true);
     
-    if (userType === 'organizer') {
-      navigate('/organizer-dashboard', { replace: true });
-    } else {
-      navigate('/dashboard', { replace: true });
+    try {
+      const response = await login(formData.email, formData.password);
+      showSuccess(response?.message || 'Welcome back!');
+      console.log('User object from login response:', response.user);
+      const userType = response?.user?.data?.userType;
+      
+      if (userType === 'organizer') {
+        navigate('/organizer-dashboard', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    } catch (error) {
+      // Show backend error messages
+      if (error.response?.data?.message) {
+        showError(error.response.data.message);
+      } else if (error.isAuthError) {
+        showError(error.message);
+      } else if (error.message) {
+        showError(error.message);
+      } else {
+        showError('An unexpected error occurred');
+      }
+      console.error('Login error:', error);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    // Check if it's an authentication error from the interceptor
-    if (error.isAuthError) {
-      showError('Session expired. Please login again.');
-    } else {
-      showError(error?.message || (error?.response?.data?.message) || 'Login failed. Please check your credentials.');
-    }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">

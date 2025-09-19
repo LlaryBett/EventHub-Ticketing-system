@@ -80,14 +80,14 @@ const organizerStep2Validation = [
     .matches(/^\d{5}(-\d{4})?$/)
     .withMessage('Please provide a valid ZIP code'),
   body('taxId')
-    .optional()
+    .optional({ checkFalsy: true })  // Makes field optional and allows empty strings
     .trim()
     .isLength({ max: 20 })
     .withMessage('Tax ID cannot be more than 20 characters'),
   body('website')
-    .optional()
+    .optional({ checkFalsy: true })  // Makes field optional and allows empty strings
     .isURL()
-    .withMessage('Please provide a valid website URL'),
+    .withMessage('If provided, website must be a valid URL'),
   body('acceptTerms')
     .equals('true')
     .withMessage('You must accept the terms and conditions')

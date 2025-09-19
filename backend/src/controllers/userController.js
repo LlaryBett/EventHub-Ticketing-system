@@ -1030,3 +1030,442 @@ exports.checkInAttendee = async (req, res, next) => {
     });
   }
 };
+
+
+
+
+
+
+// ADMIN 
+
+// @desc    Get all users (admin only)
+// @route   GET /api/users/admin/users
+// @access  Private/Admin
+exports.getUsers = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    // Build filter object
+    const filter = {};
+    if (req.query.role) filter.role = req.query.role;
+    if (req.query.status) filter.status = req.query.status;
+    if (req.query.search) {
+      filter.$or = [
+        { name: { $regex: req.query.search, $options: 'i' } },
+        { email: { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
+
+    const users = await User.find(filter)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await User.countDocuments(filter);
+    const totalPages = Math.ceil(total / limit);
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      total,
+      totalPages,
+      currentPage: page,
+      data: users
+    });
+  } catch (error) {
+    console.error('Get users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Get user by ID (admin only)
+// @route   GET /api/users/admin/users/:id
+// @access  Private/Admin
+exports.getUserById = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('-password')
+      .populate({
+        path: 'organizerProfile',
+        select: 'organizationName businessType verificationStatus'
+      });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Get additional user data if needed
+    const orders = await Order.countDocuments({ userId: user._id });
+    const tickets = await IssuedTicket.countDocuments({ userId: user._id });
+
+    const userData = user.toObject();
+    userData.ordersCount = orders;
+    userData.ticketsCount = tickets;
+
+    res.status(200).json({
+      success: true,
+      data: userData
+    });
+  } catch (error) {
+    console.error('Get user by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Update user (admin only)
+// @route   PUT /api/users/admin/users/:id
+// @access  Private/Admin
+exports.updateUser = async (req, res, next) => {
+  try {
+    const { name, email, phone, role, status } = req.body;
+    
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update fields
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (phone) user.phone = phone;
+    if (role) user.role = role;
+    if (status) user.status = status;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Deactivate/activate user (admin only)
+// @route   PATCH /api/users/admin/users/:id/status
+// @access  Private/Admin
+exports.deactivateUser = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    
+    if (!['active', 'suspended', 'deactivated'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status must be active, suspended, or deactivated'
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `User ${status} successfully`,
+      data: user
+    });
+  } catch (error) {
+    console.error('Deactivate user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Delete user (admin only)
+// @route   DELETE /api/users/admin/users/:id
+// @access  Private/Admin
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // If user is organizer, delete organizer profile first
+    if (user.role === 'organizer') {
+      await Organizer.findOneAndDelete({ userId: user._id });
+    }
+
+    // Delete user's orders and tickets
+    await Order.deleteMany({ userId: user._id });
+    await IssuedTicket.deleteMany({ userId: user._id });
+
+    // Delete user account
+    await User.findByIdAndDelete(user._id);
+
+    res.status(200).json({
+      success: true,
+      message: 'User account and all associated data have been deleted'
+    });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Get user statistics (admin only)
+// @route   GET /api/users/admin/statistics/users
+// @access  Private/Admin
+exports.getUserStatistics = async (req, res, next) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalOrganizers = await User.countDocuments({ role: 'organizer' });
+    const totalAdmins = await User.countDocuments({ role: 'admin' });
+    const activeUsers = await User.countDocuments({ status: 'active' });
+    const suspendedUsers = await User.countDocuments({ status: 'suspended' });
+    
+    // Get user growth in last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const newUsers = await User.countDocuments({
+      createdAt: { $gte: thirtyDaysAgo }
+    });
+
+    // Get user registration by month for chart
+    const monthlyRegistrations = await User.aggregate([
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } },
+      { $limit: 12 }
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalUsers,
+        totalOrganizers,
+        totalAdmins,
+        activeUsers,
+        suspendedUsers,
+        newUsersLast30Days: newUsers,
+        monthlyRegistrations
+      }
+    });
+  } catch (error) {
+    console.error('Get user statistics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Search users (admin only)
+// @route   GET /api/users/admin/users/search/:query
+// @access  Private/Admin
+exports.searchUsers = async (req, res, next) => {
+  try {
+    const { query } = req.params;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const users = await User.find({
+      $or: [
+        { name: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } },
+        { phone: { $regex: query, $options: 'i' } }
+      ]
+    })
+    .select('-password')
+    .limit(limit);
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users
+    });
+  } catch (error) {
+    console.error('Search users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Get all organizers (admin only)
+// @route   GET /api/users/admin/organizers
+// @access  Private/Admin
+exports.getOrganizers = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const organizers = await Organizer.find()
+      .populate('userId', 'name email phone status')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Organizer.countDocuments();
+    const totalPages = Math.ceil(total / limit);
+
+    res.status(200).json({
+      success: true,
+      count: organizers.length,
+      total,
+      totalPages,
+      currentPage: page,
+      data: organizers
+    });
+  } catch (error) {
+    console.error('Get organizers error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Get organizer by ID (admin only)
+// @route   GET /api/users/admin/organizers/:id
+// @access  Private/Admin
+exports.getOrganizerById = async (req, res, next) => {
+  try {
+    const organizer = await Organizer.findById(req.params.id)
+      .populate('userId', 'name email phone status createdAt')
+      .populate({
+        path: 'events',
+        select: 'title date venue capacity',
+        options: { sort: { date: -1 } }
+      });
+
+    if (!organizer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Organizer not found'
+      });
+    }
+
+    // Get organizer statistics
+    const eventsCount = await Event.countDocuments({ organizer: organizer._id });
+    const totalRevenue = await IssuedTicket.aggregate([
+      {
+        $lookup: {
+          from: 'events',
+          localField: 'eventId',
+          foreignField: '_id',
+          as: 'event'
+        }
+      },
+      {
+        $match: {
+          'event.organizer': organizer._id
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$price' }
+        }
+      }
+    ]);
+
+    const organizerData = organizer.toObject();
+    organizerData.eventsCount = eventsCount;
+    organizerData.totalRevenue = totalRevenue.length > 0 ? totalRevenue[0].total : 0;
+
+    res.status(200).json({
+      success: true,
+      data: organizerData
+    });
+  } catch (error) {
+    console.error('Get organizer by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Verify organizer (admin only)
+// @route   PATCH /api/users/admin/organizers/:id/verification
+// @access  Private/Admin
+exports.verifyOrganizer = async (req, res, next) => {
+  try {
+    const { verificationStatus, verificationNotes } = req.body;
+    
+    if (!['pending', 'verified', 'rejected'].includes(verificationStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification status must be pending, verified, or rejected'
+      });
+    }
+
+    const organizer = await Organizer.findByIdAndUpdate(
+      req.params.id,
+      {
+        verificationStatus,
+        verificationNotes: verificationNotes || '',
+        verifiedAt: verificationStatus === 'verified' ? new Date() : null
+      },
+      { new: true, runValidators: true }
+    ).populate('userId', 'name email');
+
+    if (!organizer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Organizer not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Organizer ${verificationStatus} successfully`,
+      data: organizer
+    });
+  } catch (error) {
+    console.error('Verify organizer error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};

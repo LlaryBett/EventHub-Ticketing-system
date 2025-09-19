@@ -14,9 +14,21 @@ const {
   getOrganizerAttendees,
   getEventAttendees,
   exportEventAttendees,
-  checkInAttendee
+  checkInAttendee,
+  // Admin-specific imports (if any)
+getUsers,
+  getUserById,
+  updateUser,
+  deactivateUser,
+  deleteUser,
+  getUserStatistics,
+  searchUsers,
+  getOrganizers,
+  getOrganizerById,
+  verifyOrganizer
 } = require('../controllers/userController');
-const { protect } = require('../middleware/auth');
+
+const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -73,33 +85,48 @@ const organizerProfileValidation = [
     .matches(/^\d{5}(-\d{4})?$/)
     .withMessage('Please provide a valid ZIP code'),
   body('taxId')
-    .optional()
+    .optional({ nullable: true, checkFalsy: true }) // Makes field completely optional
     .trim()
     .isLength({ max: 20 })
-    .withMessage('Tax ID cannot be more than 20 characters'),
+    .withMessage('If provided, Tax ID cannot be more than 20 characters'),
   body('website')
-    .optional()
+    .optional({ nullable: true, checkFalsy: true }) // Makes field completely optional
     .isURL()
-    .withMessage('Please provide a valid website URL')
+    .withMessage('If provided, website must be a valid URL')
 ];
 
-// User profile routes
+// User profile routes (existing)
 router.get('/me', protect, getMe);
 router.get('/:id', getUserProfile);
 router.get('/:id/events', protect, getUserEvents);
 router.get('/:id/orders', protect, getUserOrderHistory);
 router.get('/:id/tickets', protect, getUserTickets);
 
-// User account management
+// User account management (existing)
 router.put('/updatedetails', protect, updateDetailsValidation, updateDetails);
 router.put('/updatepassword', protect, updatePasswordValidation, updatePassword);
 router.put('/organizer/profile', protect, organizerProfileValidation, updateOrganizerProfile);
 router.delete('/delete', protect, deleteAccount);
 
-// Organizer attendee management routes
+// Organizer attendee management routes (existing)
 router.get('/organizer/attendees', protect, getOrganizerAttendees);
 router.get('/organizer/events/:eventId/attendees', protect, getEventAttendees);
 router.get('/organizer/events/:eventId/attendees/export', protect, exportEventAttendees);
 router.post('/organizer/tickets/:ticketId/checkin', protect, checkInAttendee);
+
+// ========== ADMIN ROUTES ==========
+// User management
+router.get('/admin/users', protect, authorize('admin'), getUsers);
+router.get('/admin/users/:id', protect, authorize('admin'), getUserById);
+router.put('/admin/users/:id', protect, authorize('admin'), updateUser);
+router.patch('/admin/users/:id/status', protect, authorize('admin'), deactivateUser);
+router.delete('/admin/users/:id', protect, authorize('admin'), deleteUser);
+router.get('/admin/statistics/users', protect, authorize('admin'), getUserStatistics);
+router.get('/admin/users/search/:query', protect, authorize('admin'), searchUsers);
+
+// Organizer management
+router.get('/admin/organizers', protect, authorize('admin'), getOrganizers);
+router.get('/admin/organizers/:id', protect, authorize('admin'), getOrganizerById);
+router.patch('/admin/organizers/:id/verification', protect, authorize('admin'), verifyOrganizer);
 
 module.exports = router;

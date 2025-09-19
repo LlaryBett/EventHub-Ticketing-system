@@ -54,7 +54,8 @@ const Organizer = () => {
           setCategories([]);
         }
       } catch (error) {
-        showError('Failed to load categories. Please try again.');
+        // Show backend error message if available
+        showError(error.response?.data?.message || 'Failed to load categories. Please try again.');
         console.error('Categories loading error:', error);
       } finally {
         setCategoriesLoading(false);
@@ -174,8 +175,9 @@ const Organizer = () => {
 
       console.log('Payload sent to backend (newEvent):', newEvent);
 
-      await eventService.createEvent(newEvent);
-      showSuccess('Event created successfully!');
+      const response = await eventService.createEvent(newEvent);
+      // Use success message from backend
+      showSuccess(response?.data?.message || response?.message || 'Event created successfully!');
       
       // Reset form
       setEventData({
@@ -200,7 +202,14 @@ const Organizer = () => {
         id: 1 
       }]);
     } catch (error) {
-      showError('Failed to create event. Please try again.');
+      // Show specific error message from backend
+      if (error.response?.data?.message) {
+        showError(error.response.data.message);
+      } else if (error.message) {
+        showError(error.message);
+      } else {
+        showError('Failed to create event. Please try again.');
+      }
       console.error('Event creation error:', error);
     } finally {
       setLoading(false);

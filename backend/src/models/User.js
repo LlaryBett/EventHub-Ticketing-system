@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+
 
 const UserSchema = new mongoose.Schema({
   name: {
@@ -23,14 +25,13 @@ const UserSchema = new mongoose.Schema({
     minlength: [8, 'Password must be at least 8 characters'],
     select: false
   },
- phone: {
-  type: String,
-  match: [
-    /^(?:\+254|254|0)(?:7\d{8}|11\d{7})$/,
-    'Please add a valid Kenyan phone number'
-  ]
-},
-
+  phone: {
+    type: String,
+    match: [
+      /^(?:\+254|254|0)(?:7\d{8}|11\d{7})$/,
+      'Please add a valid Kenyan phone number'
+    ]
+  },
   userType: {
     type: String,
     enum: ['attendee', 'organizer', 'admin'],
@@ -79,6 +80,11 @@ const UserSchema = new mongoose.Schema({
   upcomingEvents: {
     type: Number,
     default: 0
+  },
+  // NEW FIELD: Track if organizer is approved (for JWT token)
+  isApprovedOrganizer: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,
@@ -86,11 +92,11 @@ const UserSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// ... rest of the schema remains exactly the same ...
 // Index for better query performance
 UserSchema.index({ email: 1 });
 UserSchema.index({ userType: 1 });
 UserSchema.index({ status: 1 });
+UserSchema.index({ isApprovedOrganizer: 1 }); // NEW INDEX
 
 // Virtual for organizer profile
 UserSchema.virtual('organizerProfile', {
@@ -123,6 +129,24 @@ UserSchema.pre('save', async function(next) {
 
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
+
+// NEW: Auto-update isApprovedOrganizer based on organizer profile
+UserSchema.pre('save', async function(next) {
+  if (this.userType === 'organizer' && this.isModified('userType')) {
+    try {
+      const Organizer = mongoose.model('Organizer');
+      const organizer = await Organizer.findOne({ userId: this._id });
+      
+      if (organizer) {
+        this.isApprovedOrganizer = organizer.approvalStatus === 'approved';
+      }
+    } catch (error) {
+      // If Organizer model doesn't exist or other error, continue
+      console.log('Error checking organizer status:', error.message);
+    }
+  }
   next();
 });
 
@@ -173,6 +197,19 @@ UserSchema.methods.getEmailVerificationToken = function() {
   this.emailVerificationExpire = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
 
   return verificationToken;
+};
+
+// NEW: Method to get signed JWT token with organizer approval status
+UserSchema.methods.getSignedJwtToken = function() {
+  return jwt.sign(
+    { 
+      id: this._id,
+      userType: this.userType,
+      isApprovedOrganizer: this.isApprovedOrganizer || false
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRE }
+  );
 };
 
 module.exports = mongoose.model('User', UserSchema);
