@@ -64,11 +64,11 @@ const OrganizerSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
-  verificationStatus: {
-    type: String,
-    enum: ['unverified', 'pending', 'verified'],
-    default: 'unverified'
-  },
+ verificationStatus: {
+  type: String,
+  enum: ['unverified', 'pending', 'verified', 'rejected', 'suspended'],
+  default: 'unverified'
+},
   rejectionReason: {
     type: String,
     maxlength: [500, 'Rejection reason cannot be more than 500 characters']

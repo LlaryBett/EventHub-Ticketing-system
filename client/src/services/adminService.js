@@ -99,15 +99,26 @@ export const getOrganizerById = async (organizerId) => {
 // Verify organizer
 export const verifyOrganizer = async (organizerId, verificationData) => {
   try {
+    console.log("verifyOrganizer called with ID:", organizerId);
+    console.log("verificationData:", verificationData);
+
     const response = await api.patch(
       `/user/admin/organizers/${organizerId}/verification`,
       verificationData
     );
+
+    console.log("verifyOrganizer response:", response.data);
     return response.data;
   } catch (error) {
+    console.error(
+      "verifyOrganizer error:",
+      error.response?.data || error.message
+    );
     throw error.response?.data || error.message;
   }
 };
+
+
 
 // ========== UTILITY FUNCTIONS ==========
 

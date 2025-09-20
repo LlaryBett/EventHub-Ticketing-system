@@ -1428,17 +1428,37 @@ exports.getOrganizerById = async (req, res, next) => {
 // @desc    Verify organizer (admin only)
 // @route   PATCH /api/users/admin/organizers/:id/verification
 // @access  Private/Admin
+// @desc    Verify organizer (admin only)
+// @route   PATCH /api/users/admin/organizers/:id/verification
+// @access  Private/Admin
 exports.verifyOrganizer = async (req, res, next) => {
   try {
+    console.log("---- VERIFY ORGANIZER REQUEST ----");
+    console.log("Params:", req.params);       // Should contain { id: '...' }
+    console.log("Body:", req.body);           // Should contain verificationStatus, verificationNotes
+    console.log("Headers:", req.headers);     // Optional, helps check auth/debug
+
     const { verificationStatus, verificationNotes } = req.body;
-    
-    if (!['pending', 'verified', 'rejected'].includes(verificationStatus)) {
+
+    // Allowed verification statuses
+    const allowedStatuses = ['pending', 'verified', 'rejected', 'suspended'];
+
+    if (!allowedStatuses.includes(verificationStatus)) {
       return res.status(400).json({
         success: false,
-        message: 'Verification status must be pending, verified, or rejected'
+        message: `Verification status must be one of: ${allowedStatuses.join(', ')}`
       });
     }
 
+    // Safety check for ID
+    if (!req.params.id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Organizer ID is required in the URL'
+      });
+    }
+
+    // Update the organizer
     const organizer = await Organizer.findByIdAndUpdate(
       req.params.id,
       {
@@ -1456,6 +1476,8 @@ exports.verifyOrganizer = async (req, res, next) => {
       });
     }
 
+    console.log("Updated organizer:", organizer);
+
     res.status(200).json({
       success: true,
       message: `Organizer ${verificationStatus} successfully`,
@@ -1469,3 +1491,4 @@ exports.verifyOrganizer = async (req, res, next) => {
     });
   }
 };
+
