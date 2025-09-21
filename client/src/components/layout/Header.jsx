@@ -151,7 +151,7 @@ const Header = () => {
                 {/* Enhanced User Dropdown */}
                 {userMenuOpen && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)}></div>
+                    {/* ...existing code... */}
                     <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 transform opacity-100 scale-100 transition-all duration-200">
                       <div className="px-4 py-3 border-b border-gray-100">
                         <p className="text-sm font-medium text-gray-900">{user.data?.name}</p>
@@ -163,21 +163,31 @@ const Header = () => {
                         className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors duration-200 group"
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        <svg className="w-4 h-4 mr-3 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                        </svg>
+                        {/* ...dashboard icon... */}
                         Dashboard
                       </Link>
-                      
-                      {(user.role === 'organizer' || user.role === 'admin') && (
+
+                      {/* Admin Dashboard link for admin users */}
+                      {(user.data?.userType === 'admin') && (
+                        <Link
+                          to="/admin"
+                          className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors duration-200 group"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          <svg className="w-4 h-4 mr-3 text-gray-400 group-hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
+                          </svg>
+                          Admin Dashboard
+                        </Link>
+                      )}
+
+                      {(user.data?.userType === 'organizer' || user.data?.userType === 'admin') && (
                         <Link
                           to="/organizer"
                           className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors duration-200 group"
                           onClick={() => setUserMenuOpen(false)}
                         >
-                          <svg className="w-4 h-4 mr-3 text-gray-400 group-hover:text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
+                          {/* ...organizer icon... */}
                           Organizer Panel
                         </Link>
                       )}

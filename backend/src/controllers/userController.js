@@ -8,6 +8,7 @@ const IssuedTicket = require('../models/IssuedTicket'); // make sure this path i
 const Order = require('../models/Order');
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
+const emailService = require('../utils/emailService'); // <-- Add this import
 
 // Generate JWT Token (needed for updatePassword)
 const generateToken = (id, userType) => {
@@ -257,7 +258,7 @@ exports.getMe = async (req, res, next) => {
           currentPeriodRevenue: currentRevenue,
           previousPeriodRevenue: previousRevenue,
           currentPeriodAttendees: currentAttendees,
-          previousPeriodAttendees: previousAttendees,
+          previousPeriodAttendees: previousPeriodAttendees,
           revenueTrend,
           eventPerformance,
           recentEvents
@@ -1428,16 +1429,8 @@ exports.getOrganizerById = async (req, res, next) => {
 // @desc    Verify organizer (admin only)
 // @route   PATCH /api/users/admin/organizers/:id/verification
 // @access  Private/Admin
-// @desc    Verify organizer (admin only)
-// @route   PATCH /api/users/admin/organizers/:id/verification
-// @access  Private/Admin
 exports.verifyOrganizer = async (req, res, next) => {
   try {
-    console.log("---- VERIFY ORGANIZER REQUEST ----");
-    console.log("Params:", req.params);       // Should contain { id: '...' }
-    console.log("Body:", req.body);           // Should contain verificationStatus, verificationNotes
-    console.log("Headers:", req.headers);     // Optional, helps check auth/debug
-
     const { verificationStatus, verificationNotes } = req.body;
 
     // Allowed verification statuses
@@ -1476,6 +1469,24 @@ exports.verifyOrganizer = async (req, res, next) => {
       });
     }
 
+    // --- Notify organizer by email if status changed ---
+    if (
+      ['verified', 'rejected', 'suspended'].includes(verificationStatus) &&
+      organizer.userId &&
+      organizer.userId.email
+    ) {
+      emailService.sendOrganizerVerificationEmail({
+        to: organizer.userId.email,
+        name: organizer.userId.name,
+        organizationName: organizer.organizationName,
+        status: verificationStatus,
+        notes: verificationNotes
+      }).catch(err => {
+        console.error('Failed to send organizer verification email:', err);
+      });
+    }
+    // --- End email notification ---
+
     console.log("Updated organizer:", organizer);
 
     res.status(200).json({
@@ -1492,3 +1503,302 @@ exports.verifyOrganizer = async (req, res, next) => {
   }
 };
 
+
+
+
+
+// @desc    Get comprehensive dashboard stats (admin only)
+// @route   GET /api/users/admin/dashboard
+// @access  Private/Admin
+exports.getAdminDashboardStats = async (req, res, next) => {
+  try {
+    // Get current date for filtering
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+    const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+
+    // 1. User Statistics
+    const totalUsers = await User.countDocuments();
+    const totalOrganizers = await User.countDocuments({ userType: 'organizer' });
+    const totalAttendees = await User.countDocuments({ userType: 'user' });
+    const newUsersLast30Days = await User.countDocuments({
+      createdAt: { $gte: thirtyDaysAgo }
+    });
+
+    // 2. Event Statistics
+    const totalEvents = await Event.countDocuments();
+    const activeEvents = await Event.countDocuments({
+      date: { $gte: now },
+      status: 'approved'
+    });
+    const upcomingEvents = await Event.countDocuments({
+      date: { $gte: now },
+      status: 'approved'
+    });
+    const pastEvents = await Event.countDocuments({
+      date: { $lt: now }
+    });
+
+    // 3. Ticket and Revenue Statistics
+    const totalTicketsSold = await IssuedTicket.countDocuments();
+    const totalRevenueResult = await IssuedTicket.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$price' }
+        }
+      }
+    ]);
+    const totalRevenue = totalRevenueResult.length > 0 ? totalRevenueResult[0].total : 0;
+
+    // 4. Pending Approvals
+    const pendingOrganizerVerification = await Organizer.countDocuments({
+      verificationStatus: 'pending'
+    });
+    const pendingEventApprovals = await Event.countDocuments({
+      status: 'pending'
+    });
+    const pendingApprovals = pendingOrganizerVerification + pendingEventApprovals;
+
+    // 5. Recent Events (last 10)
+    const recentEvents = await Event.find()
+      .populate('organizer', 'organizationName')
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select('title date venue image status')
+      .lean();
+
+    // 6. Recent Purchases (last 10)
+    const recentPurchases = await IssuedTicket.find()
+      .populate('eventId', 'title')
+      .populate('userId', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select('ticketCode attendeeName price createdAt eventId userId')
+      .lean();
+
+    // 7. Top Events by Revenue
+    const topEvents = await IssuedTicket.aggregate([
+      {
+        $group: {
+          _id: '$eventId',
+          ticketsSold: { $sum: 1 },
+          revenue: { $sum: '$price' }
+        }
+      },
+      { $sort: { revenue: -1 } },
+      { $limit: 5 }
+    ]);
+
+    // Populate event details for top events
+    const topEventsWithDetails = await Promise.all(
+      topEvents.map(async (event) => {
+        const eventDetails = await Event.findById(event._id)
+          .select('title image date venue')
+          .lean();
+        return {
+          ...event,
+          ...eventDetails
+        };
+      })
+    );
+
+    // 8. Top Organizers by Revenue
+    const topOrganizers = await Event.aggregate([
+      {
+        $lookup: {
+          from: 'issuedtickets',
+          localField: '_id',
+          foreignField: 'eventId',
+          as: 'tickets'
+        }
+      },
+      {
+        $unwind: '$tickets'
+      },
+      {
+        $group: {
+          _id: '$organizer',
+          eventsCount: { $sum: 1 },
+          totalRevenue: { $sum: '$tickets.price' },
+          ticketsSold: { $sum: 1 }
+        }
+      },
+      { $sort: { totalRevenue: -1 } },
+      { $limit: 5 }
+    ]);
+
+    // Populate organizer details
+    const topOrganizersWithDetails = await Promise.all(
+      topOrganizers.map(async (org) => {
+        const organizer = await Organizer.findById(org._id)
+          .populate('userId', 'name email')
+          .select('organizationName userId')
+          .lean();
+        return {
+          ...org,
+          name: organizer.userId.name,
+          organizationName: organizer.organizationName
+        };
+      })
+    );
+
+    // 9. Ticket Sales Trend (last 7 days)
+    const ticketTrend = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now.getTime() - (i * 24 * 60 * 60 * 1000));
+      const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
+      
+      const dayTickets = await IssuedTicket.countDocuments({
+        createdAt: { $gte: startOfDay, $lte: endOfDay }
+      });
+      
+      const dayRevenue = await IssuedTicket.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startOfDay, $lte: endOfDay }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: '$price' }
+          }
+        }
+      ]);
+
+      ticketTrend.push({
+        date: startOfDay.toISOString().split('T')[0],
+        tickets: dayTickets,
+        revenue: dayRevenue.length > 0 ? dayRevenue[0].total : 0
+      });
+    }
+
+    // 10. Events by Category (populate category name)
+    const eventsByCategoryAgg = await Event.aggregate([
+      {
+        
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
+    // Populate category names
+    let eventsByCategory = [];
+    if (eventsByCategoryAgg.length > 0) {
+      // If you have a Category model, use it to get names
+      const Category = require('../models/Category');
+      const categoryIds = eventsByCategoryAgg.map(c => c._id).filter(Boolean);
+      const categories = await Category.find({ _id: { $in: categoryIds } }).select('name').lean();
+      const categoryMap = {};
+      categories.forEach(cat => {
+        categoryMap[cat._id.toString()] = cat.name;
+      });
+      eventsByCategory = eventsByCategoryAgg.map(c => ({
+        _id: c._id,
+        name: categoryMap[c._id?.toString()] || 'Unknown',
+        count: c.count
+      }));
+    }
+
+    // 11. User Growth (last 6 months)
+    const userGrowth = await User.aggregate([
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1 } },
+      { $limit: 6 }
+    ]);
+
+    // 12. Low Stock and Sold Out Events
+    const lowStockEvents = await Event.find({
+      $expr: { $lt: ['$ticketsSold', { $multiply: ['$capacity', 0.2] }] }, // Less than 20% capacity
+      date: { $gte: now },
+      status: 'approved'
+    }).select('title capacity ticketsSold').limit(5).lean();
+
+    const soldOutEvents = await Event.find({
+      $expr: { $gte: ['$ticketsSold', '$capacity'] },
+      date: { $gte: now },
+      status: 'approved'
+    }).select('title capacity ticketsSold').limit(5).lean();
+
+    // 13. New Signups (last 7 days)
+    const newSignups = await User.find({
+      createdAt: { $gte: sevenDaysAgo }
+    })
+    .sort({ createdAt: -1 })
+    .select('name email createdAt userType')
+    .limit(10)
+    .lean();
+
+    // 14. Reported Items (placeholder - you'll need to implement reporting system)
+    const reportedItems = 0; // This would come from your reporting system
+
+    // Compile all data
+    const dashboardData = {
+      // KPI Stats
+      totalUsers,
+      totalOrganizers,
+      totalAttendees,
+      totalEvents,
+      activeEvents,
+      upcomingEvents,
+      pastEvents,
+      totalTicketsSold,
+      totalRevenue,
+      pendingApprovals,
+      
+      // Charts data
+      ticketTrend,
+      revenueTrend: ticketTrend, // Same as ticket trend but with revenue
+      eventsByCategory,
+      userGrowth,
+      
+      // Activity feeds
+      recentEvents,
+      recentPurchases: recentPurchases.map(purchase => ({
+        id: purchase._id,
+        eventTitle: purchase.eventId?.title || 'Unknown Event',
+        buyerName: purchase.attendeeName || purchase.userId?.name || 'Unknown Buyer',
+        quantity: 1, // Each issued ticket represents one purchase
+        amount: purchase.price,
+        date: purchase.createdAt
+      })),
+      newSignups,
+      supportTickets: [], // Placeholder - implement support ticket system
+      
+      // Top performers
+      topEvents: topEventsWithDetails,
+      topOrganizers: topOrganizersWithDetails,
+      
+      // Alerts
+      pendingOrganizerVerification,
+      reportedItems,
+      lowStockEvents,
+      soldOutEvents
+    };
+
+    res.status(200).json({
+      success: true,
+      data: dashboardData
+    });
+
+  } catch (error) {
+    console.error('Get admin dashboard stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};

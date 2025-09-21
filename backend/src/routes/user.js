@@ -15,8 +15,8 @@ const {
   getEventAttendees,
   exportEventAttendees,
   checkInAttendee,
-  // Admin-specific imports (if any)
-getUsers,
+  // Admin-specific imports
+  getUsers,
   getUserById,
   updateUser,
   deactivateUser,
@@ -25,7 +25,8 @@ getUsers,
   searchUsers,
   getOrganizers,
   getOrganizerById,
-  verifyOrganizer
+  verifyOrganizer,
+  getAdminDashboardStats // Add this import
 } = require('../controllers/userController');
 
 const { protect, authorize } = require('../middleware/auth');
@@ -115,6 +116,9 @@ router.get('/organizer/events/:eventId/attendees/export', protect, exportEventAt
 router.post('/organizer/tickets/:ticketId/checkin', protect, checkInAttendee);
 
 // ========== ADMIN ROUTES ==========
+// Dashboard route (ADD THIS NEW ROUTE)
+router.get('/admin/dashboard', protect, authorize('admin'), getAdminDashboardStats);
+
 // User management
 router.get('/admin/users', protect, authorize('admin'), getUsers);
 router.get('/admin/users/:id', protect, authorize('admin'), getUserById);

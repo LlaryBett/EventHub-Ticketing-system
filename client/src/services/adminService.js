@@ -118,7 +118,17 @@ export const verifyOrganizer = async (organizerId, verificationData) => {
   }
 };
 
+// ========== ADMIN ROUTES ==========
 
+// Get admin dashboard stats (from /admin/dashboard endpoint)
+export const getAdminDashboardStats = async () => {
+  try {
+    const response = await api.get('/user/admin/dashboard');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
 
 // ========== UTILITY FUNCTIONS ==========
 
@@ -167,13 +177,15 @@ export default {
   deleteUser,
   getUserStatistics,
   searchUsers,
-  
+
   // Organizer Management
   getOrganizers,
   getOrganizerById,
   verifyOrganizer,
-  
+
   // Utilities
   isAdmin,
-  getDashboardStats
+  getDashboardStats,
+  // Admin
+  getAdminDashboardStats
 };

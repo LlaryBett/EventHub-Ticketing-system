@@ -138,9 +138,27 @@ const sendContactResponse = async (email, { name, subject, response, referenceId
   });
 };
 
+async function sendOrganizerVerificationEmail({ to, name, organizationName, status, notes }) {
+  let subject, text;
+  if (status === 'verified') {
+    subject = 'Your Organizer Application Has Been Approved';
+    text = `Hello ${name},\n\nCongratulations! Your organizer application for "${organizationName}" has been approved. You can now create and manage events on our platform.\n\nBest regards,\nE-Ticket Team`;
+  } else if (status === 'rejected') {
+    subject = 'Your Organizer Application Was Rejected';
+    text = `Hello ${name},\n\nWe regret to inform you that your organizer application for "${organizationName}" was rejected.${notes ? `\n\nReason: ${notes}` : ''}\n\nIf you have questions, please contact support.\n\nBest regards,\nE-Ticket Team`;
+  } else if (status === 'suspended') {
+    subject = 'Your Organizer Account Has Been Suspended';
+    text = `Hello ${name},\n\nYour organizer account for "${organizationName}" has been suspended.${notes ? `\n\nReason: ${notes}` : ''}\n\nPlease contact support for more information.\n\nBest regards,\nE-Ticket Team`;
+  } else {
+    return;
+  }
+  return module.exports.sendEmail({ to, subject, text });
+}
+
 module.exports = {
   sendEmail,
   sendContactConfirmation,
   sendContactNotification,
-  sendContactResponse
+  sendContactResponse,
+  sendOrganizerVerificationEmail
 };
