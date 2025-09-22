@@ -212,24 +212,36 @@ export const exportEventAttendees = async (eventId, format = 'csv') => {
 };
 
 // Check in an attendee
-export const checkInAttendee = async (ticketId) => {
+export const checkInAttendee = async (ticketCode) => {
   try {
-    console.log('[checkInAttendee] ticketId:', ticketId);
+    console.log('🔹 [checkInAttendee] Called with ticketCode:', ticketCode);
 
-    const url = `/user/organizer/tickets/${ticketId}/checkin`;
-    console.log('[checkInAttendee] Requesting URL:', url);
+    if (!ticketCode) {
+      console.warn('⚠️ [checkInAttendee] ticketCode is undefined or empty!');
+      throw new Error('Ticket code is required to check in.');
+    }
+
+    const url = `/user/organizer/tickets/${ticketCode}/checkin`;
+    console.log('🔹 [checkInAttendee] Requesting URL:', url);
 
     const response = await api.post(url);
-
-    console.log('[checkInAttendee] Response data:', response.data);
+    console.log('✅ [checkInAttendee] Response status:', response.status);
+    console.log('✅ [checkInAttendee] Response data:', response.data);
 
     return response.data;
   } catch (error) {
     const errorMessage = error.response?.data?.message || error.message;
-    console.error('[checkInAttendee] Error:', errorMessage);
+    console.error('❌ [checkInAttendee] Error:', errorMessage);
+
+    if (error.response) {
+      console.error('❌ [checkInAttendee] Response data:', error.response.data);
+      console.error('❌ [checkInAttendee] Response status:', error.response.status);
+    }
+
     throw new Error(errorMessage);
   }
 };
+
 
 // Utility function to handle CSV download
 export const downloadAttendeesCSV = async (eventId, eventTitle) => {

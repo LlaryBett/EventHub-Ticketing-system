@@ -1,11 +1,14 @@
+const mongoose = require('mongoose');
 const Order = require('../models/Order');
 const GuestOrder = require('../models/GuestOrder');
+const IssuedTicket = require('../models/IssuedTicket'); // Adjust path to your model
 const Event = require('../models/Event');
 const User = require('../models/User');
 const Ticket = require('../models/Ticket');
 const { validationResult } = require('express-validator');
 const { sendEmail } = require('../utils/emailService');
 const jwt = require('jsonwebtoken');
+const QRCode = require('qrcode');
 const {
   validateTicketAvailability,
   reserveTickets,
@@ -475,8 +478,6 @@ getOrderById: async (req, res) => {
   },
 
   // Process checkout (updated for both authenticated and guest users)
- // Process checkout (updated to handle frontend payload structure)
-// Process checkout (updated to handle frontend payload structure)
 processCheckout: async (req, res) => {
   try {
     console.log('Checkout payload received from frontend:', req.body);
@@ -618,7 +619,47 @@ processCheckout: async (req, res) => {
         }
 
         // 🔹 CREATE ISSUED TICKETS
-        const issuedTickets = await createIssuedTickets(order, user);
+        const issuedTickets = [];
+        
+        for (const item of order.items) {
+          // Get event details
+          const event = await Event.findById(item.eventId);
+          if (!event) {
+            throw new Error(`Event not found for ID: ${item.eventId}`);
+          }
+
+          // For each quantity in the item, create a separate ticket
+          for (let i = 0; i < item.quantity; i++) {
+            const ticketCode = 'TICKET-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+            // Generate a real QR code image (base64) from the ticketCode
+            const qrCodeImage = await QRCode.toDataURL(ticketCode);
+
+            const issuedTicketData = {
+              ticketId: item.ticketId || new mongoose.Types.ObjectId(), // Use existing or create new
+              orderId: order._id,
+              userId: user ? user._id : null,
+              eventId: event._id,
+              eventTitle: event.title,
+              eventVenue: event.venue,
+              ticketCode: ticketCode,
+              qrCode: qrCodeImage, // <-- store base64 image here
+              attendeeName: order.customerName,
+              attendeeEmail: order.customerEmail,
+              price: item.price,
+              ticketType: item.ticketType || item.name || 'General Admission',
+              isUsed: false,
+              usedAt: null,
+              createdAt: new Date()
+            };
+
+            // Create and save the issued ticket
+            const issuedTicket = new IssuedTicket(issuedTicketData);
+            await issuedTicket.save();
+            
+            issuedTickets.push(issuedTicket);
+          }
+        }
+
         console.log('Constructed issuedTickets:', issuedTickets);
 
         // Check if account already exists for guest orders

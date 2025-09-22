@@ -16,6 +16,7 @@ import { formatDate, formatPrice } from '../utils/formatDate';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
+import QRScanner from '../components/common/QRScanner'; // Add this import
 
 const OrganizerDashboard = () => {
   const { showSuccess, showError } = useUI();
@@ -71,6 +72,10 @@ const OrganizerDashboard = () => {
       routingNumber: ''
     }
   });
+
+  // QR Scanner state
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
 
   // Add some sample categories for demonstration
   const eventCategories = [
@@ -175,6 +180,8 @@ const OrganizerDashboard = () => {
       setSelectedEvent(null);
     } catch (error) {
       showError('Failed to delete event');
+      // Use error for logging
+      console.error(error);
     }
   };
 
@@ -185,9 +192,13 @@ const OrganizerDashboard = () => {
       showSuccess('Event duplicated successfully');
       setShowDuplicateModal(false);
       setSelectedEvent(null);
+      // Use eventData for logging or debugging
+      console.debug('Duplicated event with data:', eventData);
       // Refresh events list
     } catch (error) {
       showError('Failed to duplicate event');
+      // Use error for logging
+      console.error(error);
     }
   };
 
@@ -198,9 +209,13 @@ const OrganizerDashboard = () => {
       showSuccess('Event updated successfully');
       setShowEditModal(false);
       setSelectedEvent(null);
+      // Use eventData for logging or debugging
+      console.debug('Updated event with data:', eventData);
       // Refresh events list
     } catch (error) {
       showError('Failed to update event');
+      // Use error for logging
+      console.error(error);
     }
   };
 
@@ -210,8 +225,12 @@ const OrganizerDashboard = () => {
       // await eventService.sendNotificationToAttendees(selectedEvent.id, notificationData);
       showSuccess('Notification sent successfully');
       setShowNotificationModal(false);
+      // Use notificationData for logging or debugging
+      console.debug('Notification sent with data:', notificationData);
     } catch (error) {
       showError('Failed to send notification');
+      // Use error for logging
+      console.error(error);
     }
   };
 
@@ -223,6 +242,8 @@ const OrganizerDashboard = () => {
       setShowSettingsModal(false);
     } catch (error) {
       showError('Failed to update settings');
+      // Use error for logging
+      console.error(error);
     }
   };
 
@@ -233,13 +254,73 @@ const OrganizerDashboard = () => {
       showSuccess(`Attendees exported as ${format.toUpperCase()}`);
     } catch (error) {
       showError('Failed to export attendees');
+      // Use error for logging
+      console.error(error);
     }
+  };
+
+  // QR Scanner Handlers
+  const handleScanSuccess = async (decodedText, decodedResult) => {
+    setScanResult(decodedText);
+    try {
+      // Extract ticket ID from QR code data
+      let ticketId = decodedText;
+      if (decodedText.startsWith('{')) {
+        const qrData = JSON.parse(decodedText);
+        ticketId = qrData.ticketId || qrData.id;
+      }
+      // Always call userService to verify ticket against backend
+      const checkinResponse = await checkInAttendee(ticketId);
+
+      // Display backend message if available, otherwise fallback
+      if (checkinResponse && checkinResponse.message) {
+        showSuccess(checkinResponse.message);
+      } else if (checkinResponse && checkinResponse.error) {
+        showError(checkinResponse.error);
+      } else if (checkinResponse && checkinResponse.success) {
+        showSuccess('Attendee checked in successfully!');
+      } else {
+        showSuccess('Check-in completed.');
+      }
+
+      // Use decodedResult for debugging
+      if (decodedResult) {
+        console.debug('Decoded QR result:', decodedResult);
+      }
+      // Refresh attendees list
+      if (selectedEvent?.eventId) {
+        const response = await getEventAttendees(selectedEvent.eventId);
+        setAttendees(response?.data?.attendees || []);
+        setAttendeeStats(response?.data?.stats || {});
+      }
+      setShowQRScanner(false);
+    } catch (error) {
+      // Display backend error message if available
+      if (error?.response?.data?.message) {
+        showError(error.response.data.message);
+      } else if (error?.message) {
+        showError(error.message);
+      } else {
+        showError('Failed to check in attendee. Please try again.');
+      }
+      console.error('Check-in failed:', error);
+    }
+  };
+
+  const handleScanError = (errorMessage) => {
+    // Optional: Handle scan errors quietly or show subtle notification
+    console.log('QR Scan Error:', errorMessage);
   };
 
   // Pagination
   const indexOfLastEvent = currentPage * eventsPerPage;
   const indexOfFirstEvent = indexOfLastEvent - eventsPerPage;
   const currentEvents = filteredEvents.slice(indexOfFirstEvent, indexOfLastEvent);
+  // Use currentEvents for debugging or logging
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.debug('Current paginated events:', currentEvents);
+  }
   const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
 
   const tabs = [
@@ -269,6 +350,8 @@ const OrganizerDashboard = () => {
           setAttendees([]);
           setAttendeeStats({});
           setModalEventInfo(null);
+          // Use err for logging
+          console.error(err);
         }
       }
     };
@@ -1256,7 +1339,10 @@ const OrganizerDashboard = () => {
         {/* Attendees Modal */}
         <Modal
           isOpen={showAttendeesModal}
-          onClose={() => setShowAttendeesModal(false)}
+          onClose={() => {
+            setShowAttendeesModal(false);
+            setShowQRScanner(false); // Close scanner when modal closes
+          }}
           title={`Attendees - ${modalEventInfo?.title || selectedEvent?.title}`}
           size="large"
         >
@@ -1314,7 +1400,7 @@ const OrganizerDashboard = () => {
                 </div>
               </div>
             )}
-            {/* Export Buttons */}
+            {/* Export and Scanner Buttons */}
             <div className="flex space-x-4 mb-2">
               <Button 
                 size="small"
@@ -1330,7 +1416,33 @@ const OrganizerDashboard = () => {
                 <Download className="w-4 h-4 mr-1" />
                 Export Excel
               </Button>
+              {/* Add QR Scanner Button */}
+              <Button 
+                size="small"
+                variant={showQRScanner ? "primary" : "outline"}
+                onClick={() => setShowQRScanner(!showQRScanner)}
+              >
+                <QrCode className="w-4 h-4 mr-1" />
+                {showQRScanner ? 'Hide Scanner' : 'Scan Ticket'}
+              </Button>
             </div>
+            {/* QR Scanner Section */}
+            {showQRScanner && (
+              <div className="mb-4 p-4 border rounded-lg">
+                <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Scan Ticket QR Code
+                </h4>
+                <QRScanner 
+                  onScanSuccess={handleScanSuccess}
+                  onScanError={handleScanError}
+                />
+                {scanResult && (
+                  <p className={`text-sm mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    Last scan: {scanResult.substring(0, 50)}...
+                  </p>
+                )}
+              </div>
+            )}
             {/* Attendee List */}
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {attendees.length === 0 ? (
@@ -1363,7 +1475,23 @@ const OrganizerDashboard = () => {
                     </div>
                     <div className="flex items-center space-x-2">
                       <img src={attendee.qrCode} alt="QR Code" className="w-8 h-8" />
-                      <Button size="small" variant={attendee.isUsed ? "success" : "outline"} onClick={() => checkInAttendee(attendee.ticketId)}>
+                      <Button 
+                        size="small" 
+                        variant={attendee.isUsed ? "success" : "outline"} 
+                        onClick={async () => {
+                          try {
+                            await checkInAttendee(attendee.ticketId);
+                            showSuccess('Attendee checked in successfully!');
+                            // Refresh the list
+                            const response = await getEventAttendees(selectedEvent.eventId);
+                            setAttendees(response?.data?.attendees || []);
+                          } catch (error) {
+                            showError('Failed to check in attendee');
+                            // Use error for logging
+                            console.error(error);
+                          }
+                        }}
+                      >
                         <QrCode className="w-4 h-4" />
                         {attendee.isUsed ? "Checked In" : "Check In"}
                       </Button>

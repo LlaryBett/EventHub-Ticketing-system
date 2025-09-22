@@ -113,7 +113,8 @@ router.delete('/delete', protect, deleteAccount);
 router.get('/organizer/attendees', protect, getOrganizerAttendees);
 router.get('/organizer/events/:eventId/attendees', protect, getEventAttendees);
 router.get('/organizer/events/:eventId/attendees/export', protect, exportEventAttendees);
-router.post('/organizer/tickets/:ticketId/checkin', protect, checkInAttendee);
+router.post('/organizer/tickets/:ticketCode/checkin', protect, checkInAttendee);
+
 
 // ========== ADMIN ROUTES ==========
 // Dashboard route (ADD THIS NEW ROUTE)

@@ -183,15 +183,15 @@ const AdminOverview = () => {
                   <Pie
                     data={dashboardData.eventsByCategory}
                     dataKey="count"
-                    nameKey="_id"
+                    nameKey="name"
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
                     fill="#a78bfa"
-                    label={({ _id, count }) => `${_id}: ${count}`}
+                    label={({ name, count }) => `${name}: ${count}`}
                   >
                     {dashboardData.eventsByCategory.map((entry, idx) => (
-                      <Cell key={`cell-${idx}`} fill={["#6366f1", "#a78bfa", "#f59e42", "#f87171", "#34d399"][idx % 5]} />
+                      <Cell key={`cell-${idx}`} fill={entry.color || ["#6366f1", "#a78bfa", "#f59e42", "#f87171", "#34d399"][idx % 5]} />
                     ))}
                   </Pie>
                   <Legend />

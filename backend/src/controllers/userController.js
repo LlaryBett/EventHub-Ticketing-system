@@ -258,7 +258,7 @@ exports.getMe = async (req, res, next) => {
           currentPeriodRevenue: currentRevenue,
           previousPeriodRevenue: previousRevenue,
           currentPeriodAttendees: currentAttendees,
-          previousPeriodAttendees: previousPeriodAttendees,
+          previousPeriodAttendees: previousAttendees, // ✅ Fix here
           revenueTrend,
           eventPerformance,
           recentEvents
@@ -960,11 +960,13 @@ exports.exportEventAttendees = async (req, res, next) => {
 // @access  Private (organizer only)
 exports.checkInAttendee = async (req, res, next) => {
   try {
-    const { ticketId } = req.params;
+    const { ticketCode } = req.params; // from scanned QR code
+    console.log('🔹 ticketCode from params:', ticketCode);
 
     // Get organizer profile
     const organizerProfile = await Organizer.findOne({ userId: req.user.id });
-    
+    console.log('🔹 organizerProfile:', organizerProfile);
+
     if (!organizerProfile) {
       return res.status(404).json({
         success: false,
@@ -972,9 +974,11 @@ exports.checkInAttendee = async (req, res, next) => {
       });
     }
 
-    // Get the ticket and verify it belongs to organizer's event
-    const ticket = await IssuedTicket.findById(ticketId)
-      .populate('eventId', 'title organizer');
+    // Find the ticket and populate the event details
+    const ticket = await IssuedTicket.findOne({ ticketCode })
+      .populate('eventId', 'title venue organizer');
+
+    console.log('🔹 Found ticket:', ticket);
 
     if (!ticket) {
       return res.status(404).json({
@@ -1002,7 +1006,7 @@ exports.checkInAttendee = async (req, res, next) => {
       });
     }
 
-    // Check in the ticket
+    // ✅ Check in the ticket — no need to save eventTitle or eventVenue
     ticket.isUsed = true;
     ticket.usedAt = new Date();
     await ticket.save();
@@ -1010,7 +1014,8 @@ exports.checkInAttendee = async (req, res, next) => {
     console.log('✅ Ticket checked in:', {
       ticketCode: ticket.ticketCode,
       attendeeName: ticket.attendeeName,
-      eventTitle: ticket.eventId.title
+      eventTitle: ticket.eventId.title,
+      eventVenue: ticket.eventId.venue
     });
 
     res.status(200).json({
@@ -1019,6 +1024,8 @@ exports.checkInAttendee = async (req, res, next) => {
       data: {
         ticketCode: ticket.ticketCode,
         attendeeName: ticket.attendeeName,
+        eventTitle: ticket.eventId.title,
+        eventVenue: ticket.eventId.venue,
         checkedInAt: ticket.usedAt
       }
     });
@@ -1031,6 +1038,9 @@ exports.checkInAttendee = async (req, res, next) => {
     });
   }
 };
+
+
+
 
 
 
@@ -1675,10 +1685,9 @@ exports.getAdminDashboardStats = async (req, res, next) => {
       });
     }
 
-    // 10. Events by Category (populate category name)
+    // 10. Events by Category (populate category name, icon, color)
     const eventsByCategoryAgg = await Event.aggregate([
       {
-        
         $group: {
           _id: '$category',
           count: { $sum: 1 }
@@ -1687,22 +1696,36 @@ exports.getAdminDashboardStats = async (req, res, next) => {
       { $sort: { count: -1 } }
     ]);
 
-    // Populate category names
     let eventsByCategory = [];
     if (eventsByCategoryAgg.length > 0) {
-      // If you have a Category model, use it to get names
       const Category = require('../models/Category');
       const categoryIds = eventsByCategoryAgg.map(c => c._id).filter(Boolean);
-      const categories = await Category.find({ _id: { $in: categoryIds } }).select('name').lean();
+      // If category is stored as ObjectId, use _id; if as string, use name
+      // Try both for robustness
+      const categories = await Category.find({
+        $or: [
+          { _id: { $in: categoryIds.filter(id => mongoose.Types.ObjectId.isValid(id)) } },
+          { name: { $in: categoryIds.filter(id => typeof id === 'string') } }
+        ]
+      }).select('name icon color').lean();
+
+      // Build map for both _id and name
       const categoryMap = {};
       categories.forEach(cat => {
-        categoryMap[cat._id.toString()] = cat.name;
+        categoryMap[cat._id?.toString()] = cat;
+        categoryMap[cat.name] = cat;
       });
-      eventsByCategory = eventsByCategoryAgg.map(c => ({
-        _id: c._id,
-        name: categoryMap[c._id?.toString()] || 'Unknown',
-        count: c.count
-      }));
+
+      eventsByCategory = eventsByCategoryAgg.map(c => {
+        const cat = categoryMap[c._id?.toString()] || categoryMap[c._id] || {};
+        return {
+          _id: c._id,
+          name: cat.name || 'Unknown',
+          icon: cat.icon || '📁',
+          color: cat.color || 'bg-gray-500',
+          count: c.count
+        };
+      });
     }
 
     // 11. User Growth (last 6 months)

@@ -7,7 +7,6 @@ const Modal = ({ isOpen, onClose, title, children, size = 'medium' }) => {
     } else {
       document.body.style.overflow = 'unset';
     }
-
     return () => {
       document.body.style.overflow = 'unset';
     };
@@ -25,11 +24,11 @@ const Modal = ({ isOpen, onClose, title, children, size = 'medium' }) => {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+        {/* Use a blurred, light backdrop instead of black */}
+        <div
+          className="fixed inset-0 backdrop-blur-sm bg-white/70 transition-opacity"
           onClick={onClose}
         ></div>
-        
         <div className={`relative bg-white rounded-lg shadow-xl w-full ${sizeClasses[size]} mx-auto`}>
           <div className="flex items-center justify-between p-6 border-b">
             <h3 className="text-lg font-semibold text-gray-900">
@@ -44,7 +43,6 @@ const Modal = ({ isOpen, onClose, title, children, size = 'medium' }) => {
               </svg>
             </button>
           </div>
-          
           <div className="p-6">
             {children}
           </div>
