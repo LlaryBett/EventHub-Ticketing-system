@@ -536,11 +536,13 @@ const deleteEvent = async (req, res) => {
 };
 
 // Get featured events
+// Get featured events
 const getFeaturedEvents = async (req, res) => {
   try {
     const events = await Event.find({ featured: true })
       .populate('category', 'name')
       .populate('organizer', 'name')
+      .populate('tickets') // Populate the ticket details
       .limit(10);
 
     // Transform data to match your expected format
@@ -551,8 +553,16 @@ const getFeaturedEvents = async (req, res) => {
       image: event.image,
       date: event.date.toISOString().split('T')[0],
       time: event.time,
-      location: event.location,
-      price: event.price,
+      location: event.venue, // Fixed: changed from event.location to event.venue
+      // Price from first ticket (or 0 if no tickets)
+      price: event.tickets && event.tickets.length > 0 ? event.tickets[0].price : 0,
+      // Include all tickets array
+      tickets: event.tickets ? event.tickets.map(ticket => ({
+        id: ticket._id,
+        type: ticket.type,
+        price: ticket.price,
+        quantity: ticket.quantity
+      })) : [],
       category: event.category.name,
       organizer: event.organizer.name,
       capacity: event.capacity,
@@ -573,7 +583,6 @@ const getFeaturedEvents = async (req, res) => {
     });
   }
 };
-
 // Register user for an event
 const registerForEvent = async (req, res) => {
   try {

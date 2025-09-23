@@ -334,14 +334,18 @@ const OrganizerDashboard = () => {
   const [attendees, setAttendees] = useState([]);
   const [attendeeStats, setAttendeeStats] = useState({});
   const [modalEventInfo, setModalEventInfo] = useState(null);
+  const [attendeesLoading, setAttendeesLoading] = useState(false); // NEW
 
   // When opening the Attendees Modal, fetch attendees for the selected event
   useEffect(() => {
     const fetchAttendees = async () => {
       if (showAttendeesModal && selectedEvent?.eventId) {
+        setAttendeesLoading(true); // NEW
+        setAttendees([]); // Reset to avoid stale data
+        setAttendeeStats({});
+        setModalEventInfo(null);
         try {
           const response = await getEventAttendees(selectedEvent.eventId);
-          // FIX: Use response.data instead of response
           setAttendees(response?.data?.attendees || []);
           setAttendeeStats(response?.data?.stats || {});
           setModalEventInfo(response?.data?.event || null);
@@ -352,6 +356,8 @@ const OrganizerDashboard = () => {
           setModalEventInfo(null);
           // Use err for logging
           console.error(err);
+        } finally {
+          setAttendeesLoading(false); // NEW
         }
       }
     };
@@ -1445,7 +1451,11 @@ const OrganizerDashboard = () => {
             )}
             {/* Attendee List */}
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {attendees.length === 0 ? (
+              {attendeesLoading ? (
+                <div className={`text-center py-8 ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                  Loading attendees...
+                </div>
+              ) : attendees.length === 0 ? (
                 <div className={`text-center py-8 ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                   No attendees found for this event.
                 </div>

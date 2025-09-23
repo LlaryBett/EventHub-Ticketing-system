@@ -26,9 +26,9 @@ const baseClasses = 'font-medium rounded-full transition-all duration-200 focus:
 
   
   const sizeClasses = {
-    small: 'px-3 py-1.5 text-sm',
-    medium: 'px-6 py-2.5 text-base',
-    large: 'px-8 py-3 text-lg'
+    small: 'px-3 py-1.5 text-sm', // text-sm = 14px (Tailwind)
+    medium: 'px-6 py-2.5 text-base', // text-base = 16px (Tailwind)
+    large: 'px-8 py-3 text-lg' // text-lg = 18px (Tailwind)
   };
   
   const widthClass = fullWidth ? 'w-full' : '';

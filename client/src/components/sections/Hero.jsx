@@ -201,7 +201,7 @@ const Hero = () => {
             variants={slideInLeft}
           >
             <motion.h1 
-              className="text-4xl md:text-6xl font-bold leading-tight"
+              className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold leading-tight"
               variants={fadeInUp}
             >
               Discover Amazing
@@ -209,26 +209,27 @@ const Hero = () => {
             </motion.h1>
                      
             <motion.p 
-              className="text-xl text-gray-200 max-w-lg"
+              className="text-base sm:text-lg lg:text-xl text-gray-200 max-w-lg"
               variants={fadeInUp}
             >
               From tech conferences to music festivals, find and book tickets to the best events happening in your city and around the world.
             </motion.p>
                      
             <motion.div 
-              className="flex flex-col sm:flex-row gap-4"
+              className="flex flex-row gap-4"
               variants={fadeInUp}
             >
               <Link to="/events">
                 <Button 
                   size="large" 
-                  className="bg-yellow-400 text-gray-900 font-semibold hover:bg-yellow-300 hover:shadow-lg transition-all hover:scale-105 border-0"
+                  className="bg-yellow-400 text-gray-900 font-semibold hover:bg-yellow-300 hover:shadow-lg transition-all hover:scale-105 border-0 text-sm sm:text-base px-4 py-3 min-h-[48px] whitespace-nowrap"
                 >
                   <span className="flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
-                    Browse Events
+                    <span className="hidden sm:inline">Browse Events</span>
+                    <span className="sm:hidden">Browse</span>
                     <motion.span
                       className="inline-block"
                       whileHover={{ x: 5 }}
@@ -243,13 +244,14 @@ const Hero = () => {
                 <Button
                    variant="outline"
                    size="large"
-                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-gray-900 transition-all hover:scale-105 font-semibold"
+                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-gray-900 transition-all hover:scale-105 font-semibold text-sm sm:text-base px-4 py-3 min-h-[48px] whitespace-nowrap"
                 >
                   <span className="flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
-                    Create Event
+                    <span className="hidden sm:inline">Create Event</span>
+                    <span className="sm:hidden">Create</span>
                   </span>
                 </Button>
               </Link>
@@ -257,7 +259,7 @@ const Hero = () => {
 
             {/* Stats */}
             <motion.div 
-              className="flex flex-wrap gap-8 pt-8"
+              className="flex flex-wrap gap-6 sm:gap-8 pt-6 sm:pt-8"
               variants={fadeInUp}
             >
               {[
@@ -280,16 +282,16 @@ const Hero = () => {
                     }
                   }}
                 >
-                  <div className="text-3xl font-bold">{stat.number}</div>
-                  <div className="text-gray-300">{stat.label}</div>
+                  <div className="text-2xl sm:text-3xl font-bold">{stat.number}</div>
+                  <div className="text-gray-300 text-sm">{stat.label}</div>
                 </motion.div>
               ))}
             </motion.div>
           </motion.div>
 
-          {/* Hero Carousel - Circular Format */}
+          {/* Hero Carousel - Hidden on mobile, visible on large screens */}
           <motion.div 
-            className="relative flex justify-center"
+            className="relative justify-center hidden lg:flex"
             variants={slideInRight}
           >
             <div className="relative">
