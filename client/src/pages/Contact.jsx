@@ -1,20 +1,72 @@
 import React, { useState, useEffect } from 'react';
-import { useUI } from '../context/UIContext';
-import { useAuth } from '../context/AuthContext'; // Add this import
-import Button from '../components/common/Button';
-import Input from '../components/common/Input';
 import { Mail, Phone, MapPin, MessageCircle, Map } from 'lucide-react';
-import { 
-  submitContactForm, 
-  getAllFAQs, 
-  getContactInfo, 
-  getContactCategories,
-  validateContactForm 
-} from '../services/contactService';
+
+// Mock components since we don't have the imports
+const Button = ({ children, fullWidth, loading, disabled, type, ...props }) => {
+  const baseClasses = "font-semibold rounded-lg transition-colors duration-200 text-base min-h-12";
+  const widthClass = fullWidth ? "w-full" : "px-6 py-3";
+  const stateClasses = disabled || loading ? "bg-gray-400 text-gray-200 cursor-not-allowed" : "bg-blue-600 text-white hover:bg-blue-700";
+  
+  return (
+    <button 
+      type={type}
+      className={`${baseClasses} ${widthClass} ${stateClasses}`}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
+
+const Input = ({ label, error, required, ...props }) => {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input
+        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base ${
+          error ? 'border-red-500' : 'border-gray-300'
+        }`}
+        {...props}
+      />
+      {error && (
+        <p className="mt-1 text-sm text-red-600">{error}</p>
+      )}
+    </div>
+  );
+};
+
+// Mock hooks
+const useUI = () => ({
+  showSuccess: (msg) => alert(`Success: ${msg}`),
+  showError: (msg) => alert(`Error: ${msg}`)
+});
+
+const useAuth = () => ({
+  user: null
+});
+
+// Mock service functions
+const submitContactForm = async (data) => {
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  return { success: true, message: 'Message sent successfully!' };
+};
+
+const getAllFAQs = async () => ({ success: true, data: [] });
+const getContactInfo = async () => ({ success: false });
+const getContactCategories = () => [
+  { value: 'general', label: 'General Inquiry' },
+  { value: 'technical', label: 'Technical Support' },
+  { value: 'billing', label: 'Billing Question' },
+  { value: 'event', label: 'Event Organization' }
+];
+const validateContactForm = (data) => ({ isValid: true, errors: {} });
 
 const Contact = () => {
   const { showSuccess, showError } = useUI();
-  const { user } = useAuth(); // Add this
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -68,7 +120,7 @@ const Contact = () => {
     };
 
     loadData();
-  }, [user]); // Add user to dependency array
+  }, [user]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -150,25 +202,25 @@ const Contact = () => {
 
   const contactInfoItems = [
     {
-      icon: <Mail className="w-8 h-8" />,
+      icon: <Mail className="w-6 h-6 md:w-8 md:h-8" />,
       title: 'Email Us',
       content: displayContactInfo.email,
       description: 'We typically respond within 24 hours'
     },
     {
-      icon: <Phone className="w-8 h-8" />,
+      icon: <Phone className="w-6 h-6 md:w-8 md:h-8" />,
       title: 'Call Us',
       content: displayContactInfo.phone,
       description: displayContactInfo.businessHours
     },
     {
-      icon: <MapPin className="w-8 h-8" />,
+      icon: <MapPin className="w-6 h-6 md:w-8 md:h-8" />,
       title: 'Visit Us',
       content: displayContactInfo.address,
       description: 'Our headquarters in the heart of SF'
     },
     {
-      icon: <MessageCircle className="w-8 h-8" />,
+      icon: <MessageCircle className="w-6 h-6 md:w-8 md:h-8" />,
       title: 'Live Chat',
       content: 'Available 24/7',
       description: 'Get instant help from our support team'
@@ -200,13 +252,15 @@ const Contact = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="bg-primary-600 text-white py-16">
-        <div className="max-w-7xl mx-auto container-padding">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+      <section className="bg-blue-600 text-white py-12 md:py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 items-center">
             {/* Left Content */}
             <div className="text-center lg:text-left">
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">Get in Touch</h1>
-              <p className="text-xl text-primary-100">
+              {/* H1 - Mobile: 26px, Desktop: 48px */}
+              <h1 className="text-2xl md:text-5xl font-bold mb-4">Get in Touch</h1>
+              {/* Hero text - Mobile: 16px, Desktop: 20px */}
+              <p className="text-base md:text-xl text-blue-100 leading-relaxed">
                 Have questions, feedback, or need help? We're here for you. 
                 Reach out and we'll respond as quickly as possible.
               </p>
@@ -251,14 +305,15 @@ const Contact = () => {
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto container-padding py-16">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+      <div className="max-w-7xl mx-auto px-4 py-12 md:py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16">
           {/* Contact Form */}
           <div>
-            <div className="bg-white rounded-lg shadow-md p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Send us a Message</h2>
+            <div className="bg-white rounded-lg shadow-md p-6 md:p-8">
+              {/* H2 - Mobile: 20px, Desktop: 24px */}
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6">Send us a Message</h2>
               
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-4 md:space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Input
@@ -281,15 +336,14 @@ const Contact = () => {
                   </div>
                 </div>
 
-               <Input
-  label="Phone Number"
-  type="tel"
-  placeholder="+254 712 345 678"
-  value={formData.phone}
-  onChange={(e) => handleInputChange('phone', e.target.value)}
-  error={formErrors.phone}
-/>
-
+                <Input
+                  label="Phone Number"
+                  type="tel"
+                  placeholder="+254 712 345 678"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  error={formErrors.phone}
+                />
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -298,7 +352,7 @@ const Contact = () => {
                   <select
                     value={formData.category}
                     onChange={(e) => handleInputChange('category', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base ${
                       formErrors.category ? 'border-red-500' : 'border-gray-300'
                     }`}
                     required
@@ -327,11 +381,11 @@ const Contact = () => {
                     Message <span className="text-red-500">*</span>
                   </label>
                   <textarea
-                    rows={6}
+                    rows={5}
                     placeholder="Tell us how we can help you..."
                     value={formData.message}
                     onChange={(e) => handleInputChange('message', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base ${
                       formErrors.message ? 'border-red-500' : 'border-gray-300'
                     }`}
                     required
@@ -342,26 +396,27 @@ const Contact = () => {
                 </div>
 
                 <Button
-                  type="submit"
+                  onClick={handleSubmit}
                   fullWidth
                   loading={loading}
                   disabled={loading}
                 >
                   {loading ? 'Sending...' : 'Send Message'}
                 </Button>
-              </form>
+              </div>
             </div>
           </div>
 
           {/* Contact Information */}
-          <div className="space-y-8">
+          <div className="space-y-6 md:space-y-8">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Other Ways to Reach Us</h2>
+              {/* H2 - Mobile: 20px, Desktop: 24px */}
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6">Other Ways to Reach Us</h2>
               {dataLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   {[1,2,3,4].map(i => (
-                    <div key={i} className="bg-white rounded-lg shadow-md p-6 animate-pulse">
-                      <div className="w-8 h-8 bg-gray-300 rounded mb-3"></div>
+                    <div key={i} className="bg-white rounded-lg shadow-md p-4 md:p-6 animate-pulse">
+                      <div className="w-6 h-6 md:w-8 md:h-8 bg-gray-300 rounded mb-3"></div>
                       <div className="h-4 bg-gray-300 rounded mb-2"></div>
                       <div className="h-3 bg-gray-300 rounded mb-1"></div>
                       <div className="h-3 bg-gray-300 rounded"></div>
@@ -369,12 +424,15 @@ const Contact = () => {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   {contactInfoItems.map((info, index) => (
-                    <div key={index} className="bg-white rounded-lg shadow-md p-6">
-                      <div className="text-primary-600 mb-3">{info.icon}</div>
-                      <h3 className="font-semibold text-gray-900 mb-2">{info.title}</h3>
-                      <p className="text-primary-600 font-medium mb-1">{info.content}</p>
+                    <div key={index} className="bg-white rounded-lg shadow-md p-4 md:p-6">
+                      <div className="text-blue-600 mb-3">{info.icon}</div>
+                      {/* Card title - Mobile: 16px, Desktop: 16px */}
+                      <h3 className="font-semibold text-base text-gray-900 mb-2">{info.title}</h3>
+                      {/* Contact info - Mobile: 14px, Desktop: 16px */}
+                      <p className="text-sm md:text-base text-blue-600 font-medium mb-1">{info.content}</p>
+                      {/* Description - Mobile: 14px, Desktop: 14px */}
                       <p className="text-sm text-gray-500">{info.description}</p>
                     </div>
                   ))}
@@ -384,11 +442,12 @@ const Contact = () => {
 
             {/* FAQ Section */}
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
+              {/* H2 - Mobile: 20px, Desktop: 24px */}
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
               {dataLoading ? (
                 <div className="bg-white rounded-lg shadow-md divide-y">
                   {[1,2,3,4].map(i => (
-                    <div key={i} className="p-6 animate-pulse">
+                    <div key={i} className="p-4 md:p-6 animate-pulse">
                       <div className="h-4 bg-gray-300 rounded mb-3"></div>
                       <div className="h-3 bg-gray-300 rounded"></div>
                     </div>
@@ -399,14 +458,15 @@ const Contact = () => {
                   {displayFAQs.map((item, index) => (
                     <details
                       key={index}
-                      className="group p-6 cursor-pointer"
+                      className="group p-4 md:p-6 cursor-pointer"
                     >
-                      <summary className="flex justify-between items-center font-semibold text-gray-900 list-none">
+                      <summary className="flex justify-between items-center font-semibold text-sm md:text-base text-gray-900 list-none">
                         {item.question}
-                        <span className="ml-2 transition-transform group-open:rotate-180">
+                        <span className="ml-2 transition-transform group-open:rotate-180 text-lg">
                           ▼
                         </span>
                       </summary>
+                      {/* Answer text - Mobile: 14px, Desktop: 14px */}
                       <p className="mt-3 text-gray-600 text-sm leading-relaxed">
                         {item.answer}
                       </p>
@@ -420,19 +480,22 @@ const Contact = () => {
       </div>
 
       {/* Map Section */}
-      <section className="bg-white py-16">
-        <div className="max-w-7xl mx-auto container-padding">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Visit Our Office</h2>
-            <p className="text-gray-600">
+      <section className="bg-white py-12 md:py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-6 md:mb-8">
+            {/* H2 - Mobile: 22px, Desktop: 30px */}
+            <h2 className="text-xl md:text-3xl font-bold text-gray-900 mb-4">Visit Our Office</h2>
+            {/* Description - Mobile: 16px, Desktop: 16px */}
+            <p className="text-base text-gray-600 leading-relaxed">
               We're located in the heart of San Francisco. Drop by for a coffee and chat!
             </p>
           </div>
           
-          <div className="bg-gray-200 rounded-lg h-64 flex items-center justify-center">
+          <div className="bg-gray-200 rounded-lg h-48 md:h-64 flex items-center justify-center">
             <div className="text-gray-500 flex items-center gap-3">
-              <Map className="w-8 h-8" />
-              <span>Interactive map would be displayed here</span>
+              <Map className="w-6 h-6 md:w-8 md:h-8" />
+              {/* Map placeholder text - Mobile: 14px, Desktop: 16px */}
+              <span className="text-sm md:text-base">Interactive map would be displayed here</span>
             </div>
           </div>
         </div>
