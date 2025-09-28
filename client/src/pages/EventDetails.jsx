@@ -45,6 +45,45 @@ const EventDetails = () => {
     }
   };
 
+  // Function to generate proper Google Maps embed URL
+  const generateMapsEmbedUrl = (event) => {
+    // If the event has coordinates, use them directly
+    if (event.latitude && event.longitude) {
+      return `https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d15057.534307180755!2d${event.longitude}!3d${event.latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2s!4v1635959999999!5m2!1sen!2s`;
+    }
+    
+    // If no coordinates, build a proper search query
+    const addressParts = [
+      event.venue,
+      event.address,
+      event.city,
+      event.state || event.region,
+      event.country
+    ].filter(Boolean);
+    
+    const fullAddress = addressParts.join(', ');
+    const encodedAddress = encodeURIComponent(fullAddress);
+    
+    // Use the newer embed API format that works better for search
+    return `https://www.google.com/maps/embed/v1/search?key=AIzaSyBFw0Qbyq9zTFTd-tUY6disiuIcVgzgS_Q&q=${encodedAddress}&zoom=15&maptype=roadmap`;
+  };
+
+  // Fallback function for when API key is not available
+  const generateMapsSearchUrl = (event) => {
+    const addressParts = [
+      event.venue,
+      event.address,
+      event.city,
+      event.state || event.region,
+      event.country
+    ].filter(Boolean);
+    
+    const query = encodeURIComponent(addressParts.join(', '));
+    
+    // Use the search parameter which works better than the pb parameter
+    return `https://maps.google.com/maps?q=${query}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -188,6 +227,7 @@ const EventDetails = () => {
           <li className="text-gray-700 font-semibold truncate max-w-xs" title={event.title}>{event.title}</li>
         </ol>
       </nav>
+      
       {/* Hero Section */}
       <div className="max-w-5xl mx-auto mt-8 rounded-3xl shadow-2xl overflow-hidden bg-white/80 relative">
         <div className="relative h-96">
@@ -241,36 +281,35 @@ const EventDetails = () => {
               </section>
 
               {/* Event Details */}
-<section>
-  <h2 className="text-2xl font-bold text-gray-900 mb-4">Event Details</h2>
-  <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-primary-600">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-2">Organizer</h3>
-        <p className="text-gray-600">{event.organizer?.organizationName || 'N/A'}</p>
-      </div>
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-2">Capacity</h3>
-        <p className="text-gray-600">{event.capacity} attendees</p>
-      </div>
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-2">Registered</h3>
-        <p className="text-gray-600">{event.registered} people</p>
-      </div>
-      <div>
-        <h3 className="font-semibold text-gray-900 mb-2">Available Spots</h3>
-        <p
-          className={`font-medium ${
-            spotsLeft <= 10 ? 'text-red-600' : 'text-green-600'
-          }`}
-        >
-          {spotsLeft} spots left
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
+              <section>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Event Details</h2>
+                <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-primary-600">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Organizer</h3>
+                      <p className="text-gray-600">{event.organizer?.organizationName || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Capacity</h3>
+                      <p className="text-gray-600">{event.capacity} attendees</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Registered</h3>
+                      <p className="text-gray-600">{event.registered} people</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Available Spots</h3>
+                      <p
+                        className={`font-medium ${
+                          spotsLeft <= 10 ? 'text-red-600' : 'text-green-600'
+                        }`}
+                      >
+                        {spotsLeft} spots left
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </section>
 
               {/* Tags */}
               {event.tags && event.tags.length > 0 && (
@@ -305,55 +344,71 @@ const EventDetails = () => {
                 </div>
               </section>
 
-              {/* Sitemap */}
+              {/* Location & Map */}
               <section>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Sitemap</h2>
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <div className="text-gray-600 text-lg leading-relaxed">
-                    {event.sitemap ? (
-                      <>
-                        {typeof event.sitemap === 'string' ? (
-                          <p>{event.sitemap}</p>
-                        ) : Array.isArray(event.sitemap) ? (
-                          <ul className="space-y-2">
-                            {event.sitemap.map((item, index) => (
-                              <li key={index} className="flex items-start">
-                                <svg className="w-4 h-4 mr-2 mt-1 text-primary-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                                <span>{item}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : typeof event.sitemap === 'object' ? (
-                          <div>
-                            {Object.entries(event.sitemap).map(([key, value]) => (
-                              <div key={key} className="mb-3">
-                                <h3 className="font-semibold text-gray-900 capitalize mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</h3>
-                                <p className="text-gray-600">{value}</p>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p>{String(event.sitemap)}</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Event Location</h2>
+                <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                  {/* Address Info */}
+                  <div className="p-6 bg-gray-50 border-b">
+                    <div className="flex items-start space-x-3">
+                      <svg className="w-6 h-6 text-primary-600 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-lg">{event.venue}</h3>
+                        {event.address && (
+                          <p className="text-gray-600 mt-1">{event.address}</p>
                         )}
-                      </>
-                    ) : (
-                      <div className="text-center py-8">
-                        <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <p className="text-gray-500">No sitemap information available for this event.</p>
+                        {event.city && event.country && (
+                          <p className="text-gray-600">{event.city}, {event.country}</p>
+                        )}
                       </div>
-                    )}
+                    </div>
+                  </div>
+                  
+                  {/* Google Maps Embed */}
+                  <div className="relative">
+                    <iframe
+                      src={generateMapsSearchUrl(event)}
+                      width="100%"
+                      height="400"
+                      style={{ border: 0 }}
+                      allowFullScreen=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      className="w-full"
+                      title={`Map showing location of ${event.venue}`}
+                    ></iframe>
+                    
+                    {/* Fallback for when map doesn't load */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                      <div className="text-center">
+                        <svg className="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m-6 3l6-3" />
+                        </svg>
+                        <p className="text-gray-500 text-sm">Interactive Map</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Location Info */}
+                  <div className="p-4 bg-gray-50 text-sm text-gray-600">
+                    <div className="flex items-center justify-between">
+                      <span>📍 Click and drag to explore the area</span>
+                      <a 
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([event.venue, event.address, event.city, event.country].filter(Boolean).join(', '))}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-600 hover:text-primary-800 font-medium"
+                      >
+                        Open in Google Maps →
+                      </a>
+                    </div>
                   </div>
                 </div>
               </section>
             </div>
-
-            
-
-          
           </div>
 
           {/* Sidebar */}
@@ -364,24 +419,23 @@ const EventDetails = () => {
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose Your Ticket</h3>
                   <div className="space-y-3">
-  {tickets.map((ticket, index) => (
-    <div 
-      key={ticket.id || ticket._id || index} 
-      className="border-l-4 border-primary-600 rounded-lg"
-    >
-      <TicketCard
-        ticket={ticket}
-        index={index}
-        isSelected={selectedTicketIndex === index}
-        onSelect={(idx) => {
-          setSelectedTicketIndex(idx);
-          setSelectedQuantity(tickets[idx]?.minOrder || 1);
-        }}
-      />
-    </div>
-  ))}
-</div>
-
+                    {tickets.map((ticket, index) => (
+                      <div 
+                        key={ticket.id || ticket._id || index} 
+                        className="border-l-4 border-primary-600 rounded-lg"
+                      >
+                        <TicketCard
+                          ticket={ticket}
+                          index={index}
+                          isSelected={selectedTicketIndex === index}
+                          onSelect={(idx) => {
+                            setSelectedTicketIndex(idx);
+                            setSelectedQuantity(tickets[idx]?.minOrder || 1);
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
