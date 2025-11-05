@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useUI } from '../../context/UIContext';
-import { formatDate, formatPrice, getDaysUntilEvent } from '../../utils/formatDate';
+import { formatPrice, getDaysUntilEvent } from '../../utils/formatDate';
 import Button from '../common/Button';
 
 const EventCard = ({ event }) => {
@@ -28,14 +28,13 @@ const EventCard = ({ event }) => {
     showSuccess(`${event.title} added to cart!`);
   };
 
-  const daysUntil = getDaysUntilEvent(event.date);
-  const isUpcoming = daysUntil >= 0;
-  const spotsLeft = event.capacity - event.registered;
-
   const firstTicket = Array.isArray(event.tickets) && event.tickets.length > 0
     ? event.tickets[0]
     : null;
   const hasPrice = firstTicket && typeof firstTicket.price === 'number';
+  
+  const daysUntil = getDaysUntilEvent(event.date);
+  const isUpcoming = daysUntil >= 0;
 
   return (
     <Link
@@ -61,13 +60,8 @@ const EventCard = ({ event }) => {
               </span>
             </div>
           )}
-          <div className="absolute top-4 right-4">
-            <span className="bg-white bg-opacity-90 text-gray-900 px-2 py-1 rounded-full text-xs font-medium">
-              {hasPrice ? formatPrice(firstTicket.price) : 'N/A'}
-            </span>
-          </div>
           {!isUpcoming && (
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="absolute top-4 right-4">
               <span className="bg-red-500 text-white px-4 py-2 rounded-lg font-medium">
                 Event Passed
               </span>
@@ -76,35 +70,39 @@ const EventCard = ({ event }) => {
         </div>
 
         <div className="p-4 flex-1 flex flex-col">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-primary-600 font-medium capitalize">
-              {event.category?.icon} {event.category?.name}
+              {event.category?.name}
             </span>
-            {isUpcoming && daysUntil <= 7 && (
-              <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">
-                {daysUntil === 0 ? 'Today' : `${daysUntil} days left`}
-              </span>
-            )}
           </div>
 
-          <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 line-clamp-2">
             {event.title}
           </h3>
 
-          <p className="text-gray-600 text-xs mb-2 line-clamp-3">
-            {event.description}
-          </p>
+          <div className="space-y-2 text-sm text-gray-600 mb-4">
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>{event.date}</span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{event.time}</span>
+            </div>
 
-          <div className="mb-2 h-4">
-            {spotsLeft <= 10 && spotsLeft > 0 && (
-              <span className="text-orange-600 font-medium text-sm">
-                Only {spotsLeft} spots left!
-              </span>
-            )}
-            {spotsLeft === 0 && (
-              <span className="text-red-600 font-medium text-sm">
-                Sold Out
-              </span>
+            {event.venue && (
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="line-clamp-1">{event.venue}</span>
+              </div>
             )}
           </div>
         </div>
@@ -116,7 +114,7 @@ const EventCard = ({ event }) => {
             tabIndex={-1}
             onClick={e => e.stopPropagation()}
           >
-            See More Details
+            Buy Tickets
             <svg 
               className="w-4 h-4 ml-1 group-hover/link:translate-x-1 transition-transform duration-200" 
               fill="none" 
@@ -127,21 +125,19 @@ const EventCard = ({ event }) => {
             </svg>
           </Link>
 
-          {isUpcoming ? (
-            hasPrice ? (
-              <Button
-                fullWidth={false}
-                onClick={e => handleAddToCart(e, firstTicket)}
-                className="group-hover:bg-primary-700 min-w-[140px]"
-              >
-                • {formatPrice(firstTicket.price)}
-              </Button>
-            ) : (
-              <Button fullWidth={false} disabled variant="secondary" className="min-w-[100px]">
-                Sold Out
-              </Button>
-            )
-          ) : null}
+          {hasPrice && isUpcoming ? (
+            <Button
+              fullWidth={false}
+              onClick={e => handleAddToCart(e, firstTicket)}
+              className="group-hover:bg-primary-700 min-w-[140px]"
+            >
+              {formatPrice(firstTicket.price)}
+            </Button>
+          ) : !isUpcoming ? null : (
+            <Button fullWidth={false} disabled variant="secondary" className="min-w-[100px]">
+              No Tickets
+            </Button>
+          )}
         </div>
       </div>
     </Link>

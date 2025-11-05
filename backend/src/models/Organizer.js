@@ -54,7 +54,23 @@ const OrganizerSchema = new mongoose.Schema({
   },
   logo: {
     type: String,
-    default: 'default-organizer.jpg'
+    default: 'default-organizer.jpg',
+    validate: {
+      validator: function(v) {
+        // Allow default logo or valid URLs/paths
+        if (v === 'default-organizer.jpg') return true;
+        return /\.(jpg|jpeg|png|gif)$/i.test(v);
+      },
+      message: 'Logo must be a valid image file (jpg, jpeg, png, gif)'
+    }
+  },
+  logoMeta: {
+    originalName: String,
+    mimeType: String,
+    size: Number,
+    width: Number,
+    height: Number,
+    uploadedAt: Date
   },
   banner: {
     type: String
@@ -204,6 +220,16 @@ OrganizerSchema.methods.incrementEventCount = function() {
 // Update revenue
 OrganizerSchema.methods.addRevenue = function(amount) {
   this.totalRevenue += amount;
+  return this.save();
+};
+
+// Add method to update logo
+OrganizerSchema.methods.updateLogo = function(logoPath, metadata = {}) {
+  this.logo = logoPath;
+  this.logoMeta = {
+    ...metadata,
+    uploadedAt: new Date()
+  };
   return this.save();
 };
 

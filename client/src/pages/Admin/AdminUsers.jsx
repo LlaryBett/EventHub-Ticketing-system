@@ -31,14 +31,17 @@ const AdminUsers = () => {
   const [organizerStatusFilter, setOrganizerStatusFilter] = useState('all');
 
   useEffect(() => {
+    console.log('AdminUsers component mounted');
     fetchUsers();
     fetchOrganizers();
   }, []);
 
   const fetchUsers = async () => {
+    console.log('Fetching users...');
     try {
       setLoading(true);
       const allUsers = await adminService.getUsers();
+      console.log('Fetched users:', allUsers);
       setUsers(Array.isArray(allUsers) ? allUsers : allUsers.data || []);
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -49,8 +52,10 @@ const AdminUsers = () => {
   };
 
   const fetchOrganizers = async () => {
+    console.log('Fetching organizers...');
     try {
       const allOrganizers = await adminService.getOrganizers();
+      console.log('Fetched organizers:', allOrganizers);
       setOrganizers(Array.isArray(allOrganizers) ? allOrganizers : allOrganizers.data || []);
     } catch (error) {
       console.error('Failed to fetch organizers:', error);
@@ -58,9 +63,11 @@ const AdminUsers = () => {
   };
 
   const handleUserAction = async (action, userId, userData = null) => {
+    console.log('User action:', { action, userId, userData });
     try {
       switch (action) {
         case 'suspend':
+          console.log('Suspending user:', userId);
           await adminService.deactivateUser(userId, 'suspended');
           showSuccess('User suspended successfully');
           break;
@@ -85,47 +92,87 @@ const AdminUsers = () => {
           setShowUserModal(false);
           break;
       }
+      console.log('User action completed successfully');
       fetchUsers();
     } catch (error) {
+      console.error('Failed user action:', error);
       showError(`Failed to ${action} user`);
     }
   };
 
+  // FIXED: Updated handleOrganizerAction to update both status fields and let backend handle user updates
   const handleOrganizerAction = async (action, organizerId, rejectionReason = null) => {
+    console.log('Organizer action:', { action, organizerId, rejectionReason });
     try {
       switch (action) {
         case 'verify':
-          await adminService.verifyOrganizer(organizerId, { verificationStatus: 'verified' });
+          console.log('Verifying organizer:', organizerId);
+          // Update both organizer status fields - backend should handle updating the related user
+          await adminService.verifyOrganizer(organizerId, {
+            verificationStatus: 'verified',
+            approvalStatus: 'approved'
+          });
           showSuccess('Organizer verified successfully');
           break;
+
         case 'reject':
-          await adminService.verifyOrganizer(organizerId, { verificationStatus: 'rejected', rejectionReason });
+          await adminService.verifyOrganizer(organizerId, {
+            verificationStatus: 'rejected',
+            rejectionReason
+          });
           showSuccess('Organizer application rejected');
           break;
+
         case 'suspend':
-          await adminService.verifyOrganizer(organizerId, { verificationStatus: 'suspended' });
+          await adminService.verifyOrganizer(organizerId, {
+            verificationStatus: 'suspended'
+          });
           showSuccess('Organizer suspended successfully');
           break;
+
         case 'delete':
           if (window.confirm('Are you sure you want to delete this organizer? This action cannot be undone.')) {
-            // If you have adminService.deleteOrganizer, call it here
             await adminService.deleteOrganizer(organizerId);
             showSuccess('Organizer deleted successfully');
           }
           break;
       }
+
+      console.log('Action completed successfully');
       fetchOrganizers();
-      fetchUsers();
+      fetchUsers(); // Refresh users to see updated types
       setShowOrganizerModal(false);
     } catch (error) {
-      showError(`Failed to ${action} organizer`);
+      console.error('Failed organizer action:', error);
+      showError(`Failed to ${action} organizer: ${error?.message || error}`);
     }
   };
 
   // Get verification status for organizer users
   const getOrganizerVerificationStatus = (userId) => {
+    console.log('Getting verification status for user ID:', userId);
     const organizer = organizers.find(org => org.userId === userId || org.id === userId);
+    console.log('Found organizer for status:', organizer);
     return organizer?.verificationStatus || 'pending';
+  };
+
+  // Add logging to findOrganizerByUser
+  const findOrganizerByUser = (userId) => {
+    console.log('Finding organizer for user ID:', userId);
+    console.log('Available organizers:', organizers);
+    const organizer = organizers.find(org => 
+      org.userId === userId || 
+      org.userId?._id === userId || 
+      org.userId?.id === userId
+    );
+    console.log('Found organizer:', organizer);
+    return organizer;
+  };
+
+  // FIXED: Enhanced function to get organizer by user ID for actions
+  const findOrganizerIdByUser = (userId) => {
+    const organizer = findOrganizerByUser(userId);
+    return organizer?.id || organizer?._id;
   };
 
   // Count pending organizers for notification
@@ -343,10 +390,13 @@ const AdminUsers = () => {
                         <button
                           onClick={async () => {
                             try {
+                              console.log('Review clicked for organizer:', organizer);
                               const organizerDetails = await adminService.getOrganizerById(organizer.id);
+                              console.log('Fetched organizer details:', organizerDetails);
                               setSelectedOrganizer(organizerDetails);
                               setShowOrganizerModal(true);
                             } catch (error) {
+                              console.error('Review error:', error);
                               showError('Failed to load organizer details');
                             }
                           }}
@@ -491,13 +541,20 @@ const AdminUsers = () => {
                             <button
                               onClick={async () => {
                                 try {
-                                  const organizer = organizers.find(org => org.userId === user.id || org.id === user.id);
+                                  console.log('Review clicked for user:', user);
+                                  const organizer = findOrganizerByUser(user.id);
+                                  console.log('Found organizer for review:', organizer);
                                   if (organizer) {
                                     const organizerDetails = await adminService.getOrganizerById(organizer.id);
+                                    console.log('Fetched organizer details:', organizerDetails);
                                     setSelectedOrganizer(organizerDetails);
                                     setShowOrganizerModal(true);
+                                  } else {
+                                    console.warn('No organizer found for user:', user);
+                                    showError('Organizer details not found');
                                   }
                                 } catch (error) {
+                                  console.error('Review error:', error);
                                   showError('Failed to load organizer details');
                                 }
                               }}
@@ -505,11 +562,14 @@ const AdminUsers = () => {
                             >
                               Review
                             </button>
+                            {/* FIXED: Use organizer ID instead of user ID */}
                             <button
-                              onClick={() => {
-                                const organizer = organizers.find(org => org.userId === user.id || org.id === user.id);
-                                if (organizer) {
-                                  handleOrganizerAction('verify', organizer.id);
+                              onClick={async () => {
+                                const organizerId = findOrganizerIdByUser(user.id);
+                                if (organizerId) {
+                                  handleOrganizerAction('verify', organizerId);
+                                } else {
+                                  showError('Organizer not found for this user');
                                 }
                               }}
                               className="text-green-600 hover:text-green-900 px-2 py-1 rounded"
@@ -519,16 +579,22 @@ const AdminUsers = () => {
                           </>
                         )}
                         
-                        <button
-                          onClick={() => handleUserAction(user.status === 'active' ? 'suspend' : 'activate', user.id)}
-                          className={`px-2 py-1 rounded ${
-                            user.status === 'active' 
-                              ? 'text-yellow-600 hover:text-yellow-900'
-                              : 'text-green-600 hover:text-green-900'
-                          }`}
-                        >
-                          {user.status === 'active' ? 'Suspend' : 'Activate'}
-                        </button>
+                        {(user.userType === 'organizer' && (verificationStatus === 'verified' || verificationStatus === 'pending')) && (
+                          <button
+                            onClick={async () => {
+                              const organizerId = findOrganizerIdByUser(user.id);
+                              if (organizerId) {
+                                handleOrganizerAction('suspend', organizerId);
+                              } else {
+                                showError('Organizer not found for this user');
+                              }
+                            }}
+                            className="text-yellow-600 hover:text-yellow-900 px-2 py-1 rounded"
+                          >
+                            Suspend
+                          </button>
+                        )}
+                        
                         <button
                           onClick={() => handleUserAction('delete', user.id)}
                           className="text-red-600 hover:text-red-900 px-2 py-1 rounded"
@@ -606,12 +672,16 @@ const AdminUsers = () => {
       {/* Organizer Review Modal */}
       <Modal
         isOpen={showOrganizerModal}
-        onClose={() => setShowOrganizerModal(false)}
+        onClose={() => {
+          console.log('Closing organizer modal');
+          setShowOrganizerModal(false);
+        }}
         title="Review Organizer Application"
         size="large"
       >
         {selectedOrganizer && (
           <div className="space-y-6">
+            {console.log('Rendering organizer modal with data:', selectedOrganizer)}
             {/* Organizer Info */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Organizer Information</h3>
@@ -737,8 +807,9 @@ const AdminUsers = () => {
                   variant="outline"
                   onClick={() => {
                     const organizerId = selectedOrganizer.data?.id || selectedOrganizer.data?._id;
+                    console.log('Reject action clicked for organizer:', organizerId);
                     if (!organizerId) {
-                      console.warn('Organizer ID missing for reject action', selectedOrganizer);
+                      console.warn('Organizer ID missing for reject action:', selectedOrganizer);
                       return;
                     }
                     if (window.confirm('Are you sure you want to reject this organizer application?')) {
@@ -752,8 +823,9 @@ const AdminUsers = () => {
                 <Button
                   onClick={() => {
                     const organizerId = selectedOrganizer.data?.id || selectedOrganizer.data?._id;
+                    console.log('Verify action clicked for organizer:', organizerId);
                     if (!organizerId) {
-                      console.warn('Organizer ID missing for verify action', selectedOrganizer);
+                      console.warn('Organizer ID missing for verify action:', selectedOrganizer);
                       return;
                     }
                     handleOrganizerAction('verify', organizerId);

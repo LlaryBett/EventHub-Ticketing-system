@@ -6,7 +6,7 @@ import Layout from '../components/layout/Layout';
 import Home from '../pages/Home';
 import Events from '../pages/Events';
 import EventDetails from '../pages/EventDetails';
-import Categories from '../pages/Categories';
+import Discover from '../pages/Discover';  // Changed from Categories
 import Checkout from '../pages/Checkout';
 import Dashboard from '../pages/Dashboard';
 import Organizer from '../pages/Organizer';
@@ -25,7 +25,7 @@ import AdminDashboard from '../pages/Admin/AdminDashboard';
 import AdminOverview from '../pages/Admin/AdminOverview';
 import AdminUsers from '../pages/Admin/AdminUsers';
 import AdminEvents from '../pages/Admin/AdminEvents';
-import AdminCategories from '../pages/Admin/AdminCategories';
+import AdminUI from '../pages/Admin/AdminUI';
 import AdminAnalytics from '../pages/Admin/AdminAnalytics';
 import AdminReports from '../pages/Admin/AdminReports';
 import AdminSettings from '../pages/Admin/AdminSettings';
@@ -37,7 +37,7 @@ const AppRoutes = () => {
       <Route path="/" element={<Layout><Home /></Layout>} />
       <Route path="/events" element={<Layout><Events /></Layout>} />
       <Route path="/events/:id" element={<Layout><EventDetails /></Layout>} />
-      <Route path="/categories" element={<Layout><Categories /></Layout>} />
+      <Route path="/discover" element={<Layout><Discover /></Layout>} />  {/* Changed from categories */}
       <Route path="/pricing" element={<Layout><Pricing /></Layout>} />
       <Route path="/about" element={<Layout><About /></Layout>} />
       <Route path="/contact" element={<Layout><Contact /></Layout>} />
@@ -64,6 +64,6 @@ const AppRoutes = () => {
 };
 
 export default AppRoutes;
-    
+
 
 

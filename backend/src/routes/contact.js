@@ -14,7 +14,15 @@ const {
   updateFAQ,
   deleteFAQ,
   getContactInfo,
-  updateContactInfo
+  updateContactInfo,
+  getContactPageContent,
+  updateContactPageContent,
+  getContactFormConfig,
+  updateContactFormConfig,
+  getBusinessRules,
+  updateBusinessRules,
+  getCompleteConfiguration,
+  initializeConfiguration
 } = require('../controllers/contactController');
 
 const { protect, authorize } = require('../middleware/auth');
@@ -104,6 +112,7 @@ const faqValidation = [
 
 const contactInfoValidation = [
   body('email')
+    .optional()
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email address'),
@@ -146,7 +155,146 @@ const contactInfoValidation = [
     .withMessage('LinkedIn URL must be valid')
 ];
 
-// Public routes
+const pageContentValidation = [
+  body('heroTitle')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Hero title must not exceed 100 characters'),
+  
+  body('heroDescription')
+    .optional()
+    .trim()
+    .isLength({ max: 300 })
+    .withMessage('Hero description must not exceed 300 characters'),
+  
+  body('formTitle')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Form title must not exceed 100 characters'),
+  
+  body('sidebarTitle')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Sidebar title must not exceed 100 characters'),
+  
+  body('faqTitle')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('FAQ title must not exceed 100 characters'),
+  
+  body('mapTitle')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Map title must not exceed 100 characters'),
+  
+  body('mapDescription')
+    .optional()
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage('Map description must not exceed 200 characters')
+];
+
+const formConfigValidation = [
+  body('successMessage')
+    .optional()
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage('Success message must not exceed 200 characters'),
+  
+  body('errorMessage')
+    .optional()
+    .trim()
+    .isLength({ max: 200 })
+    .withMessage('Error message must not exceed 200 characters'),
+  
+  body('categories')
+    .optional()
+    .isArray()
+    .withMessage('Categories must be an array'),
+  
+  body('categories.*.value')
+    .trim()
+    .notEmpty()
+    .withMessage('Category value is required'),
+  
+  body('categories.*.label')
+    .trim()
+    .notEmpty()
+    .withMessage('Category label is required'),
+  
+  body('fieldSettings.name.required')
+    .optional()
+    .isBoolean()
+    .withMessage('Name required must be boolean'),
+  
+  body('fieldSettings.email.required')
+    .optional()
+    .isBoolean()
+    .withMessage('Email required must be boolean'),
+  
+  body('fieldSettings.phone.required')
+    .optional()
+    .isBoolean()
+    .withMessage('Phone required must be boolean'),
+  
+  body('fieldSettings.subject.required')
+    .optional()
+    .isBoolean()
+    .withMessage('Subject required must be boolean'),
+  
+  body('fieldSettings.message.required')
+    .optional()
+    .isBoolean()
+    .withMessage('Message required must be boolean'),
+  
+  body('fieldSettings.category.required')
+    .optional()
+    .isBoolean()
+    .withMessage('Category required must be boolean')
+];
+
+const businessRulesValidation = [
+  body('autoResponder.enabled')
+    .optional()
+    .isBoolean()
+    .withMessage('Auto responder enabled must be boolean'),
+  
+  body('autoResponder.subject')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Auto responder subject must not exceed 100 characters'),
+  
+  body('notification.enabled')
+    .optional()
+    .isBoolean()
+    .withMessage('Notification enabled must be boolean'),
+  
+  body('notification.adminEmail')
+    .optional()
+    .isEmail()
+    .withMessage('Admin email must be valid'),
+  
+  body('responseTime')
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('Response time must not exceed 50 characters'),
+  
+  body('workingHours')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Working hours must not exceed 100 characters')
+];
+
+// ===== PUBLIC ROUTES =====
+
 // Submit contact form (can be accessed by guests or logged-in users)
 router.post('/submit', contactFormValidation, submitContactForm);
 
@@ -156,35 +304,43 @@ router.get('/faqs', getAllFAQs);
 // Get contact information (public)
 router.get('/info', getContactInfo);
 
-// Protected routes (require authentication)
+// Get contact page content (public)
+router.get('/content', getContactPageContent);
+
+// Get contact form configuration (public)
+router.get('/form-config', getContactFormConfig);
+
+// ===== PROTECTED ROUTES (Require authentication) =====
+
 // Get user's own contact submissions
 router.get('/user/:userId', protect, getUserContactSubmissions);
 
 // Get single contact submission (user can view their own, admin can view all)
 router.get('/:id', protect, getContactSubmission);
 
-// Admin only routes
-// Get all contact submissions with filtering and pagination
+// ===== ADMIN ONLY ROUTES =====
+
+// Contact submissions management
 router.get('/', protect, authorize('admin'), getAllContactSubmissions);
-
-// Update contact submission status
 router.put('/:id/status', protect, authorize('admin'), statusUpdateValidation, updateContactStatus);
-
-// Delete contact submission
 router.delete('/:id', protect, authorize('admin'), deleteContactSubmission);
 
-// FAQ management routes (Admin only)
-// Create FAQ
+// FAQ management routes
 router.post('/faqs', protect, authorize('admin'), faqValidation, createFAQ);
+router.put('/faqs/:index', protect, authorize('admin'), faqValidation, updateFAQ);
+router.delete('/faqs/:index', protect, authorize('admin'), deleteFAQ);
 
-// Update FAQ
-router.put('/faqs/:id', protect, authorize('admin'), faqValidation, updateFAQ);
-
-// Delete FAQ
-router.delete('/faqs/:id', protect, authorize('admin'), deleteFAQ);
-
-// Contact information management (Admin only)
-// Update contact information
+// Configuration management routes
 router.put('/info', protect, authorize('admin'), contactInfoValidation, updateContactInfo);
+router.put('/content', protect, authorize('admin'), pageContentValidation, updateContactPageContent);
+router.put('/form-config', protect, authorize('admin'), formConfigValidation, updateContactFormConfig);
+router.put('/business-rules', protect, authorize('admin'), businessRulesValidation, updateBusinessRules);
+
+// Get business rules (Admin only - contains sensitive info)
+router.get('/business-rules', protect, authorize('admin'), getBusinessRules);
+
+// Complete configuration management
+router.get('/config/all', protect, authorize('admin'), getCompleteConfiguration);
+router.post('/config/initialize', protect, authorize('admin'), initializeConfiguration);
 
 module.exports = router;

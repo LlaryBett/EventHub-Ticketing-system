@@ -55,8 +55,8 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl flex overflow-hidden">
+    <div className="bg-gray-50 flex items-center justify-center py-12 sm:py-16 pb-24 sm:pb-32 lg:min-h-screen lg:py-0 lg:pb-0">
+      <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl flex overflow-hidden mx-4">
         {/* Left Column - Description/Images */}
         <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden items-center justify-center">
           {/* Background decoration */}

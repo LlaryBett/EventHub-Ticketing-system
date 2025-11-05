@@ -242,6 +242,27 @@ export const checkInAttendee = async (ticketCode) => {
   }
 };
 
+// Upload organizer logo
+export const uploadOrganizerLogo = async (file) => {
+  try {
+    console.log('[uploadOrganizerLogo] Uploading logo file:', file);
+
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    const response = await api.post('/user/organizer/logo', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    console.log('[uploadOrganizerLogo] Response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('[uploadOrganizerLogo] Error:', error);
+    throw new Error(error.response?.data?.message || error.message);
+  }
+};
 
 // Utility function to handle CSV download
 export const downloadAttendeesCSV = async (eventId, eventTitle) => {

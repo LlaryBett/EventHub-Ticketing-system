@@ -498,10 +498,22 @@ exports.registerOrganizerStep1 = async (req, res, next) => {
       });
     }
 
+    // Generate a temporary registration token
+    const tempToken = jwt.sign(
+      { 
+        email: email,
+        timestamp: Date.now(),
+        registrationType: 'organizer_step1'
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    // Store step 1 data in session
     req.session.organizerStep1 = {
       name,
       email,
-      password, // Store password for new users
+      password,
       phone,
       isUpgrade: false,
       existingUserId: undefined,
@@ -511,7 +523,11 @@ exports.registerOrganizerStep1 = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Step 1 completed successfully (new registration)',
-      data: { email, isUpgrade: false }
+      data: { 
+        email, 
+        isUpgrade: false 
+      },
+      token: tempToken // Include the token in response
     });
   } catch (error) {
     console.error('Organizer step 1 error:', error);
@@ -532,6 +548,29 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         errors: errors.array()
+      });
+    }
+
+    // Get token from request headers
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization token required'
+      });
+    }
+
+    // Verify the token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded.registrationType !== 'organizer_step1') {
+        throw new Error('Invalid token type');
+      }
+    } catch (err) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired registration session'
       });
     }
 
@@ -857,15 +896,15 @@ exports.login = async (req, res, next) => {
 
 // Helper function for login messages
 function getLoginMessage(user, isApprovedOrganizer, canAccessOrganizerFeatures) {
-  if (user.status === 'pending_verification') {
-    if (user.userType === 'organizer') {
-      return 'Login successful. Your account is pending verification. Organizer features will be available after admin approval.';
+  if (user.userType === 'organizer') {
+    if (isApprovedOrganizer) {
+      return 'Login successful. Your organizer account is active.';
     }
-    return 'Login successful. Your account is pending verification.';
+    return 'Login successful. Your organizer application is under review.';
   }
   
-  if (user.userType === 'organizer' && !canAccessOrganizerFeatures) {
-    return 'Login successful. Organizer features will be available after admin approval.';
+  if (user.status === 'pending_verification') {
+    return 'Login successful. Your account is pending verification.';
   }
   
   return 'Login successful';

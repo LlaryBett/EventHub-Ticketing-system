@@ -4,7 +4,7 @@ import { Ticket, FileText, Camera, MapPin, Tag, Calendar, RotateCcw, Plus, X } f
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import { eventService } from '../services/eventService';
-import { categoriesService } from '../services/categoriesService';
+import { uiService } from '../services/uiService';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 
@@ -45,14 +45,22 @@ const Organizer = () => {
     const fetchCategories = async () => {
       try {
         setCategoriesLoading(true);
-        const categoriesData = await categoriesService.getAllCategories();
-        if (Array.isArray(categoriesData)) {
-          setCategories(categoriesData);
-        } else if (Array.isArray(categoriesData?.data)) {
-          setCategories(categoriesData.data);
-        } else {
-          setCategories([]);
+
+        // Try to use categories from discover configuration (admin-managed)
+        try {
+          const discoverResp = await uiService.getDiscoverContent();
+          if (discoverResp?.success && Array.isArray(discoverResp.data?.categories) && discoverResp.data.categories.length > 0) {
+            // discover categories typically have {_id, name, slug, ...}
+            setCategories(discoverResp.data.categories);
+            return;
+          }
+        } catch (err) {
+          // No external fallback - log and continue with empty categories
+          console.warn('uiService.getDiscoverContent failed; categories will be empty', err);
         }
+
+        // If discover config didn't provide categories, leave categories empty
+        setCategories([]);
       } catch (error) {
         // Show backend error message if available
         showError(error.response?.data?.message || 'Failed to load categories. Please try again.');
@@ -266,12 +274,28 @@ const Organizer = () => {
       
       <div className="max-w-7xl mx-auto container-padding py-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Create Your Event</h1>
-          <p className="text-xl text-gray-600">
-            Share your passion with the world. Create an amazing event that people will love to attend.
-          </p>
-        </div>
+        <div className="mb-8">
+  <div className="bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row">
+    {/* Left: Text content */}
+    <div className="flex-1 p-6 md:p-8 flex flex-col justify-center text-center md:text-left">
+      <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+        Create Your Event
+      </h1>
+      <p className="text-xl text-gray-600 leading-relaxed">
+        Share your passion with the world. Create an amazing event that people will love to attend.
+      </p>
+    </div>
+    
+    {/* Right: Image with clip-path */}
+    <div
+      className="flex-1 bg-cover bg-center min-h-[150px] md:min-h-[180px]"
+      style={{
+        backgroundImage: "url('https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&h=600&fit=crop')",
+        clipPath: "polygon(30% 0, 100% 0, 100% 100%, 0 100%, 0 50%)"
+      }}
+    ></div>
+  </div>
+</div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Form - Left Column */}
@@ -321,9 +345,12 @@ const Organizer = () => {
                             disabled={categoriesLoading}
                           >
                             <option value="">Select a category</option>
-                            {categories.map((category) => (
-                              <option key={category.id} value={category.id}>
-                                {category.name}
+                            {categories.map((category, idx) => (
+                              <option
+                                key={category._id || category.id || idx}
+                                value={category.slug || category._id || category.id}
+                              >
+                                {category.name || category.title || category.label || `Category ${idx + 1}`}
                               </option>
                             ))}
                           </select>
@@ -347,6 +374,9 @@ const Organizer = () => {
                       </div>
                     </section>
 
+                    {/* Divider after Basic Information */}
+                    <hr aria-hidden="true" className="w-full border-t border-gray-300 my-6" />
+
                     {/* Date & Time */}
                     <section>
                       <h2 className="text-xl font-semibold text-gray-900 mb-6">Date & Time</h2>
@@ -368,6 +398,9 @@ const Organizer = () => {
                       </div>
                     </section>
 
+                    {/* Divider after Date & Time */}
+                    <hr aria-hidden="true" className="w-full border-t border-gray-300 my-6" />
+
                     {/* Location */}
                     <section>
                       <h2 className="text-xl font-semibold text-gray-900 mb-6">Location</h2>
@@ -379,6 +412,9 @@ const Organizer = () => {
                         required
                       />
                     </section>
+
+                    {/* Divider after Location */}
+                    <hr aria-hidden="true" className="w-full border-t border-gray-300 my-6" />
 
                     {/* Event Image */}
                     <section>
@@ -394,6 +430,9 @@ const Organizer = () => {
                         Provide a URL to an image that represents your event. If left blank, a default image will be used.
                       </p>
                     </section>
+
+                    {/* Divider after Event Image */}
+                    <hr aria-hidden="true" className="w-full border-t border-gray-300 my-6" />
 
                     {/* Enhanced Ticket Types Section */}
                     <section>
@@ -568,17 +607,18 @@ const Organizer = () => {
                       </div>
                     </section>
 
-                    {/* Submit Button */}
+                    {/* Divider above submit */}
                     <div className="pt-6">
-                      <Button
-                        type="submit"
-                        size="large"
-                        loading={loading}
-                        disabled={loading || categoriesLoading}
-                        className="w-1/2 mx-auto"
-                      >
-                        {loading ? 'Creating Event...' : 'Create Event'}
-                      </Button>
+                      <hr aria-hidden="true" className="w-full border-t border-gray-300 mb-6" />
+                       <Button
+                         type="submit"
+                         size="large"
+                         loading={loading}
+                         disabled={loading || categoriesLoading}
+                         className="w-1/2 mx-auto"
+                       >
+                         {loading ? 'Creating Event...' : 'Create Event'}
+                       </Button>
                     </div>
 
                   </fieldset>
@@ -640,6 +680,9 @@ const Organizer = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Divider between Tips and Quick Actions */}
+              <hr aria-hidden="true" className="w-full border-t border-gray-300 my-6" />
 
               {/* Quick Actions Card */}
               <div className="bg-white rounded-lg shadow-md p-6">
@@ -774,6 +817,7 @@ const Organizer = () => {
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>

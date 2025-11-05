@@ -1,12 +1,15 @@
 // AdminDashboard.jsx - Main admin layout with routing
 import React from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { MdDashboard, MdPeople, MdEvent, MdCategory, MdAnalytics } from 'react-icons/md';
+import { HiDocumentReport } from 'react-icons/hi';
+import { FiSettings } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import AdminOverview from './AdminOverview';
 import AdminUsers from './AdminUsers';
 import AdminEvents from './AdminEvents';
-import AdminCategories from './AdminCategories';
+import AdminUI from './AdminUI';  
 import AdminAnalytics from './AdminAnalytics';
 import AdminReports from './AdminReports';
 import AdminSettings from './AdminSettings';
@@ -17,13 +20,13 @@ const AdminDashboard = () => {
   const location = useLocation();
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: '📊', path: '/admin/overview' },
-    { id: 'users', label: 'Users', icon: '👥', path: '/admin/users' },
-    { id: 'events', label: 'Events', icon: '🎫', path: '/admin/events' },
-    { id: 'categories', label: 'Categories', icon: '📂', path: '/admin/categories' },
-    { id: 'analytics', label: 'Analytics', icon: '📈', path: '/admin/analytics' },
-    { id: 'reports', label: 'Reports', icon: '📋', path: '/admin/reports' },
-    { id: 'settings', label: 'Settings', icon: '⚙️', path: '/admin/settings' }
+    { id: 'overview', label: 'Overview', icon: <MdDashboard className="text-xl" />, path: '/admin/overview' },
+    { id: 'users', label: 'Users', icon: <MdPeople className="text-xl" />, path: '/admin/users' },
+    { id: 'events', label: 'Events', icon: <MdEvent className="text-xl" />, path: '/admin/events' },
+    { id: 'UI', label: 'UI', icon: <MdCategory className="text-xl" />, path: '/admin/ui' },
+    { id: 'analytics', label: 'Analytics', icon: <MdAnalytics className="text-xl" />, path: '/admin/analytics' },
+    { id: 'reports', label: 'Reports', icon: <HiDocumentReport className="text-xl" />, path: '/admin/reports' },
+    { id: 'settings', label: 'Settings', icon: <FiSettings className="text-xl" />, path: '/admin/settings' }
   ];
 
   const isActiveTab = (path) => {
@@ -91,7 +94,7 @@ const AdminDashboard = () => {
                         : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    <span className="mr-3 text-lg">{tab.icon}</span>
+                    <span className="mr-3">{tab.icon}</span>
                     {tab.label}
                   </button>
                 ))}
@@ -106,7 +109,7 @@ const AdminDashboard = () => {
               <Route path="/overview" element={<AdminOverview />} />
               <Route path="/users" element={<AdminUsers />} />
               <Route path="/events" element={<AdminEvents />} />
-              <Route path="/categories" element={<AdminCategories />} />
+              <Route path="/UI" element={<AdminUI />} />
               <Route path="/analytics" element={<AdminAnalytics />} />
               <Route path="/reports" element={<AdminReports />} />
               <Route path="/settings" element={<AdminSettings />} />

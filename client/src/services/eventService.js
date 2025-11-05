@@ -84,6 +84,68 @@ class EventService {
     }
   }
 
+  // STORIES FUNCTIONALITY
+
+  // Get stories for discover page
+  async getDiscoverStories(limit = 20) {
+    try {
+      const response = await api.get(`/events/stories/discover?limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // Get stories for organizer
+  async getOrganizerStories() {
+    try {
+      const response = await api.get('/events/stories/organizer');
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // Create a new story
+  async createStory(storyData) {
+    try {
+      const response = await api.post('/events/stories', storyData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // Update a story
+  async updateStory(storyId, storyData) {
+    try {
+      const response = await api.put(`/events/stories/${storyId}`, storyData);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // Delete a story
+  async deleteStory(storyId) {
+    try {
+      const response = await api.delete(`/events/stories/${storyId}`);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  // Get stories for a specific event
+  async getEventStories(eventId) {
+    try {
+      const response = await api.get(`/events/stories/event/${eventId}`);
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
   // Handle API errors consistently
   handleError(error) {
     if (error.isAuthError) {

@@ -66,47 +66,23 @@ export const AuthProvider = ({ children }) => {
   };
 
   const registerAttendee = async (userData) => {
-    try {
-      const response = await authService.registerAttendee(userData);
-      
-      // After registration, also call getMe() to get fresh user data
-      const freshUserData = await userService.getMe(); // Changed to userService
-      setUser(freshUserData);
-      
-      return {
-        ...response,
-        user: freshUserData
-      };
-    } catch (error) {
-      throw error;
-    }
+    const response = await authService.registerAttendee(userData);
+    const freshUserData = await userService.getMe();
+    setUser(freshUserData);
+    return {
+      ...response,
+      user: freshUserData
+    };
   };
 
   const registerOrganizerStep1 = async (userData) => {
-    try {
-      const response = await authService.registerOrganizerStep1(userData);
-      
-      // After registration, also call getMe() to get fresh user data
-      const freshUserData = await userService.getMe(); // Changed to userService
-      setUser(freshUserData);
-      
-      return {
-        ...response,
-        user: freshUserData
-      };
-    } catch (error) {
-      throw error;
-    }
+    const response = await authService.registerOrganizerStep1(userData);
+    // Remove getMe and setUser here to proceed directly to step 2
+    return response;
   };
 
   const registerOrganizerStep2 = async (userData) => {
-    try {
-      const response = await authService.registerOrganizerStep2(userData);
-      // Step 2 doesn't return a token, so we don't need to set user
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    return await authService.registerOrganizerStep2(userData);
   };
 
   const logout = async () => {
@@ -122,73 +98,42 @@ export const AuthProvider = ({ children }) => {
   };
 
   const forgotPassword = async (email) => {
-    try {
-      const response = await authService.forgotPassword(email);
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    return await authService.forgotPassword(email);
   };
 
   const resetPassword = async (resetToken, password) => {
-    try {
-      const response = await authService.resetPassword(resetToken, password);
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    return await authService.resetPassword(resetToken, password);
   };
 
   const updateDetails = async (userData) => {
-    try {
-      const response = await userService.updateDetails(userData); // Changed to userService
-      
-      // After update, get fresh user data
-      const freshUserData = await userService.getMe(); // Changed to userService
-      setUser(freshUserData);
-      
-      return {
-        ...response,
-        user: freshUserData
-      };
-    } catch (error) {
-      throw error;
-    }
+    const response = await userService.updateDetails(userData);
+    const freshUserData = await userService.getMe();
+    setUser(freshUserData);
+    return {
+      ...response,
+      user: freshUserData
+    };
   };
 
   const updatePassword = async (currentPassword, newPassword) => {
-    try {
-      const response = await userService.updatePassword({ // Changed to userService
-        currentPassword,
-        newPassword
-      });
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    return await userService.updatePassword({
+      currentPassword,
+      newPassword
+    });
   };
 
   // New function to update organizer profile
   const updateOrganizerProfile = async (profileData) => {
-    try {
-      const response = await userService.updateOrganizerProfile(profileData);
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    return await userService.updateOrganizerProfile(profileData);
   };
 
   // New function to delete account
   const deleteAccount = async () => {
-    try {
-      const response = await userService.deleteAccount();
-      setUser(null);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      return response;
-    } catch (error) {
-      throw error;
-    }
+    const response = await userService.deleteAccount();
+    setUser(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return response;
   };
 
   const value = {

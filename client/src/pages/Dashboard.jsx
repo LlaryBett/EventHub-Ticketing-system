@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import { getUserProfile, getUserEvents, getOrderHistory, getUserTickets } from '../services/userService';
@@ -13,6 +13,7 @@ import {
 import { formatPrice, formatDate } from '../utils/formatDate';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Button from '../components/common/Button';
+import Modal from '../components/common/Modal';
 import { 
   Calendar,
   MapPin,
@@ -36,11 +37,14 @@ import {
   X,    // For tickets
   FileText,   // For orders/history
   User, 
-  Trash2     // For delete notification
+  Trash2,     // For delete notification
+  // Add these new imports for emoji replacements
+  Sparkles, Receipt, UserCircle, BellRing
 } from 'lucide-react';
 
 const Dashboard = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { showSuccess, showError } = useUI();
   const [loading, setLoading] = useState(true);
@@ -52,8 +56,19 @@ const Dashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [savedPaymentMethods, setSavedPaymentMethods] = useState([]);
   const [favoriteEvents, setFavoriteEvents] = useState([]);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   console.log('Dashboard user data:', user);
+
+  const openOrderModal = (order) => {
+    setSelectedOrder(order);
+    setShowOrderModal(true);
+  };
+  const closeOrderModal = () => {
+    setShowOrderModal(false);
+    setSelectedOrder(null);
+  };
 
   useEffect(() => {
     if (location.state?.orderConfirmation) {
@@ -395,7 +410,10 @@ const Dashboard = () => {
             {activeTab === 'tickets' && (
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20">
                 <div className="p-6 border-b">
-                  <h2 className="text-2xl font-bold text-slate-900">My Tickets 🎫</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                    <Ticket className="w-6 h-6" />
+                    My Tickets
+                  </h2>
                   <p className="text-slate-600 mt-2">Access your digital tickets and QR codes</p>
                 </div>
                 <div className="p-6">
@@ -420,15 +438,31 @@ const Dashboard = () => {
                               </div>
                             </div>
                           </div>
+
+                          {/* Ticket preview: use ticket.ticketImage if present, otherwise event image */}
                           <div className="ml-4">
-                            <div className="w-28 h-28 bg-white rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-300 shadow-lg">
-                              {ticket.qrCode ? (
-                                <img src={ticket.qrCode} alt="QR Code" className="w-24 h-24 object-contain" />
-                              ) : (
-                                <QrCode className="w-14 h-14 text-slate-400" />
-                              )}
+                            <div className="w-36 h-28 rounded-2xl overflow-hidden relative shadow-lg border border-slate-100 bg-gray-100">
+                              <img
+                                src={ticket.ticketImage || ticket.eventId?.image || '/api/placeholder/360/280'}
+                                alt={`${ticket.ticketType} background`}
+                                className="w-full h-full object-cover filter contrast-105"
+                              />
+                              {/* subtle overlay for graffiti vibe */}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent pointer-events-none" />
+                              {/* graffiti label — simple text overlay; replace with PNG overlay if available */}
+                              <div className="absolute left-2 top-2 px-2 py-0.5 -rotate-6 text-xs font-extrabold text-white" style={{ textShadow: '0 2px 6px rgba(0,0,0,0.6)' }}>
+                                GRAFFITI
+                              </div>
+                              {/* QR code on the ticket preview */}
+                              <div className="absolute right-2 bottom-2 w-20 h-20 bg-white/95 rounded-lg flex items-center justify-center p-1">
+                                {ticket.qrCode ? (
+                                  <img src={ticket.qrCode} alt="QR Code" className="w-16 h-16 object-contain" />
+                                ) : (
+                                  <QrCode className="w-10 h-10 text-slate-400" />
+                                )}
+                              </div>
                             </div>
-                            <p className="text-xs text-center mt-2 text-slate-500 font-medium">QR Code</p>
+                            <p className="text-xs text-center mt-2 text-slate-500 font-medium">Ticket Preview</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
@@ -484,20 +518,11 @@ const Dashboard = () => {
             {activeTab === 'events' && (
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20">
                 <div className="p-6 border-b">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-2xl font-bold text-slate-900">My Events 📅</h2>
-                      <p className="text-slate-600 mt-2">Events you're attending or have attended</p>
-                    </div>
-                    <div className="flex space-x-2">
-                      <button className="p-3 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200">
-                        <Filter className="w-5 h-5" />
-                      </button>
-                      <button className="p-3 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200">
-                        <Search className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
+                  <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                    <Calendar className="w-6 h-6" />
+                    My Events
+                  </h2>
+                  <p className="text-slate-600 mt-2">Events you're attending or have attended</p>
                 </div>
                 <div className="p-6">
                   {userEvents.length === 0 ? (
@@ -552,7 +577,14 @@ const Dashboard = () => {
                               </div>
                             </div>
                             <div className="flex flex-col space-y-2 ml-4">
-                              <Button size="small" variant="outline" className="border-2 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50">View Details</Button>
+                              <Button
+                                size="small"
+                                variant="outline"
+                                className="border-2 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50"
+                                onClick={() => navigate(`/events/${event._id}`)}
+                              >
+                                View Details
+                              </Button>
                               <button className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200">
                                 <MessageCircle className="w-4 h-4" />
                               </button>
@@ -570,7 +602,10 @@ const Dashboard = () => {
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20">
                 <div className="p-6 border-b">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-slate-900">Notifications 🔔</h2>
+                    <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                      <BellRing className="w-6 h-6" />
+                      Notifications
+                    </h2>
                     <div className="flex space-x-3">
                       <Button 
                         size="small" 
@@ -651,7 +686,10 @@ const Dashboard = () => {
                 <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20">
                   <div className="p-6 border-b">
                     <div className="flex items-center justify-between">
-                      <h2 className="text-2xl font-bold text-slate-900">Payment Methods 💳</h2>
+                      <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                        <CreditCard className="w-6 h-6" />
+                        Payment Methods
+                      </h2>
                       <Button size="small" className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700">Add New Card</Button>
                     </div>
                   </div>
@@ -749,7 +787,10 @@ const Dashboard = () => {
             {activeTab === 'orders' && (
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20">
                 <div className="p-6 border-b">
-                  <h2 className="text-2xl font-bold text-slate-900">Order History 📝</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                    <Receipt className="w-6 h-6" />
+                    Order History
+                  </h2>
                   <p className="text-slate-600 mt-2">View and download your order receipts</p>
                 </div>
                 <div className="p-6">
@@ -781,7 +822,9 @@ const Dashboard = () => {
                                   <Download className="w-4 h-4 mr-1" />
                                   Receipt
                                 </Button>
-                                <Button size="small" variant="outline" className="border-2 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50">View Details</Button>
+                                <Button size="small" variant="outline" className="border-2 border-slate-200 hover:border-indigo-300 hover:bg-indigo-50" onClick={() => openOrderModal(order)}>
+                                  View Details
+                                </Button>
                               </div>
                             </div>
                           </div>
@@ -796,7 +839,10 @@ const Dashboard = () => {
             {activeTab === 'profile' && (
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20">
                 <div className="p-6 border-b">
-                  <h2 className="text-2xl font-bold text-slate-900">Profile Settings 👤</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                    <UserCircle className="w-6 h-6" />
+                    Profile Settings
+                  </h2>
                   <p className="text-slate-600 mt-2">Manage your account information and preferences</p>
                 </div>
                 <div className="p-6">
@@ -903,6 +949,92 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Order Details Modal */}
+      <Modal
+        isOpen={showOrderModal}
+        onClose={closeOrderModal}
+        title={`Order ${selectedOrder?.orderNumber || ''}`}
+        size="large"
+      >
+        <div className="space-y-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">{selectedOrder?.customerName}</h3>
+              <p className="text-sm text-slate-500">{selectedOrder?.customerEmail}</p>
+              <p className="text-xs text-slate-400 mt-1">Placed: {formatDate(selectedOrder?.createdAt)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-slate-500">Payment</p>
+              <p className="font-medium">{selectedOrder?.paymentMethod}</p>
+              <p className="text-xs text-slate-400">{selectedOrder?.paymentDetails?.phone || ''}</p>
+            </div>
+          </div>
+
+          <hr className="border-t border-gray-200" />
+
+          {/* Billing Address */}
+          <div>
+            <h4 className="font-medium mb-2">Billing Address</h4>
+            <div className="text-sm text-slate-700">
+              <div>{selectedOrder?.billingAddress?.firstName} {selectedOrder?.billingAddress?.lastName}</div>
+              <div>{selectedOrder?.billingAddress?.email}</div>
+              <div>{selectedOrder?.billingAddress?.phone}</div>
+            </div>
+          </div>
+
+          <hr className="border-t border-gray-200" />
+
+          {/* Items */}
+          <div>
+            <h4 className="font-medium mb-3">Items</h4>
+            <div className="space-y-3">
+              {selectedOrder?.items?.map((it) => (
+                <div key={it._id} className="flex items-center gap-4">
+                  <img src={it.eventId?.image} alt={it.title} className="w-16 h-10 object-cover rounded-md" />
+                  <div className="flex-1">
+                    <div className="font-medium">{it.title}</div>
+                    <div className="text-sm text-slate-500">{formatDate(it.eventId?.date)} • {it.eventId?.time} • {it.eventId?.venue}</div>
+                  </div>
+                  <div className="text-right text-sm">
+                    <div>{it.quantity} × {formatPrice(it.price)}</div>
+                    <div className="font-medium">{formatPrice((it.quantity || 0) * (it.price || 0))}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <hr className="border-t border-gray-200" />
+
+          {/* Totals */}
+          <div className="flex justify-end">
+            <div className="w-full max-w-xs">
+              <div className="flex justify-between text-sm text-slate-600">
+                <div>Subtotal</div>
+                <div>{formatPrice(selectedOrder?.totals?.subtotal || 0)}</div>
+              </div>
+              <div className="flex justify-between text-sm text-slate-600">
+                <div>Tax</div>
+                <div>{formatPrice(selectedOrder?.totals?.tax || 0)}</div>
+              </div>
+              <div className="flex justify-between text-sm text-slate-600">
+                <div>Discount</div>
+                <div>-{formatPrice(selectedOrder?.totals?.discountAmount || 0)}</div>
+              </div>
+              <hr className="my-2" />
+              <div className="flex justify-between font-semibold text-slate-900">
+                <div>Total</div>
+                <div>{formatPrice(selectedOrder?.totals?.total || 0)}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={closeOrderModal}>Close</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -5,6 +5,23 @@ import adminService  from '../../services/adminService';
 import { formatDate, formatPrice } from '../../utils/formatDate';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useNavigate } from 'react-router-dom';
+// Import necessary icons from react-icons
+import { 
+  FiUsers, 
+  FiDollarSign, 
+  FiAlertTriangle,
+  FiSettings,
+  FiFileText,
+  FiCreditCard // Use this instead of FiTicket
+} from 'react-icons/fi';
+import { 
+  MdCategory, 
+  MdAnalytics, 
+  MdWarning,
+  MdEventAvailable 
+} from 'react-icons/md';
+import { BsGraphUp } from 'react-icons/bs';
+import { IoTicketOutline } from 'react-icons/io5';
 // Add Recharts imports
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
@@ -81,9 +98,7 @@ const AdminOverview = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center">
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-              </svg>
+              <FiUsers className="w-6 h-6 text-blue-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-500">Total Users</p>
@@ -96,9 +111,7 @@ const AdminOverview = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center">
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-              </svg>
+              <MdEventAvailable className="w-6 h-6 text-green-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-500">Total Events</p>
@@ -111,9 +124,7 @@ const AdminOverview = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center">
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-              </svg>
+              <IoTicketOutline className="w-6 h-6 text-purple-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-500">Tickets Sold</p>
@@ -126,9 +137,7 @@ const AdminOverview = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center">
             <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-              </svg>
+              <FiDollarSign className="w-6 h-6 text-orange-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-500">Total Revenue</p>
@@ -141,9 +150,7 @@ const AdminOverview = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center">
             <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
+              <FiAlertTriangle className="w-6 h-6 text-red-600" />
             </div>
             <div className="ml-4">
               <p className="text-sm text-gray-500">Pending</p>
@@ -329,9 +336,7 @@ const AdminOverview = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="p-4 border border-orange-200 bg-orange-50 rounded-lg">
             <div className="flex items-center">
-              <svg className="w-5 h-5 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
+              <MdWarning className="w-5 h-5 text-orange-600 mr-2" />
               <span className="font-medium text-orange-800">Organizer Verification</span>
             </div>
             <p className="text-2xl font-bold text-orange-900 mt-2">{dashboardData.pendingOrganizerVerification}</p>
@@ -340,9 +345,7 @@ const AdminOverview = () => {
 
           <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
             <div className="flex items-center">
-              <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
+              <MdWarning className="w-5 h-5 text-red-600 mr-2" />
               <span className="font-medium text-red-800">Reported Items</span>
             </div>
             <p className="text-2xl font-bold text-red-900 mt-2">{dashboardData.reportedItems}</p>
@@ -351,9 +354,7 @@ const AdminOverview = () => {
 
           <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
             <div className="flex items-center">
-              <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
+              <MdWarning className="w-5 h-5 text-yellow-600 mr-2" />
               <span className="font-medium text-yellow-800">Low Stock</span>
             </div>
             <p className="text-2xl font-bold text-yellow-900 mt-2">{dashboardData.lowStockEvents?.length || 0}</p>
@@ -362,9 +363,7 @@ const AdminOverview = () => {
 
           <div className="p-4 border border-blue-200 bg-blue-50 rounded-lg">
             <div className="flex items-center">
-              <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-              </svg>
+              <MdWarning className="w-5 h-5 text-blue-600 mr-2" />
               <span className="font-medium text-blue-800">Sold Out</span>
             </div>
             <p className="text-2xl font-bold text-blue-900 mt-2">{dashboardData.soldOutEvents?.length || 0}</p>
@@ -383,9 +382,7 @@ const AdminOverview = () => {
           >
             <div className="text-center">
               <div className="w-8 h-8 bg-blue-100 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                </svg>
+                <FiUsers className="w-4 h-4 text-blue-600" />
               </div>
               <p className="text-sm font-medium text-gray-900">Users</p>
             </div>
@@ -397,9 +394,7 @@ const AdminOverview = () => {
           >
             <div className="text-center">
               <div className="w-8 h-8 bg-green-100 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                </svg>
+                <FiCreditCard className="w-4 h-4 text-green-600" />
               </div>
               <p className="text-sm font-medium text-gray-900">Events</p>
             </div>
@@ -411,9 +406,7 @@ const AdminOverview = () => {
           >
             <div className="text-center">
               <div className="w-8 h-8 bg-purple-100 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14-2v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6a2 2 0 012-2h10a2 2 0 012 2z" />
-                </svg>
+                <MdCategory className="w-4 h-4 text-purple-600" />
               </div>
               <p className="text-sm font-medium text-gray-900">Categories</p>
             </div>
@@ -425,9 +418,7 @@ const AdminOverview = () => {
           >
             <div className="text-center">
               <div className="w-8 h-8 bg-orange-100 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 012 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+                <MdAnalytics className="w-4 h-4 text-orange-600" />
               </div>
               <p className="text-sm font-medium text-gray-900">Analytics</p>
             </div>
@@ -439,9 +430,7 @@ const AdminOverview = () => {
           >
             <div className="text-center">
               <div className="w-8 h-8 bg-red-100 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+                <FiFileText className="w-4 h-4 text-red-600" />
               </div>
               <p className="text-sm font-medium text-gray-900">Reports</p>
             </div>
@@ -453,10 +442,7 @@ const AdminOverview = () => {
           >
             <div className="text-center">
               <div className="w-8 h-8 bg-gray-100 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+                <FiSettings className="w-4 h-4 text-gray-600" />
               </div>
               <p className="text-sm font-medium text-gray-900">Settings</p>
             </div>

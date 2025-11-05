@@ -120,7 +120,14 @@ const Register = () => {
       setCurrentStep(2);
       showSuccess('Personal information saved successfully');
     } catch (error) {
-      showError(error.message || 'Registration failed. Please try again.');
+      // Handle backend validation errors
+      if (error.errors && Array.isArray(error.errors)) {
+        error.errors.forEach(err => {
+          showError(err.msg);
+        });
+      } else {
+        showError(error.message || 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -156,20 +163,7 @@ const Register = () => {
   const handleAttendeeSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.email || !formData.password) {
-      showError('Please fill in all required fields');
-      return;
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
-      showError('Passwords do not match');
-      return;
-    }
-    
-    if (formData.password.length < 8) {
-      showError('Password must be at least 8 characters long');
-      return;
-    }
+    if (!validateStep1()) return;
     
     setLoading(true);
     
@@ -186,7 +180,14 @@ const Register = () => {
       showSuccess('Account created successfully! Welcome to EventHub.');
       navigate('/');
     } catch (error) {
-      showError(error.message || 'Registration failed. Please try again.');
+      // Handle backend validation errors
+      if (error.errors && Array.isArray(error.errors)) {
+        error.errors.forEach(err => {
+          showError(err.msg);
+        });
+      } else {
+        showError(error.message || 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

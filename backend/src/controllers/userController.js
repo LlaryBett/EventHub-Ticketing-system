@@ -9,6 +9,7 @@ const Order = require('../models/Order');
 const { validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const emailService = require('../utils/emailService'); // <-- Add this import
+const cloudinary = require('../config/cloudinary');
 
 // Generate JWT Token (needed for updatePassword)
 const generateToken = (id, userType) => {
@@ -195,15 +196,15 @@ exports.getMe = async (req, res, next) => {
 
         // --- Calculate previous period metrics ---
         const previousRevenue = previousPeriodTickets.reduce((sum, ticket) => sum + (ticket.price || 0), 0);
-        const previousAttendees = previousPeriodTickets.length;
+        const previousPeriodAttendees = previousPeriodTickets.length;  // Define this before using it
 
         // --- Calculate growth percentages ---
         const revenueGrowth = previousRevenue > 0 
           ? Math.round(((currentRevenue - previousRevenue) / previousRevenue) * 100)
           : currentRevenue > 0 ? 100 : 0;
 
-        const attendeeGrowth = previousAttendees > 0 
-          ? Math.round(((currentAttendees - previousAttendees) / previousAttendees) * 100)
+        const attendeeGrowth = previousPeriodAttendees > 0 
+          ? Math.round(((currentAttendees - previousPeriodAttendees) / previousPeriodAttendees) * 100)
           : currentAttendees > 0 ? 100 : 0;
 
         // --- Overall Analytics calculations ---
@@ -258,7 +259,7 @@ exports.getMe = async (req, res, next) => {
           currentPeriodRevenue: currentRevenue,
           previousPeriodRevenue: previousRevenue,
           currentPeriodAttendees: currentAttendees,
-          previousPeriodAttendees: previousAttendees, // ✅ Fix here
+          previousPeriodAttendees, // Now this is defined
           revenueTrend,
           eventPerformance,
           recentEvents
@@ -1435,16 +1436,16 @@ exports.getOrganizerById = async (req, res, next) => {
     });
   }
 };
-
 // @desc    Verify organizer (admin only)
 // @route   PATCH /api/users/admin/organizers/:id/verification
 // @access  Private/Admin
 exports.verifyOrganizer = async (req, res, next) => {
   try {
-    const { verificationStatus, verificationNotes } = req.body;
+    const { verificationStatus, approvalStatus, rejectionReason } = req.body;
 
     // Allowed verification statuses
     const allowedStatuses = ['pending', 'verified', 'rejected', 'suspended'];
+    const allowedApprovalStatuses = ['pending', 'approved', 'rejected'];
 
     if (!allowedStatuses.includes(verificationStatus)) {
       return res.status(400).json({
@@ -1461,17 +1462,8 @@ exports.verifyOrganizer = async (req, res, next) => {
       });
     }
 
-    // Update the organizer
-    const organizer = await Organizer.findByIdAndUpdate(
-      req.params.id,
-      {
-        verificationStatus,
-        verificationNotes: verificationNotes || '',
-        verifiedAt: verificationStatus === 'verified' ? new Date() : null
-      },
-      { new: true, runValidators: true }
-    ).populate('userId', 'name email');
-
+    // Find organizer first to get userId
+    const organizer = await Organizer.findById(req.params.id);
     if (!organizer) {
       return res.status(404).json({
         success: false,
@@ -1479,30 +1471,75 @@ exports.verifyOrganizer = async (req, res, next) => {
       });
     }
 
+    // Prepare update data
+    const updateData = {
+      verificationStatus,
+      rejectionReason: rejectionReason || '',
+      verifiedAt: verificationStatus === 'verified' ? new Date() : null
+    };
+
+    // If approvalStatus is provided, update it too
+    if (approvalStatus && allowedApprovalStatuses.includes(approvalStatus)) {
+      updateData.approvalStatus = approvalStatus;
+      updateData.approvedAt = approvalStatus === 'approved' ? new Date() : null;
+    }
+
+    // Update the organizer
+    const updatedOrganizer = await Organizer.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('userId', 'name email');
+
+    // CRITICAL: Update the user's organizer status
+    if (organizer.userId) {
+      const isApprovedOrganizer = 
+        verificationStatus === 'verified' && 
+        (approvalStatus === 'approved' || organizer.approvalStatus === 'approved');
+      
+      await User.findByIdAndUpdate(
+        organizer.userId,
+        { 
+          userType: 'organizer',
+          isApprovedOrganizer: isApprovedOrganizer
+        }
+      );
+      
+      console.log('✅ Updated user organizer status:', {
+        userId: organizer.userId,
+        userType: 'organizer',
+        isApprovedOrganizer: isApprovedOrganizer
+      });
+    }
+
     // --- Notify organizer by email if status changed ---
     if (
       ['verified', 'rejected', 'suspended'].includes(verificationStatus) &&
-      organizer.userId &&
-      organizer.userId.email
+      updatedOrganizer.userId &&
+      updatedOrganizer.userId.email
     ) {
       emailService.sendOrganizerVerificationEmail({
-        to: organizer.userId.email,
-        name: organizer.userId.name,
-        organizationName: organizer.organizationName,
+        to: updatedOrganizer.userId.email,
+        name: updatedOrganizer.userId.name,
+        organizationName: updatedOrganizer.organizationName,
         status: verificationStatus,
-        notes: verificationNotes
+        notes: rejectionReason
       }).catch(err => {
         console.error('Failed to send organizer verification email:', err);
       });
     }
-    // --- End email notification ---
 
-    console.log("Updated organizer:", organizer);
+    console.log("✅ Updated organizer:", {
+      id: updatedOrganizer._id,
+      verificationStatus: updatedOrganizer.verificationStatus,
+      approvalStatus: updatedOrganizer.approvalStatus,
+      userId: updatedOrganizer.userId?._id
+    });
 
     res.status(200).json({
       success: true,
       message: `Organizer ${verificationStatus} successfully`,
-      data: organizer
+      data: updatedOrganizer
     });
   } catch (error) {
     console.error('Verify organizer error:', error);
@@ -1822,6 +1859,70 @@ exports.getAdminDashboardStats = async (req, res, next) => {
     res.status(500).json({
       success: false,
       message: 'Server Error'
+    });
+  }
+};
+
+// @desc    Upload organizer logo
+// @route   POST /api/users/organizer/logo
+// @access  Private (organizer only)
+exports.uploadOrganizerLogo = async (req, res) => {
+  try {
+    // Check if file exists in request
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload a file'
+      });
+    }
+
+    // Get organizer profile
+    const organizerProfile = await Organizer.findOne({ userId: req.user.id });
+    if (!organizerProfile) {
+      return res.status(404).json({
+        success: false,
+        message: 'Organizer profile not found'
+      });
+    }
+
+    // Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'organizer-logos',
+      public_id: `organizer_${organizerProfile._id}`,
+      overwrite: true,
+      transformation: [
+        { width: 500, height: 500, crop: 'fill' },
+        { quality: 'auto' }
+      ]
+    });
+
+    // Delete old logo from Cloudinary if exists
+    if (organizerProfile.logo && organizerProfile.logo.includes('cloudinary')) {
+      const oldPublicId = organizerProfile.logo.split('/').pop().split('.')[0];
+      await cloudinary.uploader.destroy(oldPublicId);
+    }
+
+    // Update organizer profile with new logo URL
+    organizerProfile.logo = result.secure_url;
+    await organizerProfile.save();
+
+    console.log('✅ Logo uploaded successfully:', {
+      organizerId: organizerProfile._id,
+      logoUrl: result.secure_url
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        logo: result.secure_url
+      }
+    });
+
+  } catch (error) {
+    console.error('Logo upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error uploading logo'
     });
   }
 };

@@ -6,6 +6,9 @@ import { useUI } from '../context/UIContext';
 import { formatDate, formatPrice, getDaysUntilEvent } from '../utils/formatDate';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Button from '../components/common/Button';
+// Add react-icons imports
+import { FiCalendar, FiMapPin, FiClock, FiUsers, FiFileText, FiShare2, FiTwitter, FiLink } from 'react-icons/fi';
+import { FaCheck } from 'react-icons/fa';
 
 const EventDetails = () => {
   const { id } = useParams();
@@ -154,9 +157,8 @@ const EventDetails = () => {
               : 'border-gray-300'
           }`}>
             {isSelected && (
-              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
+              // replaced inline svg with react-icon
+              <FaCheck className="w-3 h-3 text-white" />
             )}
           </div>
         </div>
@@ -188,9 +190,8 @@ const EventDetails = () => {
           <div className="space-y-1">
             {ticket.benefits.slice(0, 3).map((benefit, idx) => (
               <div key={idx} className="flex items-center text-sm text-gray-600">
-                <svg className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
+                {/* replaced inline svg check with react-icon */}
+                <FaCheck className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />
                 <span className="truncate">{benefit}</span>
               </div>
             ))}
@@ -251,16 +252,13 @@ const EventDetails = () => {
               <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">{event.title}</h1>
               <div className="flex flex-wrap items-center gap-6 text-lg drop-shadow">
                 <div className="flex items-center">
-                  <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+                  {/* replaced inline calendar svg with react-icon */}
+                  <FiCalendar className="w-6 h-6 mr-2" />
                   {formatDate(event.date)} at {event.time}
                 </div>
                 <div className="flex items-center">
-                  <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
+                  {/* replaced inline location svg with react-icon */}
+                  <FiMapPin className="w-6 h-6 mr-2" />
                   {event.venue}
                 </div>
               </div>
@@ -332,14 +330,17 @@ const EventDetails = () => {
               <section>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Share This Event</h2>
                 <div className="flex space-x-4">
-                  <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200">
-                    Share on Facebook
+                  <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2">
+                    <FiShare2 className="w-4 h-4" />
+                    <span>Share on Facebook</span>
                   </button>
-                  <button className="bg-blue-400 text-white px-4 py-2 rounded-lg hover:bg-blue-500 transition-colors duration-200">
-                    Share on Twitter
+                  <button className="bg-blue-400 text-white px-4 py-2 rounded-lg hover:bg-blue-500 transition-colors duration-200 flex items-center space-x-2">
+                    <FiTwitter className="w-4 h-4" />
+                    <span>Share on Twitter</span>
                   </button>
-                  <button className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200">
-                    Copy Link
+                  <button className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200 flex items-center space-x-2">
+                    <FiLink className="w-4 h-4" />
+                    <span>Copy Link</span>
                   </button>
                 </div>
               </section>
@@ -384,9 +385,8 @@ const EventDetails = () => {
                     {/* Fallback for when map doesn't load */}
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-100 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                       <div className="text-center">
-                        <svg className="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m-6 3l6-3" />
-                        </svg>
+                        {/* replaced complex inline svg with react-icon */}
+                        <FiMapPin className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                         <p className="text-gray-500 text-sm">Interactive Map</p>
                       </div>
                     </div>
@@ -538,21 +538,18 @@ const EventDetails = () => {
               {/* Event Info */}
               <div className="mt-6 pt-6 border-t space-y-3">
                 <div className="flex items-center text-sm text-gray-600">
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                  {/* replaced clock svg with react-icon */}
+                  <FiClock className="w-4 h-4 mr-2" />
                   Duration: 2-3 hours
                 </div>
                 <div className="flex items-center text-sm text-gray-600">
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
+                  {/* replaced users svg with react-icon */}
+                  <FiUsers className="w-4 h-4 mr-2" />
                   Age: All ages welcome
                 </div>
                 <div className="flex items-center text-sm text-gray-600">
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                  {/* replaced document svg with react-icon */}
+                  <FiFileText className="w-4 h-4 mr-2" />
                   E-tickets provided
                 </div>
               </div>

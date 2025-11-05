@@ -1,5 +1,7 @@
 import { api } from './api';
 
+// ===== PUBLIC ROUTES =====
+
 // Submit contact form (public - no auth required)
 export const submitContactForm = async (contactData) => {
   try {
@@ -32,6 +34,28 @@ export const getContactInfo = async () => {
   }
 };
 
+// Get contact page content (public)
+export const getContactPageContent = async () => {
+  try {
+    const response = await api.get('/contact/content');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Get contact form configuration (public)
+export const getContactFormConfig = async () => {
+  try {
+    const response = await api.get('/contact/form-config');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// ===== PROTECTED ROUTES =====
+
 // Get user's own contact submissions (protected)
 export const getUserContactSubmissions = async (userId) => {
   try {
@@ -52,8 +76,9 @@ export const getContactSubmission = async (id) => {
   }
 };
 
-// Admin only functions
-// Get all contact submissions with filtering and pagination (admin)
+// ===== ADMIN ONLY ROUTES =====
+
+// Contact submissions management
 export const getAllContactSubmissions = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams(params).toString();
@@ -65,7 +90,6 @@ export const getAllContactSubmissions = async (params = {}) => {
   }
 };
 
-// Update contact submission status (admin)
 export const updateContactStatus = async (id, statusData) => {
   try {
     const response = await api.put(`/contact/${id}/status`, statusData);
@@ -75,7 +99,6 @@ export const updateContactStatus = async (id, statusData) => {
   }
 };
 
-// Delete contact submission (admin)
 export const deleteContactSubmission = async (id) => {
   try {
     const response = await api.delete(`/contact/${id}`);
@@ -86,7 +109,6 @@ export const deleteContactSubmission = async (id) => {
 };
 
 // FAQ Management (Admin only)
-// Create FAQ (admin)
 export const createFAQ = async (faqData) => {
   try {
     const response = await api.post('/contact/faqs', faqData);
@@ -96,28 +118,25 @@ export const createFAQ = async (faqData) => {
   }
 };
 
-// Update FAQ (admin)
-export const updateFAQ = async (id, faqData) => {
+export const updateFAQ = async (index, faqData) => {
   try {
-    const response = await api.put(`/contact/faqs/${id}`, faqData);
+    const response = await api.put(`/contact/faqs/${index}`, faqData);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
   }
 };
 
-// Delete FAQ (admin)
-export const deleteFAQ = async (id) => {
+export const deleteFAQ = async (index) => {
   try {
-    const response = await api.delete(`/contact/faqs/${id}`);
+    const response = await api.delete(`/contact/faqs/${index}`);
     return response.data;
   } catch (error) {
     throw error.response?.data || error.message;
   }
 };
 
-// Contact Information Management (Admin only)
-// Update contact information (admin)
+// Configuration Management (Admin only)
 export const updateContactInfo = async (contactInfoData) => {
   try {
     const response = await api.put('/contact/info', contactInfoData);
@@ -127,18 +146,91 @@ export const updateContactInfo = async (contactInfoData) => {
   }
 };
 
-// Helper functions for contact form categories
-export const getContactCategories = () => {
-  return [
-    { value: 'general', label: 'General Inquiry' },
-    { value: 'support', label: 'Technical Support' },
-    { value: 'billing', label: 'Billing & Payments' },
-    { value: 'partnership', label: 'Partnership' },
-    { value: 'feedback', label: 'Feedback' }
-  ];
+export const updateContactPageContent = async (pageContentData) => {
+  try {
+    const response = await api.put('/contact/content', pageContentData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
 };
 
-// Helper functions for contact status
+export const updateContactFormConfig = async (formConfigData) => {
+  try {
+    const response = await api.put('/contact/form-config', formConfigData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const getBusinessRules = async () => {
+  try {
+    const response = await api.get('/contact/business-rules');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const updateBusinessRules = async (businessRulesData) => {
+  try {
+    const response = await api.put('/contact/business-rules', businessRulesData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const getCompleteConfiguration = async () => {
+  try {
+    const response = await api.get('/contact/config/all');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+export const initializeConfiguration = async () => {
+  try {
+    const response = await api.post('/contact/config/initialize');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// ===== HELPER FUNCTIONS =====
+
+// Dynamic category helper - fetches from backend configuration
+export const getContactCategories = async () => {
+  try {
+    const config = await getContactFormConfig();
+    if (config.success && config.data.categories && config.data.categories.length > 0) {
+      return config.data.categories.filter(cat => !cat.isActive === false);
+    }
+    
+    // Fallback to default categories if none configured
+    return [
+      { value: 'general', label: 'General Inquiry' },
+      { value: 'support', label: 'Technical Support' },
+      { value: 'billing', label: 'Billing & Payments' },
+      { value: 'partnership', label: 'Partnership' },
+      { value: 'feedback', label: 'Feedback' }
+    ];
+  } catch (error) {
+    console.error('Failed to fetch categories, using defaults:', error);
+    return [
+      { value: 'general', label: 'General Inquiry' },
+      { value: 'support', label: 'Technical Support' },
+      { value: 'billing', label: 'Billing & Payments' },
+      { value: 'partnership', label: 'Partnership' },
+      { value: 'feedback', label: 'Feedback' }
+    ];
+  }
+};
+
+// Dynamic status helper
 export const getContactStatuses = () => {
   return [
     { value: 'pending', label: 'Pending', color: 'orange' },
@@ -148,40 +240,95 @@ export const getContactStatuses = () => {
   ];
 };
 
-// Validation helpers (client-side validation that matches backend)
-export const validateContactForm = (data) => {
+// Dynamic priority helper
+export const getContactPriorities = () => {
+  return [
+    { value: 'low', label: 'Low', color: 'gray' },
+    { value: 'medium', label: 'Medium', color: 'blue' },
+    { value: 'high', label: 'High', color: 'orange' },
+    { value: 'urgent', label: 'Urgent', color: 'red' }
+  ];
+};
+
+// Validation helpers
+export const validateContactForm = async (data) => {
   const errors = {};
 
-  // Name validation
-  if (!data.name || data.name.trim().length < 2 || data.name.trim().length > 50) {
-    errors.name = 'Name must be between 2 and 50 characters';
-  }
+  try {
+    // Get dynamic configuration for validation
+    const config = await getContactFormConfig();
+    const fieldSettings = config.data?.fieldSettings || {};
+    
+    // Name validation
+    if (fieldSettings.name?.required && (!data.name || data.name.trim().length === 0)) {
+      errors.name = 'Name is required';
+    } else if (data.name && (data.name.trim().length < 2 || data.name.trim().length > 50)) {
+      errors.name = 'Name must be between 2 and 50 characters';
+    }
 
-  // Email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!data.email || !emailRegex.test(data.email)) {
-    errors.email = 'Please provide a valid email address';
-  }
+    // Email validation
+    if (fieldSettings.email?.required && (!data.email || data.email.trim().length === 0)) {
+      errors.email = 'Email is required';
+    } else if (data.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(data.email)) {
+        errors.email = 'Please provide a valid email address';
+      }
+    }
 
-  // Phone validation (optional)
-  if (data.phone && data.phone.trim() && !/^\+?[\d\s\-()]+$/.test(data.phone)) {
-    errors.phone = 'Please provide a valid phone number';
-  }
+    // Phone validation
+    if (fieldSettings.phone?.required && (!data.phone || data.phone.trim().length === 0)) {
+      errors.phone = 'Phone number is required';
+    } else if (data.phone && data.phone.trim() && !/^\+?[\d\s\-()]{8,}$/.test(data.phone)) {
+      errors.phone = 'Please provide a valid phone number';
+    }
 
-  // Subject validation
-  if (!data.subject || data.subject.trim().length < 5 || data.subject.trim().length > 100) {
-    errors.subject = 'Subject must be between 5 and 100 characters';
-  }
+    // Subject validation
+    if (fieldSettings.subject?.required && (!data.subject || data.subject.trim().length === 0)) {
+      errors.subject = 'Subject is required';
+    } else if (data.subject && (data.subject.trim().length < 5 || data.subject.trim().length > 100)) {
+      errors.subject = 'Subject must be between 5 and 100 characters';
+    }
 
-  // Message validation
-  if (!data.message || data.message.trim().length < 10 || data.message.trim().length > 1000) {
-    errors.message = 'Message must be between 10 and 1000 characters';
-  }
+    // Message validation
+    if (fieldSettings.message?.required && (!data.message || data.message.trim().length === 0)) {
+      errors.message = 'Message is required';
+    } else if (data.message && (data.message.trim().length < 10 || data.message.trim().length > 1000)) {
+      errors.message = 'Message must be between 10 and 1000 characters';
+    }
 
-  // Category validation
-  const validCategories = ['general', 'support', 'billing', 'partnership', 'feedback'];
-  if (!data.category || !validCategories.includes(data.category)) {
-    errors.category = 'Please select a valid category';
+    // Category validation
+    if (fieldSettings.category?.required && (!data.category || data.category.trim().length === 0)) {
+      errors.category = 'Category is required';
+    } else if (data.category) {
+      const categories = await getContactCategories();
+      const validCategories = categories.map(cat => cat.value);
+      if (!validCategories.includes(data.category)) {
+        errors.category = 'Please select a valid category';
+      }
+    }
+
+  } catch (error) {
+    console.error('Failed to fetch form config for validation, using default validation:', error);
+    // Fallback to default validation if config fetch fails
+    if (!data.name || data.name.trim().length < 2 || data.name.trim().length > 50) {
+      errors.name = 'Name must be between 2 and 50 characters';
+    }
+    if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      errors.email = 'Please provide a valid email address';
+    }
+    if (data.phone && data.phone.trim() && !/^\+?[\d\s\-()]+$/.test(data.phone)) {
+      errors.phone = 'Please provide a valid phone number';
+    }
+    if (!data.subject || data.subject.trim().length < 5 || data.subject.trim().length > 100) {
+      errors.subject = 'Subject must be between 5 and 100 characters';
+    }
+    if (!data.message || data.message.trim().length < 10 || data.message.trim().length > 1000) {
+      errors.message = 'Message must be between 10 and 1000 characters';
+    }
+    if (!data.category) {
+      errors.category = 'Please select a category';
+    }
   }
 
   return {
@@ -190,7 +337,6 @@ export const validateContactForm = (data) => {
   };
 };
 
-// FAQ validation
 export const validateFAQ = (data) => {
   const errors = {};
 
@@ -214,4 +360,29 @@ export const validateFAQ = (data) => {
     isValid: Object.keys(errors).length === 0,
     errors
   };
+};
+
+// Bulk data fetcher for contact page
+export const getContactPageData = async () => {
+  try {
+    const [pageContent, contactInfo, formConfig, faqs] = await Promise.all([
+      getContactPageContent(),
+      getContactInfo(),
+      getContactFormConfig(),
+      getAllFAQs()
+    ]);
+
+    return {
+      success: true,
+      data: {
+        pageContent: pageContent.data,
+        contactInfo: contactInfo.data,
+        formConfig: formConfig.data,
+        faqs: faqs.data
+      }
+    };
+  } catch (error) {
+    console.error('Failed to fetch contact page data:', error);
+    throw error;
+  }
 };

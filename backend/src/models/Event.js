@@ -25,25 +25,17 @@ const eventSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Event time is required']
   },
-  venue: { // Changed from 'location' to 'venue' to match your cart controller
+  venue: {
     type: String,
     required: [true, 'Event venue is required']
   },
-  // REMOVE the single price field
-  // price: {
-  //   type: Number,
-  //   required: [true, 'Event price is required'],
-  //   min: [0, 'Price cannot be negative']
-  // },
-  // ADD tickets array instead
   tickets: [{
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'Ticket'
-}],
-
-  category: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Category',
+    ref: 'Ticket'
+  }],
+  // CHANGED: Now uses category slug from Discover schema instead of Category model
+  category: {
+    type: String, // This stores the category slug from Discover.categories
     required: [true, 'Event category is required']
   },
   organizer: {
@@ -72,13 +64,20 @@ const eventSchema = new mongoose.Schema({
   attendees: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  }]
+  }],
+  // ADDED: Status field for event lifecycle management
+  status: {
+    type: String,
+    enum: ['draft', 'published', 'cancelled', 'completed'],
+    default: 'draft'
+  }
 }, {
   timestamps: true
 });
 
-// Compound index for frequent queries (filtering by category, featured, and sorting by date)
+// Compound index for frequent queries
 eventSchema.index({ category: 1, featured: 1, date: 1 });
+eventSchema.index({ status: 1, date: 1 }); // Added for status-based queries
 
 // Ensure registered never exceeds capacity
 eventSchema.pre('save', function (next) {
@@ -86,6 +85,16 @@ eventSchema.pre('save', function (next) {
     return next(new Error('Registered count cannot exceed event capacity'));
   }
   next();
+});
+
+// Virtual for checking if event is sold out
+eventSchema.virtual('isSoldOut').get(function() {
+  return this.registered >= this.capacity;
+});
+
+// Virtual for checking if event is upcoming
+eventSchema.virtual('isUpcoming').get(function() {
+  return this.date > new Date();
 });
 
 module.exports = mongoose.model('Event', eventSchema);

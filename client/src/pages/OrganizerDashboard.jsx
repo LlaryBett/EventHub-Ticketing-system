@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { 
@@ -6,20 +6,23 @@ import {
   Download, Edit, Copy, Trash2, Eye, Settings, Bell, Moon, Sun,
   MoreHorizontal, CheckCircle, Clock, AlertCircle, Mail, MessageSquare,
   QrCode, CreditCard, Upload, UserPlus, BarChart3, PieChart as PieChartIcon,
-  MapPin, Tag, Ticket, RefreshCw, X, ChevronDown, ChevronRight
+  MapPin, Tag, Ticket, RefreshCw, X, ChevronDown, ChevronRight, Sparkles,
+  Image, Video, Play
 } from 'lucide-react';
 import { useUI } from '../context/UIContext';
 import { eventService } from '../services/eventService';
-import { getMe } from '../services/userService';
-import { getEventAttendees, exportEventAttendees, checkInAttendee } from '../services/userService';
+import { getMe, getEventAttendees, exportEventAttendees, checkInAttendee, uploadOrganizerLogo } from '../services/userService';
 import { formatDate, formatPrice } from '../utils/formatDate';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
-import QRScanner from '../components/common/QRScanner'; // Add this import
+import QRScanner from '../components/common/QRScanner';
 
 const OrganizerDashboard = () => {
   const { showSuccess, showError } = useUI();
+  const fileInputRef = useRef(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoPreview, setLogoPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [organizerEvents, setOrganizerEvents] = useState([]);
@@ -53,8 +56,17 @@ const OrganizerDashboard = () => {
   const [showAttendeesModal, setShowAttendeesModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [showCreateStoryModal, setShowCreateStoryModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   
+  // Stories State
+  const [stories, setStories] = useState([]);
+  const [storiesLoading, setStoriesLoading] = useState(false);
+  const [newStory, setNewStory] = useState({
+    eventId: '',
+    slides: [{ type: 'image', media: '', title: '', duration: 5000, subtitle: '', description: '', cta: '', link: '' }]
+  });
+
   // Settings State
   const [organizerSettings, setOrganizerSettings] = useState({
     name: '',
@@ -138,6 +150,13 @@ const OrganizerDashboard = () => {
     fetchUserAndData();
   }, [showError]);
 
+  // Load stories when stories tab is active
+  useEffect(() => {
+    if (activeTab === 'stories') {
+      fetchStories();
+    }
+  }, [activeTab]);
+
   // Filter events based on search and filters
   useEffect(() => {
     let filtered = organizerEvents;
@@ -169,6 +188,81 @@ const OrganizerDashboard = () => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, categoryFilter, organizerEvents]);
 
+  // Stories Functions
+  const fetchStories = async () => {
+    try {
+      setStoriesLoading(true);
+      // Changed from getEventStories to getOrganizerStories
+      const response = await eventService.getOrganizerStories();
+      setStories(response.data || []);
+    } catch (error) {
+      showError(error.message || 'Failed to fetch stories');
+    } finally {
+      setStoriesLoading(false);
+    }
+  };
+
+  const handleCreateStory = async () => {
+    try {
+      // Validate required fields
+      if (!newStory.eventId) {
+        throw new Error('Please select an event');
+      }
+      if (!newStory.slides.length || !newStory.slides[0].media) {
+        throw new Error('At least one slide with media is required');
+      }
+
+      // Log the payload before sending to backend
+      console.log('Creating story payload:', newStory);
+
+      // Call the correct service method
+      const response = await eventService.createStory(newStory);
+      
+      showSuccess('Story created successfully!');
+      setShowCreateStoryModal(false);
+      setNewStory({
+        eventId: '',
+        slides: [{ type: 'image', media: '', title: '', duration: 5000, subtitle: '', description: '', cta: '', link: '' }]
+      });
+      fetchStories(); // Refresh stories list
+    } catch (error) {
+      showError(error.message || 'Failed to create story');
+    }
+  };
+
+  const handleDeleteStory = async (storyId) => {
+    try {
+      await eventService.deleteStory(storyId);
+      showSuccess('Story deleted successfully');
+      fetchStories(); // Refresh stories list
+    } catch (error) {
+      showError(error.message || 'Failed to delete story');
+    }
+  };
+
+  const addSlide = () => {
+    setNewStory(prev => ({
+      ...prev,
+      slides: [...prev.slides, { type: 'image', media: '', title: '', duration: 5000, subtitle: '', description: '', cta: '', link: '' }]
+    }));
+  };
+
+  const updateSlide = (index, field, value) => {
+    setNewStory(prev => ({
+      ...prev,
+      slides: prev.slides.map((slide, i) => 
+        i === index ? { ...slide, [field]: value } : slide
+      )
+    }));
+  };
+
+  const removeSlide = (index) => {
+    setNewStory(prev => ({
+      ...prev,
+      slides: prev.slides.filter((_, i) => i !== index)
+    }));
+  };
+
   // Event Actions
   const handleDeleteEvent = async () => {
     if (!selectedEvent) return;
@@ -180,7 +274,6 @@ const OrganizerDashboard = () => {
       setSelectedEvent(null);
     } catch (error) {
       showError('Failed to delete event');
-      // Use error for logging
       console.error(error);
     }
   };
@@ -188,48 +281,58 @@ const OrganizerDashboard = () => {
   const handleDuplicateEvent = async (eventData) => {
     try {
       // Call your backend API to duplicate event
-      // const duplicatedEvent = await eventService.duplicateEvent(selectedEvent.id, eventData);
       showSuccess('Event duplicated successfully');
       setShowDuplicateModal(false);
       setSelectedEvent(null);
-      // Use eventData for logging or debugging
-      console.debug('Duplicated event with data:', eventData);
-      // Refresh events list
     } catch (error) {
       showError('Failed to duplicate event');
-      // Use error for logging
       console.error(error);
     }
   };
 
   const handleUpdateEvent = async (eventData) => {
     try {
-      // Call your backend API to update event
-      // await eventService.updateEvent(selectedEvent.id, eventData);
+      // Prefer provided eventData, otherwise use selectedEvent from state
+      const payload = eventData && Object.keys(eventData).length ? eventData : selectedEvent;
+      const eventId = payload?.id || payload?.eventId;
+      if (!eventId) {
+        throw new Error('No event id provided for update');
+      }
+
+      // Call backend to update event
+      const res = await eventService.updateEvent(eventId, payload);
+
+      // Use returned updated event if available, otherwise fallback to payload
+      const updated = (res && (res.data || res.updatedEvent)) || payload;
+
+      // Replace updated event in organizerEvents and filteredEvents
+      setOrganizerEvents(prev => prev.map(ev => {
+        const idKey = ev.id || ev.eventId;
+        if (idKey === eventId) return { ...ev, ...updated };
+        return ev;
+      }));
+      setFilteredEvents(prev => prev.map(ev => {
+        const idKey = ev.id || ev.eventId;
+        if (idKey === eventId) return { ...ev, ...updated };
+        return ev;
+      }));
+
       showSuccess('Event updated successfully');
       setShowEditModal(false);
       setSelectedEvent(null);
-      // Use eventData for logging or debugging
-      console.debug('Updated event with data:', eventData);
-      // Refresh events list
     } catch (error) {
-      showError('Failed to update event');
-      // Use error for logging
-      console.error(error);
+      console.error('Update event failed:', error);
+      showError(error?.response?.data?.message || error?.message || 'Failed to update event');
     }
   };
 
   const handleSendNotification = async (notificationData) => {
     try {
       // Call your backend API to send notifications
-      // await eventService.sendNotificationToAttendees(selectedEvent.id, notificationData);
       showSuccess('Notification sent successfully');
       setShowNotificationModal(false);
-      // Use notificationData for logging or debugging
-      console.debug('Notification sent with data:', notificationData);
     } catch (error) {
       showError('Failed to send notification');
-      // Use error for logging
       console.error(error);
     }
   };
@@ -237,12 +340,10 @@ const OrganizerDashboard = () => {
   const handleUpdateSettings = async () => {
     try {
       // Call your backend API to update organizer settings
-      // await organizerService.updateSettings(organizerSettings);
       showSuccess('Settings updated successfully');
       setShowSettingsModal(false);
     } catch (error) {
       showError('Failed to update settings');
-      // Use error for logging
       console.error(error);
     }
   };
@@ -250,11 +351,9 @@ const OrganizerDashboard = () => {
   const exportAttendees = async (eventId, format = 'csv') => {
     try {
       // Call your backend API to export attendees
-      // const exportData = await eventService.exportAttendees(eventId, format);
       showSuccess(`Attendees exported as ${format.toUpperCase()}`);
     } catch (error) {
       showError('Failed to export attendees');
-      // Use error for logging
       console.error(error);
     }
   };
@@ -263,16 +362,13 @@ const OrganizerDashboard = () => {
   const handleScanSuccess = async (decodedText, decodedResult) => {
     setScanResult(decodedText);
     try {
-      // Extract ticket ID from QR code data
       let ticketId = decodedText;
       if (decodedText.startsWith('{')) {
         const qrData = JSON.parse(decodedText);
         ticketId = qrData.ticketId || qrData.id;
       }
-      // Always call userService to verify ticket against backend
       const checkinResponse = await checkInAttendee(ticketId);
 
-      // Display backend message if available, otherwise fallback
       if (checkinResponse && checkinResponse.message) {
         showSuccess(checkinResponse.message);
       } else if (checkinResponse && checkinResponse.error) {
@@ -283,11 +379,6 @@ const OrganizerDashboard = () => {
         showSuccess('Check-in completed.');
       }
 
-      // Use decodedResult for debugging
-      if (decodedResult) {
-        console.debug('Decoded QR result:', decodedResult);
-      }
-      // Refresh attendees list
       if (selectedEvent?.eventId) {
         const response = await getEventAttendees(selectedEvent.eventId);
         setAttendees(response?.data?.attendees || []);
@@ -295,7 +386,6 @@ const OrganizerDashboard = () => {
       }
       setShowQRScanner(false);
     } catch (error) {
-      // Display backend error message if available
       if (error?.response?.data?.message) {
         showError(error.response.data.message);
       } else if (error?.message) {
@@ -308,7 +398,6 @@ const OrganizerDashboard = () => {
   };
 
   const handleScanError = (errorMessage) => {
-    // Optional: Handle scan errors quietly or show subtle notification
     console.log('QR Scan Error:', errorMessage);
   };
 
@@ -316,16 +405,12 @@ const OrganizerDashboard = () => {
   const indexOfLastEvent = currentPage * eventsPerPage;
   const indexOfFirstEvent = indexOfLastEvent - eventsPerPage;
   const currentEvents = filteredEvents.slice(indexOfFirstEvent, indexOfLastEvent);
-  // Use currentEvents for debugging or logging
-  if (process.env.NODE_ENV === 'development') {
-    // eslint-disable-next-line no-console
-    console.debug('Current paginated events:', currentEvents);
-  }
   const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'events', label: 'My Events', icon: Calendar },
+    { id: 'stories', label: 'Stories', icon: Sparkles },
     { id: 'attendees', label: 'Attendees', icon: Users },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
     { id: 'settings', label: 'Settings', icon: Settings }
@@ -334,14 +419,14 @@ const OrganizerDashboard = () => {
   const [attendees, setAttendees] = useState([]);
   const [attendeeStats, setAttendeeStats] = useState({});
   const [modalEventInfo, setModalEventInfo] = useState(null);
-  const [attendeesLoading, setAttendeesLoading] = useState(false); // NEW
+  const [attendeesLoading, setAttendeesLoading] = useState(false);
 
   // When opening the Attendees Modal, fetch attendees for the selected event
   useEffect(() => {
     const fetchAttendees = async () => {
       if (showAttendeesModal && selectedEvent?.eventId) {
-        setAttendeesLoading(true); // NEW
-        setAttendees([]); // Reset to avoid stale data
+        setAttendeesLoading(true);
+        setAttendees([]);
         setAttendeeStats({});
         setModalEventInfo(null);
         try {
@@ -354,15 +439,50 @@ const OrganizerDashboard = () => {
           setAttendees([]);
           setAttendeeStats({});
           setModalEventInfo(null);
-          // Use err for logging
           console.error(err);
         } finally {
-          setAttendeesLoading(false); // NEW
+          setAttendeesLoading(false);
         }
       }
     };
     fetchAttendees();
   }, [showAttendeesModal, selectedEvent, showError]);
+
+  // Upload handlers for organization logo
+  const handleLogoSelect = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    // immediate preview
+    const objectUrl = URL.createObjectURL(file);
+    setLogoPreview(objectUrl);
+    await uploadLogo(file);
+    // revoke will be handled later if needed; keep simple
+  };
+
+  const uploadLogo = async (file) => {
+    setUploadingLogo(true);
+    try {
+      const response = await uploadOrganizerLogo(file);
+      const logoUrl = response?.data?.logo || response?.logo;
+      
+      if (logoUrl) {
+        setOrganizerSettings(prev => ({ ...prev, logo: logoUrl }));
+        showSuccess('Organization logo updated successfully');
+      } else {
+        setOrganizerSettings(prev => ({ ...prev, logo: logoPreview || prev.logo }));
+        showSuccess('Logo uploaded (preview shown)');
+      }
+    } catch (err) {
+      console.error('Logo upload error:', err);
+      showError(err?.message || 'Failed to upload logo');
+      setLogoPreview(null);
+    } finally {
+      setUploadingLogo(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   if (loading || !user) {
     return (
@@ -563,7 +683,6 @@ const OrganizerDashboard = () => {
                     {recentEvents.slice(0, 3).map((event) => (
                       <div key={event.eventId} className={`flex items-center justify-between py-4 border-b last:border-b-0 ${darkMode ? 'border-gray-700' : ''}`}>
                         <div className="flex items-center">
-                          {/* No image in backend, use placeholder */}
                           <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center mr-4">
                             <Calendar className="w-6 h-6 text-blue-600" />
                           </div>
@@ -632,7 +751,6 @@ const OrganizerDashboard = () => {
                         <option value="draft">Draft</option>
                       </select>
 
-                      {/* Category Filter */}
                       <select
                         value={categoryFilter}
                         onChange={(e) => setCategoryFilter(e.target.value)}
@@ -673,7 +791,6 @@ const OrganizerDashboard = () => {
                       <div className="space-y-4">
                         {filteredEvents.slice(indexOfFirstEvent, indexOfLastEvent).map((event) => (
                           <React.Fragment key={event.eventId}>
-                            {/* Registered Attendees Count - visible and separated above the card */}
                             <div className={`mb-2 text-base font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                               {event.title}
                               <span className="ml-2 text-primary-600">
@@ -707,7 +824,6 @@ const OrganizerDashboard = () => {
                                     </span>
                                   </div>
                                 </div>
-                                {/* Action Buttons */}
                                 <div className="flex space-x-2">
                                   <Button 
                                     size="small" 
@@ -761,7 +877,6 @@ const OrganizerDashboard = () => {
                                   </Button>
                                 </div>
                               </div>
-                              {/* Event Stats */}
                               <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-gray-700' : ''}`}>
                                 <div className="grid grid-cols-3 gap-4 text-center">
                                   <div>
@@ -794,7 +909,6 @@ const OrganizerDashboard = () => {
                           </React.Fragment>
                         ))}
                       </div>
-                      {/* Pagination */}
                       {totalPages > 1 && (
                         <div className="flex justify-center items-center space-x-4 mt-6">
                           <Button
@@ -822,6 +936,143 @@ const OrganizerDashboard = () => {
               </div>
             )}
 
+            {activeTab === 'stories' && (
+              <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                <div className="p-6 border-b">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Event Stories
+                      </h2>
+                      <p className={`mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        Create engaging stories to promote your events
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => setShowCreateStoryModal(true)}
+                      className="flex items-center space-x-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Create Story</span>
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  {storiesLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+                    </div>
+                  ) : stories.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Play className="w-8 h-8 text-primary-600" />
+                      </div>
+                      <h3 className={`text-lg font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        No stories yet
+                      </h3>
+                      <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        Create your first story to engage with your audience
+                      </p>
+                      <Button onClick={() => setShowCreateStoryModal(true)}>
+                        Create Your First Story
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {stories.map((story) => (
+                        <div
+                          key={story.id}
+                          className={`border rounded-lg overflow-hidden ${
+                            darkMode ? 'border-gray-700' : 'border-gray-200'
+                          }`}
+                        >
+                          <div className="relative h-48 bg-gray-200">
+                            {story.slides[0]?.type === 'image' ? (
+                              <img
+                                src={story.slides[0]?.media}
+                                alt={story.slides[0]?.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <video
+                                src={story.slides[0]?.media}
+                                className="w-full h-full object-cover"
+                                muted
+                              />
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                            
+                            <div className="absolute top-3 right-3">
+                              <span
+                                className={`px-2 py-1 text-xs rounded-full ${
+                                  story.isActive
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}
+                              >
+                                {story.isActive ? 'Active' : 'Expired'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="p-4">
+                            <h3 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {story.eventId?.title || 'Untitled Story'}
+                            </h3>
+                            
+                            <div className={`space-y-1 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                              <div className="flex items-center">
+                                <Calendar className="w-3 h-3 mr-2" />
+                                Created: {new Date(story.createdAt).toLocaleDateString()}
+                              </div>
+                              <div className="flex items-center">
+                                <Play className="w-3 h-3 mr-2" />
+                                {story.slides.length} slide{story.slides.length !== 1 ? 's' : ''}
+                              </div>
+                              <div className="flex items-center">
+                                <Users className="w-3 h-3 mr-2" />
+                                {story.views || 0} views
+                              </div>
+                            </div>
+
+                            <div className="flex space-x-2 mt-4">
+                              <Button
+                                size="small"
+                                variant="outline"
+                                onClick={() => {
+                                  // Preview story functionality
+                                }}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="outline"
+                                onClick={() => {
+                                  // Edit story functionality
+                                }}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="danger"
+                                onClick={() => handleDeleteStory(story.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Other tabs (attendees, analytics, settings) remain the same */}
             {activeTab === 'attendees' && (
               <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                 <div className="p-6 border-b">
@@ -833,7 +1084,6 @@ const OrganizerDashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     {organizerEvents.map((event) => (
                       <div key={event.id} className={`border rounded-lg p-4 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                        {/* Show event title and registered attendees count at the top of each attendee card */}
                         <div className="mb-2">
                           <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{event.title}</span>
                           <span className="ml-2 text-primary-600">
@@ -885,7 +1135,6 @@ const OrganizerDashboard = () => {
 
             {activeTab === 'analytics' && (
               <div className="space-y-8">
-                {/* Advanced Analytics Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className={`rounded-lg shadow-md p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                     <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -937,7 +1186,6 @@ const OrganizerDashboard = () => {
                   </div>
                 </div>
 
-                {/* Event Performance Table */}
                 <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                   <div className="p-6 border-b">
                     <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -1009,7 +1257,6 @@ const OrganizerDashboard = () => {
 
             {activeTab === 'settings' && (
               <div className="space-y-8">
-                {/* Profile Settings */}
                 <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                   <div className="p-6 border-b">
                     <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -1021,15 +1268,32 @@ const OrganizerDashboard = () => {
                       <div className="flex items-center space-x-6">
                         <div className="relative">
                           <img
-                            src={organizerSettings.logo || '/api/placeholder/100/100'}
+                            src={logoPreview || organizerSettings.logo || '/api/placeholder/100/100'}
                             alt="Organization Logo"
                             className="w-24 h-24 rounded-full object-cover"
                           />
+                          {/* hidden file input */}
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoSelect}
+                            className="hidden"
+                          />
                           <Button
                             size="small"
-                            className="absolute -bottom-2 -right-2 rounded-full p-2"
+                            className="absolute -bottom-2 -right-2 rounded-full p-2 flex items-center justify-center"
+                            onClick={() => fileInputRef.current && fileInputRef.current.click()}
                           >
-                            <Upload className="w-4 h-4" />
+                            {uploadingLogo ? (
+                              // simple spinner (tailwind classes used in project)
+                              <svg className="w-4 h-4 animate-spin text-white" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                              </svg>
+                            ) : (
+                              <Upload className="w-4 h-4" />
+                            )}
                           </Button>
                         </div>
                         <div>
@@ -1095,7 +1359,6 @@ const OrganizerDashboard = () => {
                   </div>
                 </div>
 
-                {/* Payout Settings */}
                 <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                   <div className="p-6 border-b">
                     <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -1144,7 +1407,6 @@ const OrganizerDashboard = () => {
                   </div>
                 </div>
 
-                {/* Notification Preferences */}
                 <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                   <div className="p-6 border-b">
                     <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -1208,6 +1470,219 @@ const OrganizerDashboard = () => {
           </div>
         </div>
 
+        {/* Create Story Modal */}
+        <Modal
+          isOpen={showCreateStoryModal}
+          onClose={() => setShowCreateStoryModal(false)}
+          title="Create Story"
+          size="large"
+        >
+          <div className="space-y-6">
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                Select Event
+              </label>
+              <select
+                value={newStory.eventId}
+                onChange={(e) => {
+                  const selectedEventId = e.target.value;
+                  // match either possible id field
+                  const selectedEventData = organizerEvents.find(event => 
+                    (event.id && event.id === selectedEventId) || 
+                    (event.eventId && event.eventId === selectedEventId)
+                  );
+                  console.log('Available events keys:', organizerEvents.map(ev => ({ id: ev.id, eventId: ev.eventId, title: ev.title })));
+                  console.log('Selected event ID:', selectedEventId);
+                  console.log('Selected event data:', selectedEventData);
+                  setNewStory({...newStory, eventId: selectedEventId});
+                }}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                  darkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white' 
+                    : 'bg-white border-gray-300'
+                }`}
+              >
+                <option value="">Choose an event</option>
+                {organizerEvents.map(event => {
+                  const val = event.id || event.eventId || '';
+                  return <option key={val || event.title} value={val}>{event.title}</option>;
+                })}
+              </select>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Story Slides
+                </h3>
+                <Button size="small" onClick={addSlide}>
+                  <Plus className="w-4 h-4" />
+                  Add Slide
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                {newStory.slides.map((slide, index) => (
+                  <div key={index} className={`border rounded-lg p-4 ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Slide {index + 1}
+                      </h4>
+                      {newStory.slides.length > 1 && (
+                        <Button
+                          size="small"
+                          variant="danger"
+                          onClick={() => removeSlide(index)}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Media Type
+                        </label>
+                        <select
+                          value={slide.type}
+                          onChange={(e) => updateSlide(index, 'type', e.target.value)}
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                            darkMode 
+                              ? 'bg-gray-700 border-gray-600 text-white' 
+                              : 'bg-white border-gray-300'
+                          }`}
+                        >
+                          <option value="image">Image</option>
+                          <option value="video">Video</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Media URL
+                        </label>
+                        <input
+                          type="url"
+                          value={slide.media}
+                          onChange={(e) => updateSlide(index, 'media', e.target.value)}
+                          placeholder="https://example.com/image.jpg"
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                            darkMode 
+                              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                              : 'bg-white border-gray-300'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Title
+                        </label>
+                        <input
+                          type="text"
+                          value={slide.title}
+                          onChange={(e) => updateSlide(index, 'title', e.target.value)}
+                          placeholder="Slide title..."
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                            darkMode 
+                              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                              : 'bg-white border-gray-300'
+                          }`}
+                        />
+                      </div>
+
+                      <div>
+                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={slide.subtitle}
+                          onChange={(e) => updateSlide(index, 'subtitle', e.target.value)}
+                          placeholder="Slide subtitle..."
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                            darkMode 
+                              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                              : 'bg-white border-gray-300'
+                          }`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Description
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={slide.description}
+                        onChange={(e) => updateSlide(index, 'description', e.target.value)}
+                        placeholder="Slide description..."
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                          darkMode 
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                            : 'bg-white border-gray-300'
+                        }`}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          CTA Button Text
+                        </label>
+                        <input
+                          type="text"
+                          value={slide.cta}
+                          onChange={(e) => updateSlide(index, 'cta', e.target.value)}
+                          placeholder="Get Tickets Now"
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                            darkMode 
+                              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                              : 'bg-white border-gray-300'
+                          }`}
+                        />
+                      </div>
+
+                      <div>
+                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          CTA Link
+                        </label>
+                        <input
+                          type="url"
+                          value={slide.link}
+                          onChange={(e) => updateSlide(index, 'link', e.target.value)}
+                          placeholder="https://example.com/tickets"
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                            darkMode 
+                              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                              : 'bg-white border-gray-300'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-4">
+              <Button variant="outline" onClick={() => setShowCreateStoryModal(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateStory} 
+                disabled={!newStory.eventId || newStory.slides.some(slide => !slide.media || !slide.title)}
+              >
+                Create Story
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
         {/* Modals */}
         
         {/* Delete Event Modal */}
@@ -1238,7 +1713,7 @@ const OrganizerDashboard = () => {
           title="Duplicate Event"
         >
           <div className="space-y-4">
-            <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            <p className={`${darkMode ? 'text-gray-300' : 'text-gray'}`}>
               Create a copy of "{selectedEvent?.title}"?
             </p>
             <div className="space-y-4">

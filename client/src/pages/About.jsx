@@ -72,18 +72,32 @@ const About = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="bg-blue-600 text-white py-12 md:py-16">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          {/* H1 - Mobile: 26px, Desktop: 48px */}
-          <h1 className="text-2xl md:text-5xl font-bold mb-6">
+      <section className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 text-white py-16 overflow-hidden">
+        {/* Background Image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=1920&h=600&fit=crop')",
+          }}
+        >
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/90 via-purple-900/85 to-pink-900/90"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative max-w-7xl mx-auto container-padding text-center">
+          <h1 className="text-2xl md:text-5xl font-bold mb-4 drop-shadow-lg">
             About EventHub
           </h1>
-          {/* Hero text - Mobile: 16px, Desktop: 24px */}
-          <p className="text-base md:text-2xl text-blue-100 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl text-blue-100 max-w-3xl mx-auto">
             We're on a mission to make discovering and attending amazing events effortless for everyone, 
             while empowering organizers to create unforgettable experiences.
           </p>
         </div>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-10 left-10 w-24 h-24 bg-blue-400/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-10 right-10 w-32 h-32 bg-pink-400/20 rounded-full blur-3xl"></div>
       </section>
 
       {/* Our Story */}

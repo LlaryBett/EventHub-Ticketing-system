@@ -3,12 +3,36 @@ const Event = require('../models/Event');
 const Organization = require('../models/Organizer'); // Add this line
 const { validationResult } = require('express-validator');
 
+// Get single ticket
+exports.getTicket = async (req, res, next) => {
+  try {
+    const ticket = await Ticket.findById(req.params.id)
+      .populate('event', 'title dates venue image'); // Added image field
+    
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Ticket not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: ticket
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get all tickets for an event
 exports.getEventTickets = async (req, res, next) => {
   try {
     const { eventId } = req.params;
     
-    const event = await Event.findById(eventId);
+    const event = await Event.findById(eventId)
+      .select('title dates venue image organizer'); // Added image field
+    
     if (!event) {
       return res.status(404).json({
         success: false,
@@ -21,29 +45,10 @@ exports.getEventTickets = async (req, res, next) => {
     res.status(200).json({
       success: true,
       count: tickets.length,
-      data: tickets
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Get single ticket
-exports.getTicket = async (req, res, next) => {
-  try {
-    const ticket = await Ticket.findById(req.params.id)
-      .populate('event', 'title dates venue');
-    
-    if (!ticket) {
-      return res.status(404).json({
-        success: false,
-        message: 'Ticket not found'
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      data: ticket
+      data: {
+        tickets,
+        event // Include full event data including image
+      }
     });
   } catch (error) {
     next(error);

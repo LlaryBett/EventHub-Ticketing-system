@@ -1,7 +1,4 @@
 const Contact = require('../models/Contact');
-const FAQ = require('../models/FAQ');
-const ContactInfo = require('../models/ContactInfo');
-const User = require('../models/User');
 const { validationResult } = require('express-validator');
 const emailService = require('../utils/emailService');
 
@@ -36,36 +33,50 @@ exports.submitContactForm = async (req, res, next) => {
 
     const contact = await Contact.create(contactData);
 
+    // Get configuration for email templates
+    const config = await Contact.getConfiguration();
+    const businessRules = config?.businessRules || {};
+
     // Send confirmation email to user
-    try {
-      await emailService.sendContactConfirmation(email, {
-        name,
-        subject,
-        category,
-        referenceId: contact._id
-      });
-    } catch (emailError) {
-      console.error('Failed to send confirmation email:', emailError);
+    if (businessRules.autoResponder?.enabled) {
+      try {
+        await emailService.sendContactConfirmation(email, {
+          name,
+          subject,
+          category,
+          referenceId: contact._id,
+          responseTime: businessRules.responseTime || '24 hours'
+        });
+      } catch (emailError) {
+        console.error('Failed to send confirmation email:', emailError);
+      }
     }
 
     // Send notification to admin
-    try {
-      await emailService.sendContactNotification({
-        name,
-        email,
-        phone,
-        subject,
-        message,
-        category,
-        referenceId: contact._id
-      });
-    } catch (emailError) {
-      console.error('Failed to send admin notification:', emailError);
+    if (businessRules.notification?.enabled) {
+      try {
+        await emailService.sendContactNotification({
+          name,
+          email,
+          phone,
+          subject,
+          message,
+          category,
+          referenceId: contact._id,
+          adminEmail: businessRules.notification.adminEmail
+        });
+      } catch (emailError) {
+        console.error('Failed to send admin notification:', emailError);
+      }
     }
+
+    // Get success message from configuration
+    const successMessage = config?.formConfig?.successMessage || 
+      'Message sent successfully! We\'ll get back to you within 24 hours.';
 
     res.status(201).json({
       success: true,
-      message: 'Message sent successfully! We\'ll get back to you within 24 hours.',
+      message: successMessage,
       data: {
         referenceId: contact._id,
         status: contact.status
@@ -80,7 +91,16 @@ exports.submitContactForm = async (req, res, next) => {
 // Get all contact submissions (Admin only)
 exports.getAllContactSubmissions = async (req, res, next) => {
   try {
-    if (!req.user.isAdmin) {
+    // Add debug logging
+    console.log('User data:', {
+      user: req.user,
+      userType: req.user.userType,
+      headers: req.headers,
+      token: req.headers.authorization
+    });
+
+    if (req.user.userType !== 'admin') {
+      console.log('Access denied - User type is not admin:', req.user.userType);
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -97,7 +117,7 @@ exports.getAllContactSubmissions = async (req, res, next) => {
     } = req.query;
 
     // Build filter object
-    const filter = {};
+    const filter = { isDeleted: { $ne: true } };
     if (status) filter.status = status;
     if (category) filter.category = category;
 
@@ -116,10 +136,12 @@ exports.getAllContactSubmissions = async (req, res, next) => {
 
     // Get status counts for dashboard
     const statusCounts = await Contact.aggregate([
+      { $match: filter },
       { $group: { _id: '$status', count: { $sum: 1 } } }
     ]);
 
     const categoryCounts = await Contact.aggregate([
+      { $match: filter },
       { $group: { _id: '$category', count: { $sum: 1 } } }
     ]);
 
@@ -146,7 +168,7 @@ exports.getContactSubmission = async (req, res, next) => {
       .populate('user', 'name email')
       .populate('assignedTo', 'name email');
 
-    if (!contact) {
+    if (!contact || contact.isDeleted) {
       return res.status(404).json({
         success: false,
         message: 'Contact submission not found'
@@ -174,7 +196,7 @@ exports.getContactSubmission = async (req, res, next) => {
 // Update contact submission status (Admin only)
 exports.updateContactStatus = async (req, res, next) => {
   try {
-    if (!req.user.isAdmin) {
+    if (req.user.userType !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -193,7 +215,7 @@ exports.updateContactStatus = async (req, res, next) => {
 
     const contact = await Contact.findById(req.params.id);
 
-    if (!contact) {
+    if (!contact || contact.isDeleted) {
       return res.status(404).json({
         success: false,
         message: 'Contact submission not found'
@@ -208,7 +230,7 @@ exports.updateContactStatus = async (req, res, next) => {
 
     await contact.save();
 
-    // Send status update email to user if resolved
+    // Send status update email to user if resolved and response provided
     if (status === 'resolved' && response) {
       try {
         await emailService.sendContactResponse(contact.email, {
@@ -236,10 +258,10 @@ exports.updateContactStatus = async (req, res, next) => {
   }
 };
 
-// Delete contact submission (Admin only)
+// Delete contact submission (Admin only) - Soft delete
 exports.deleteContactSubmission = async (req, res, next) => {
   try {
-    if (!req.user.isAdmin) {
+    if (req.user.userType !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -255,7 +277,9 @@ exports.deleteContactSubmission = async (req, res, next) => {
       });
     }
 
-    await contact.deleteOne();
+    // Soft delete
+    contact.isDeleted = true;
+    await contact.save();
 
     res.status(200).json({
       success: true,
@@ -281,7 +305,10 @@ exports.getUserContactSubmissions = async (req, res, next) => {
       });
     }
 
-    const contacts = await Contact.find({ user: userId })
+    const contacts = await Contact.find({ 
+      user: userId,
+      isDeleted: { $ne: true }
+    })
       .sort({ submittedAt: -1 })
       .populate('assignedTo', 'name email');
 
@@ -296,16 +323,24 @@ exports.getUserContactSubmissions = async (req, res, next) => {
   }
 };
 
-// Get all FAQs
+// Get all FAQs from configuration
 exports.getAllFAQs = async (req, res, next) => {
   try {
-    const { category, isActive = true } = req.query;
+    const { category } = req.query;
 
-    const filter = { isActive };
-    if (category) filter.category = category;
+    const config = await Contact.getConfiguration();
+    let faqs = config?.faqConfig?.faqs || [];
 
-    const faqs = await FAQ.find(filter)
-      .sort({ order: 1, createdAt: -1 });
+    // Filter active FAQs
+    faqs = faqs.filter(faq => faq.isActive);
+
+    // Filter by category if provided
+    if (category) {
+      faqs = faqs.filter(faq => faq.category === category);
+    }
+
+    // Sort by order
+    faqs.sort((a, b) => (a.order || 0) - (b.order || 0));
 
     // Group FAQs by category
     const faqsByCategory = faqs.reduce((acc, faq) => {
@@ -328,10 +363,10 @@ exports.getAllFAQs = async (req, res, next) => {
   }
 };
 
-// Create FAQ (Admin only)
+// Create FAQ in configuration
 exports.createFAQ = async (req, res, next) => {
   try {
-    if (!req.user.isAdmin) {
+    if (req.user.userType !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -348,18 +383,30 @@ exports.createFAQ = async (req, res, next) => {
 
     const { question, answer, category, order } = req.body;
 
-    const faq = await FAQ.create({
+    const config = await Contact.getConfiguration();
+    const currentFaqs = config?.faqConfig?.faqs || [];
+
+    const newFAQ = {
       question,
       answer,
-      category,
-      order,
-      createdBy: req.user.id
-    });
+      category: category || 'general',
+      order: order || 0,
+      isActive: true
+    };
+
+    const updatedConfig = await Contact.updateConfiguration({
+      faqConfig: {
+        faqs: [...currentFaqs, newFAQ]
+      }
+    }, req.user.id);
+
+    // Find the newly created FAQ
+    const createdFAQ = updatedConfig.faqConfig.faqs[updatedConfig.faqConfig.faqs.length - 1];
 
     res.status(201).json({
       success: true,
       message: 'FAQ created successfully',
-      data: faq
+      data: createdFAQ
     });
 
   } catch (error) {
@@ -367,10 +414,10 @@ exports.createFAQ = async (req, res, next) => {
   }
 };
 
-// Update FAQ (Admin only)
+// Update FAQ in configuration
 exports.updateFAQ = async (req, res, next) => {
   try {
-    if (!req.user.isAdmin) {
+    if (req.user.userType !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -385,30 +432,35 @@ exports.updateFAQ = async (req, res, next) => {
       });
     }
 
-    const faq = await FAQ.findById(req.params.id);
+    const { question, answer, category, order, isActive } = req.body;
+    const faqIndex = parseInt(req.params.index);
 
-    if (!faq) {
+    const config = await Contact.getConfiguration();
+    const currentFaqs = config?.faqConfig?.faqs || [];
+
+    if (faqIndex < 0 || faqIndex >= currentFaqs.length) {
       return res.status(404).json({
         success: false,
         message: 'FAQ not found'
       });
     }
 
-    const { question, answer, category, order, isActive } = req.body;
+    // Update the FAQ
+    const updatedFaqs = [...currentFaqs];
+    if (question !== undefined) updatedFaqs[faqIndex].question = question;
+    if (answer !== undefined) updatedFaqs[faqIndex].answer = answer;
+    if (category !== undefined) updatedFaqs[faqIndex].category = category;
+    if (order !== undefined) updatedFaqs[faqIndex].order = order;
+    if (isActive !== undefined) updatedFaqs[faqIndex].isActive = isActive;
 
-    faq.question = question || faq.question;
-    faq.answer = answer || faq.answer;
-    faq.category = category || faq.category;
-    faq.order = order !== undefined ? order : faq.order;
-    faq.isActive = isActive !== undefined ? isActive : faq.isActive;
-    faq.updatedAt = new Date();
-
-    await faq.save();
+    const updatedConfig = await Contact.updateConfiguration({
+      faqConfig: { faqs: updatedFaqs }
+    }, req.user.id);
 
     res.status(200).json({
       success: true,
       message: 'FAQ updated successfully',
-      data: faq
+      data: updatedConfig.faqConfig.faqs[faqIndex]
     });
 
   } catch (error) {
@@ -416,26 +468,34 @@ exports.updateFAQ = async (req, res, next) => {
   }
 };
 
-// Delete FAQ (Admin only)
+// Delete FAQ from configuration
 exports.deleteFAQ = async (req, res, next) => {
   try {
-    if (!req.user.isAdmin) {
+    if (req.user.userType !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
       });
     }
 
-    const faq = await FAQ.findById(req.params.id);
+    const faqIndex = parseInt(req.params.index);
 
-    if (!faq) {
+    const config = await Contact.getConfiguration();
+    const currentFaqs = config?.faqConfig?.faqs || [];
+
+    if (faqIndex < 0 || faqIndex >= currentFaqs.length) {
       return res.status(404).json({
         success: false,
         message: 'FAQ not found'
       });
     }
 
-    await faq.deleteOne();
+    // Remove the FAQ
+    const updatedFaqs = currentFaqs.filter((_, index) => index !== faqIndex);
+
+    await Contact.updateConfiguration({
+      faqConfig: { faqs: updatedFaqs }
+    }, req.user.id);
 
     res.status(200).json({
       success: true,
@@ -448,32 +508,11 @@ exports.deleteFAQ = async (req, res, next) => {
   }
 };
 
-// Get contact information
+// Get contact information from configuration
 exports.getContactInfo = async (req, res, next) => {
   try {
-    const contactInfo = await ContactInfo.findOne({ isActive: true })
-      .sort({ updatedAt: -1 });
-
-    if (!contactInfo) {
-      // Return default contact info if none exists
-      const defaultInfo = {
-        email: 'hello@eventhub.com',
-        phone: '+1 (555) 123-4567',
-        address: '123 Event Street, San Francisco, CA 94102',
-        businessHours: 'Monday - Friday, 9 AM - 6 PM EST',
-        socialMedia: {
-          facebook: '',
-          twitter: '',
-          instagram: '',
-          linkedin: ''
-        }
-      };
-
-      return res.status(200).json({
-        success: true,
-        data: defaultInfo
-      });
-    }
+    const config = await Contact.getConfiguration();
+    const contactInfo = config?.contactConfig || {};
 
     res.status(200).json({
       success: true,
@@ -485,10 +524,18 @@ exports.getContactInfo = async (req, res, next) => {
   }
 };
 
-// Update contact information (Admin only)
+// Update contact information in configuration
 exports.updateContactInfo = async (req, res, next) => {
   try {
-    if (!req.user.isAdmin) {
+    // Add debug logging
+    console.log('Update contact info request:', {
+      user: req.user,
+      isAdmin: req.user.isAdmin,
+      body: req.body
+    });
+
+    if (req.user.userType !== 'admin') {
+      console.log('Access denied - User is not admin:', req.user);
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin privileges required.'
@@ -503,26 +550,175 @@ exports.updateContactInfo = async (req, res, next) => {
       });
     }
 
-    let contactInfo = await ContactInfo.findOne({ isActive: true });
-
-    if (!contactInfo) {
-      // Create new contact info
-      contactInfo = await ContactInfo.create({
-        ...req.body,
-        updatedBy: req.user.id
-      });
-    } else {
-      // Update existing
-      Object.assign(contactInfo, req.body);
-      contactInfo.updatedBy = req.user.id;
-      contactInfo.updatedAt = new Date();
-      await contactInfo.save();
-    }
+    const updatedConfig = await Contact.updateConfiguration({
+      contactConfig: req.body
+    }, req.user.id);
 
     res.status(200).json({
       success: true,
       message: 'Contact information updated successfully',
-      data: contactInfo
+      data: updatedConfig.contactConfig
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get contact page content
+exports.getContactPageContent = async (req, res, next) => {
+  try {
+    const config = await Contact.getConfiguration();
+    const pageContent = config?.pageContent || {};
+
+    res.status(200).json({
+      success: true,
+      data: pageContent
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update contact page content
+exports.updateContactPageContent = async (req, res, next) => {
+  try {
+    if (req.user.userType !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const updatedConfig = await Contact.updateConfiguration({
+      pageContent: req.body
+    }, req.user.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Page content updated successfully',
+      data: updatedConfig.pageContent
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get contact form configuration
+exports.getContactFormConfig = async (req, res, next) => {
+  try {
+    const config = await Contact.getConfiguration();
+    const formConfig = config?.formConfig || {};
+
+    res.status(200).json({
+      success: true,
+      data: formConfig
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update contact form configuration
+exports.updateContactFormConfig = async (req, res, next) => {
+  try {
+    if (req.user.userType !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const updatedConfig = await Contact.updateConfiguration({
+      formConfig: req.body
+    }, req.user.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Form configuration updated successfully',
+      data: updatedConfig.formConfig
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get business rules configuration
+exports.getBusinessRules = async (req, res, next) => {
+  try {
+    const config = await Contact.getConfiguration();
+    const businessRules = config?.businessRules || {};
+
+    res.status(200).json({
+      success: true,
+      data: businessRules
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update business rules configuration
+exports.updateBusinessRules = async (req, res, next) => {
+  try {
+    if (req.user.userType !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const updatedConfig = await Contact.updateConfiguration({
+      businessRules: req.body
+    }, req.user.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Business rules updated successfully',
+      data: updatedConfig.businessRules
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get complete contact configuration
+exports.getCompleteConfiguration = async (req, res, next) => {
+  try {
+    const config = await Contact.getConfiguration();
+
+    res.status(200).json({
+      success: true,
+      data: config
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Initialize default configuration
+exports.initializeConfiguration = async (req, res, next) => {
+  try {
+    if (req.user.userType !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const config = await Contact.initializeDefaults(req.user.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Configuration initialized successfully',
+      data: config
     });
 
   } catch (error) {
