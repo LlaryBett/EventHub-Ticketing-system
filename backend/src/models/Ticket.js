@@ -104,27 +104,22 @@ TicketSchema.methods.canPurchase = function (quantity) {
   return true;
 };
 
-// Method to reserve tickets
+// FIXED: Method to reserve tickets (VALIDATION ONLY - NO DEDUCTION)
 TicketSchema.methods.reserveTickets = async function (quantity) {
-  this.canPurchase(quantity); // will throw descriptive error if invalid
-  this.available -= quantity;
-  await this.save();
-  return this;
+  this.canPurchase(quantity); // Validate but DON'T deduct
+  return this; // No changes to available count
 };
 
-// Method to release reserved tickets
+// FIXED: Method to release reserved tickets (NO ACTION NEEDED)
 TicketSchema.methods.releaseTickets = async function (quantity) {
-  this.available += quantity;
-  // Ensure available doesn't exceed total quantity
-  this.available = Math.min(this.available, this.quantity);
-  await this.save();
+  // Since reserveTickets doesn't deduct, no need to add back
   return this;
 };
 
-// Method to confirm ticket purchase (permanent)
+// FIXED: Method to confirm ticket purchase (ONLY PLACE DEDUCTION HAPPENS)
 TicketSchema.methods.confirmPurchase = async function (quantity) {
-  this.canPurchase(quantity); // descriptive validation
-  this.available -= quantity;
+  this.canPurchase(quantity); // Validate first
+  this.available -= quantity; // This is the ONLY place we deduct tickets
   await this.save();
   return this;
 };

@@ -1,11 +1,43 @@
 // src/controllers/eventController.js
+// Add this import at the top of eventController.js
+const mongoose = require('mongoose');
 const Event = require('../models/Event');
 const Organizer = require('../models/Organizer');
-const Discover = require('../models/Discover'); // Add this import
+const Discover = require('../models/Discover');
 const Ticket = require('../models/Ticket');
 const Story = require('../models/Story');
+const Order = require('../models/Order'); // ADD THIS IMPORT
 const { validationResult } = require('express-validator');
 const { uploadImage, deleteImage } = require('../utils/helpers');
+
+// Simpler version that might work better
+const calculateRegisteredCount = async (eventId) => {
+  try {
+    console.log(`🔍 Calculating registered count for event: ${eventId}`);
+    
+    // Find all orders for this event
+    const orders = await Order.find({
+      'items.eventId': eventId,
+      status: { $in: ['pending', 'confirmed', 'completed'] }
+    });
+
+    // Sum up all quantities for this event across all orders
+    let totalRegistered = 0;
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        if (item.eventId.toString() === eventId.toString()) {
+          totalRegistered += item.quantity;
+        }
+      });
+    });
+
+    console.log(`✅ Calculated registered count: ${totalRegistered}`);
+    return totalRegistered;
+  } catch (error) {
+    console.error('❌ Error calculating registered count:', error);
+    return 0;
+  }
+};
 
 // Get all events with filtering, sorting and pagination
 const getAllEvents = async (req, res) => {
@@ -204,8 +236,20 @@ const getAllEvents = async (req, res) => {
     const discoverDataFinal = await Discover.findOne({ isActive: true });
     const discoverCategories = discoverDataFinal?.categories || [];
 
+    // Calculate registered counts for all events in parallel
+    const eventsWithRegisteredCounts = await Promise.all(
+      events.map(async (event) => {
+        const registeredCount = await calculateRegisteredCount(event._id);
+        console.log(`🎫 Event ${event.title}: Stored registered=${event.registered}, Calculated registered=${registeredCount}`);
+        return {
+          event,
+          registeredCount
+        };
+      })
+    );
+
     // Transform to consistent format
-    const transformedEvents = events.map(event => {
+    const transformedEvents = eventsWithRegisteredCounts.map(({ event, registeredCount }) => {
       const categoryDetails = discoverCategories.find(cat => cat.slug === event.category);
 
       return {
@@ -216,6 +260,16 @@ const getAllEvents = async (req, res) => {
         date: event.date ? event.date.toISOString().split('T')[0] : null,
         time: event.time || null,
         venue: event.venue || null,
+        // ADDED: New event detail fields
+        duration: event.duration,
+        ageRestriction: event.ageRestriction,
+        ticketDelivery: event.ticketDelivery,
+        venueAddress: event.venueAddress,
+        eventType: event.eventType,
+        // ADDED: Free event support - CRITICAL for frontend display
+        pricingType: event.pricingType || 'paid',
+        displayPrice: event.pricingType === 'free' ? 'Free' : 'Paid',
+        actionButtonText: event.pricingType === 'free' ? 'Reserve Spot' : 'Buy Tickets',
         tickets: (event.tickets || []).map(ticket => ({
           id: ticket._id.toString(),
           type: ticket.type,
@@ -250,7 +304,8 @@ const getAllEvents = async (req, res) => {
           logo: event.organizer.logo
         } : null,
         capacity: event.capacity,
-        registered: event.registered,
+        // CHANGED: Use calculated count instead of stored field
+        registered: registeredCount,
         featured: event.featured,
         tags: event.tags || [],
         status: event.status || 'draft'
@@ -288,6 +343,8 @@ const getEventById = async (req, res) => {
       .populate('tickets')
       .populate('organizer', 'organizationName businessType logo');
 
+    console.log('🔍 Fetched event data:', event);
+
     if (!event) {
       return res.status(404).json({
         success: false,
@@ -300,6 +357,11 @@ const getEventById = async (req, res) => {
     const discoverCategories = discoverData?.categories || [];
     const categoryDetails = discoverCategories.find(cat => cat.slug === event.category);
 
+    // ADDED: Calculate actual registered count from orders
+    const registeredCount = await calculateRegisteredCount(req.params.id);
+    
+    console.log(`🎫 Event ${event.title}: Calculated registered=${registeredCount}`);
+
     const transformedEvent = {
       id: event._id,
       title: event.title,
@@ -308,6 +370,16 @@ const getEventById = async (req, res) => {
       date: event.date ? event.date.toISOString().split('T')[0] : null,
       time: event.time,
       venue: event.venue,
+      // ADDED: New event detail fields
+      duration: event.duration,
+      ageRestriction: event.ageRestriction,
+      ticketDelivery: event.ticketDelivery,
+      venueAddress: event.venueAddress,
+      eventType: event.eventType,
+      // ADDED: Free event support
+      pricingType: event.pricingType || 'paid',
+      displayPrice: event.pricingType === 'free' ? 'Free' : 'Paid',
+      actionButtonText: event.pricingType === 'free' ? 'Reserve Spot' : 'Buy Tickets',
       tickets: event.tickets.map(ticket => ({
         id: ticket._id,
         type: ticket.type,
@@ -343,9 +415,10 @@ const getEventById = async (req, res) => {
         logo: event.organizer.logo
       } : null,
       capacity: event.capacity,
-      registered: event.registered,
+      // CHANGED: Use calculated count instead of stored field
+      registered: registeredCount,
       featured: event.featured,
-      tags: event.tags,
+      tags: event.tags || [],
       status: event.status || 'draft'
     };
 
@@ -426,7 +499,10 @@ const createEvent = async (req, res) => {
       req.body.image = imageUrl;
     }
 
-    // 6️⃣ Parse tickets
+    // 6️⃣ ADDED: Handle pricing type (free/paid)
+    const pricingType = req.body.pricingType || 'paid';
+    
+    // 7️⃣ Parse tickets
     let ticketsInput = [];
     if (req.body.tickets) {
       ticketsInput = typeof req.body.tickets === 'string'
@@ -435,15 +511,28 @@ const createEvent = async (req, res) => {
 
       // Validate each ticket
       for (const ticket of ticketsInput) {
-        if (!ticket.type || ticket.price == null || ticket.quantity == null) {
+        if (!ticket.type || ticket.quantity == null) {
           return res.status(400).json({
             success: false,
-            message: 'Each ticket must have type, price, and quantity'
+            message: 'Each ticket must have type and quantity'
           });
         }
-        if (ticket.price < 0) {
-          return res.status(400).json({ success: false, message: 'Ticket price cannot be negative' });
+        
+        // ADDED: Price validation for free events
+        if (pricingType === 'free') {
+          ticket.price = 0; // Force price to 0 for free events
+        } else {
+          if (ticket.price == null) {
+            return res.status(400).json({
+              success: false,
+              message: 'Price is required for paid events'
+            });
+          }
+          if (ticket.price < 0) {
+            return res.status(400).json({ success: false, message: 'Ticket price cannot be negative' });
+          }
         }
+        
         if (ticket.quantity < 0) {
           return res.status(400).json({ success: false, message: 'Ticket quantity cannot be negative' });
         }
@@ -458,40 +547,50 @@ const createEvent = async (req, res) => {
       }
     }
 
-    // 7️⃣ Calculate capacity
+    // 8️⃣ Calculate capacity
     const capacity = ticketsInput.reduce((total, t) => total + t.quantity, 0);
 
-    // 8️⃣ Create event first without tickets
+    // 9️⃣ Create event first without tickets
     const eventData = {
       ...req.body,
       tickets: [],
       capacity,
+      // ADDED: Pricing type
+      pricingType: pricingType,
       // CHANGED: category is now the slug string
       category: req.body.category,
       organizer: organizer._id,
-      status: 'draft'
+      status: 'draft',
+      // ADDED: Include new event detail fields
+      duration: req.body.duration,
+      ageRestriction: req.body.ageRestriction,
+      ticketDelivery: req.body.ticketDelivery,
+      venueAddress: req.body.venueAddress,
+      eventType: req.body.eventType
     };
     delete eventData.price;
 
     const event = new Event(eventData);
     await event.save();
 
-    // 9️⃣ Create ticket documents and link them to event
+    // 🔟 Create ticket documents and link them to event
     const ticketDocs = await Promise.all(
       ticketsInput.map(ticket => Ticket.create({
         ...ticket,
         event: event._id,
         available: ticket.quantity,
+        // ADDED: Ensure price is 0 for free events
+        price: pricingType === 'free' ? 0 : ticket.price,
         salesStart: ticket.salesStart || new Date(),
         salesEnd: ticket.salesEnd || new Date('2100-01-01')
       }))
     );
 
-    // 🔟 Update event with ticket ObjectIds
+    // 1️⃣1️⃣ Update event with ticket ObjectIds
     event.tickets = ticketDocs.map(t => t._id);
     await event.save();
 
-    // 1️⃣1️⃣ Populate organizer for response
+    // 1️⃣2️⃣ Populate organizer for response
     await event.populate('organizer', 'organizationName');
 
     const transformedEvent = {
@@ -502,6 +601,16 @@ const createEvent = async (req, res) => {
       date: event.date?.toISOString().split('T')[0],
       time: event.time,
       venue: event.venue,
+      // ADDED: New event detail fields in response
+      duration: event.duration,
+      ageRestriction: event.ageRestriction,
+      ticketDelivery: event.ticketDelivery,
+      venueAddress: event.venueAddress,
+      eventType: event.eventType,
+      // ADDED: Free event fields
+      pricingType: event.pricingType,
+      displayPrice: event.pricingType === 'free' ? 'Free' : 'Paid',
+      actionButtonText: event.pricingType === 'free' ? 'Reserve Spot' : 'Buy Tickets',
       tickets: ticketDocs.map(t => ({
         id: t._id,
         type: t.type,
@@ -518,7 +627,7 @@ const createEvent = async (req, res) => {
       category: validCategory.name,
       organizer: event.organizer.organizationName,
       capacity: event.capacity,
-      registered: event.registered,
+      // REMOVED: registered field since we calculate from orders
       featured: event.featured,
       tags: event.tags,
       status: event.status
@@ -578,6 +687,15 @@ const updateEvent = async (req, res) => {
       // req.body.category remains as the slug string
     }
 
+    // ADDED: Handle pricing type changes
+    if (req.body.pricingType && req.body.pricingType === 'free') {
+      // If changing to free, update all tickets to price 0
+      await Ticket.updateMany(
+        { event: req.params.id },
+        { $set: { price: 0 } }
+      );
+    }
+
     // Handle image upload if present
     if (req.file) {
       if (event.image) {
@@ -600,6 +718,9 @@ const updateEvent = async (req, res) => {
     const discoverCategories = discoverData?.categories || [];
     const categoryDetails = discoverCategories.find(cat => cat.slug === updatedEvent.category);
 
+    // ADDED: Calculate actual registered count for the response
+    const registeredCount = await calculateRegisteredCount(req.params.id);
+
     const transformedEvent = {
       id: updatedEvent._id,
       title: updatedEvent.title,
@@ -608,10 +729,21 @@ const updateEvent = async (req, res) => {
       date: updatedEvent.date.toISOString().split('T')[0],
       time: updatedEvent.time,
       venue: updatedEvent.venue,
+      // ADDED: New event detail fields
+      duration: updatedEvent.duration,
+      ageRestriction: updatedEvent.ageRestriction,
+      ticketDelivery: updatedEvent.ticketDelivery,
+      venueAddress: updatedEvent.venueAddress,
+      eventType: updatedEvent.eventType,
+      // ADDED: Free event support
+      pricingType: updatedEvent.pricingType || 'paid',
+      displayPrice: updatedEvent.pricingType === 'free' ? 'Free' : 'Paid',
+      actionButtonText: updatedEvent.pricingType === 'free' ? 'Reserve Spot' : 'Buy Tickets',
       category: categoryDetails ? categoryDetails.name : updatedEvent.category,
       organizer: updatedEvent.organizer.organizationName,
       capacity: updatedEvent.capacity,
-      registered: updatedEvent.registered,
+      // CHANGED: Use calculated count instead of stored field
+      registered: registeredCount,
       featured: updatedEvent.featured,
       tags: updatedEvent.tags,
       status: updatedEvent.status || 'draft'
@@ -637,6 +769,7 @@ const updateEvent = async (req, res) => {
     });
   }
 };
+
 
 // Delete an event
 const deleteEvent = async (req, res) => {
@@ -689,7 +822,18 @@ const getFeaturedEvents = async (req, res) => {
     const discoverData = await Discover.findOne({ isActive: true });
     const discoverCategories = discoverData?.categories || [];
 
-    const transformedEvents = events.map(event => {
+    // Calculate registered counts for all featured events
+    const eventsWithRegisteredCounts = await Promise.all(
+      events.map(async (event) => {
+        const registeredCount = await calculateRegisteredCount(event._id);
+        return {
+          event,
+          registeredCount
+        };
+      })
+    );
+
+    const transformedEvents = eventsWithRegisteredCounts.map(({ event, registeredCount }) => {
       const categoryDetails = discoverCategories.find(cat => cat.slug === event.category);
       
       return {
@@ -710,7 +854,8 @@ const getFeaturedEvents = async (req, res) => {
         category: categoryDetails ? categoryDetails.name : event.category,
         organizer: event.organizer.organizationName,
         capacity: event.capacity,
-        registered: event.registered,
+        // CHANGED: Use calculated count instead of stored field
+        registered: registeredCount,
         featured: event.featured,
         tags: event.tags
       };
@@ -735,33 +880,33 @@ const registerForEvent = async (req, res) => {
     const event = await Event.findById(req.params.id);
     
     if (!event) {
-      return res.status(404).json({
-        success: false,
-        message: 'Event not found'
-      });
+      console.error("❌ Event not found");
+      return res.status(404).json({ success: false, message: 'Event not found' });
     }
+
+    // Log current registered count and capacity
+    console.log(`Current registered: ${event.registered}, Capacity: ${event.capacity}`);
 
     // Check if event is at capacity
     if (event.registered >= event.capacity) {
-      return res.status(400).json({
-        success: false,
-        message: 'Event is at full capacity'
-      });
+      console.error("❌ Event is at capacity");
+      return res.status(400).json({ success: false, message: 'Event is at capacity' });
     }
 
     // Check if user is already registered
     if (event.attendees.includes(req.user.id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'You are already registered for this event'
-      });
+      console.error("❌ User already registered");
+      return res.status(400).json({ success: false, message: 'User already registered' });
     }
 
     // Add user to attendees and increment registered count
     event.attendees.push(req.user.id);
     event.registered += 1;
-    
+
+    console.log(`User registered: ${req.user.id}. New registered count: ${event.registered}`);
+
     await event.save();
+    console.log(`✅ Event saved. Updated registered count: ${event.registered}`);
 
     res.status(200).json({
       success: true,
@@ -769,12 +914,11 @@ const registerForEvent = async (req, res) => {
     });
   } catch (error) {
     if (error.name === 'CastError') {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid event ID'
-      });
+      console.error("❌ Cast error:", error);
+      return res.status(400).json({ success: false, message: 'Invalid event ID' });
     }
     
+    console.error("❌ Server error:", error);
     res.status(500).json({
       success: false,
       message: 'Server Error',
@@ -782,9 +926,135 @@ const registerForEvent = async (req, res) => {
     });
   }
 };
+  // controllers/eventController.js
 
+// Reserve spots for free events (NO checkout needed)
+const reserveFreeSpots = async (req, res) => {
+  try {
+    const { ticketId, quantity } = req.body;
+    const eventId = req.params.id;
+    const userId = req.user._id; // From auth middleware
 
+    console.log('🎫 Free reservation request:', { eventId, ticketId, quantity, userId });
 
+    // 1. Validate event exists and is free
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Check if event is actually free
+    if (event.pricingType !== 'free') {
+      return res.status(400).json({
+        success: false,
+        message: 'This event requires payment. Please use checkout instead.'
+      });
+    }
+
+    // 2. Validate ticket
+    const ticket = await Ticket.findById(ticketId);
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Ticket type not found'
+      });
+    }
+
+    // 3. Check ticket belongs to this event
+    if (ticket.event.toString() !== eventId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid ticket for this event'
+      });
+    }
+
+    // 4. Check availability
+    if (ticket.available < quantity) {
+      return res.status(400).json({
+        success: false,
+        message: `Only ${ticket.available} spots available`
+      });
+    }
+
+    // 5. Check if user already registered for this event
+    const existingOrder = await Order.findOne({
+      user: userId,
+      event: eventId,
+      status: { $in: ['confirmed', 'completed'] }
+    });
+
+    if (existingOrder) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already registered for this event'
+      });
+    }
+
+    // 6. CREATE ORDER DIRECTLY (No checkout needed)
+    const order = await Order.create({
+      user: userId,
+      event: eventId,
+      tickets: [{
+        ticket: ticketId,
+        quantity: quantity,
+        price: 0, // Free!
+        ticketType: ticket.type
+      }],
+      totalAmount: 0,
+      status: 'confirmed', // Auto-confirm since it's free
+      paymentStatus: 'free', // Special status for free events
+      orderType: 'free_reservation'
+    });
+
+    // 7. Update ticket availability
+    ticket.available -= quantity;
+    await ticket.save();
+
+    // 8. Add user to event attendees
+    event.attendees.push(userId);
+    await event.save();
+
+    // 9. Send confirmation email (optional but recommended)
+    try {
+      await sendFreeEventConfirmation(userId, order._id, event, quantity);
+    } catch (emailError) {
+      console.log('Email sending failed but reservation completed:', emailError);
+      // Don't fail the reservation if email fails
+    }
+
+    console.log(`✅ Free reservation completed: Order ${order._id}, ${quantity} spots`);
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully reserved ${quantity} spot(s)!`,
+      data: {
+        orderId: order._id,
+        event: {
+          title: event.title,
+          date: event.date,
+          time: event.time,
+          venue: event.venue
+        },
+        ticket: {
+          type: ticket.type,
+          quantity: quantity
+        },
+        confirmation: 'Check your email for event details and tickets'
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Free reservation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during reservation',
+      error: error.message
+    });
+  }
+};
 // STORIES FUNCTIONALITY
 
 // Get stories for discover page
@@ -1185,6 +1455,7 @@ const getTimeAgo = (date) => {
   if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
   return `${Math.floor(diffInSeconds / 604800)}w ago`;
 };
+
 module.exports = {
   getAllEvents,
   getEventById,
@@ -1199,5 +1470,6 @@ module.exports = {
   createStory,
   updateStory,
   deleteStory,
-  getEventStories
+  getEventStories,
+  reserveFreeSpots // ADD THIS
 };

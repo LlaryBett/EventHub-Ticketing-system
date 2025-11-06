@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Ticket, FileText, Camera, MapPin, Tag, Calendar, RotateCcw, Plus, X } from 'lucide-react';
+import { Ticket, FileText, Camera, MapPin, Tag, Calendar, RotateCcw, Plus, X, Clock, Users, FileCheck, DollarSign } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import { eventService } from '../services/eventService';
@@ -15,6 +15,10 @@ const Organizer = () => {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  
+  // ADDED: Pricing type state
+  const [pricingType, setPricingType] = useState('paid');
+  
   const [ticketTypes, setTicketTypes] = useState([
     { 
       type: '', 
@@ -36,7 +40,18 @@ const Organizer = () => {
     time: '',
     venue: '',
     image: '',
-    tags: ''
+    tags: '',
+    // NEW FIELDS
+    duration: '2-3 hours',
+    ageRestriction: 'All ages welcome',
+    ticketDelivery: 'E-tickets provided',
+    eventType: 'in_person',
+    venueAddress: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: ''
+    }
   });
   const [showInfoModal, setShowInfoModal] = useState(false);
 
@@ -73,6 +88,18 @@ const Organizer = () => {
     fetchCategories();
   }, [showError]);
 
+  // ADDED: Effect to handle pricing type changes
+  useEffect(() => {
+    if (pricingType === 'free') {
+      // Auto-set all ticket prices to 0 for free events
+      const updatedTickets = ticketTypes.map(ticket => ({
+        ...ticket,
+        price: '0'
+      }));
+      setTicketTypes(updatedTickets);
+    }
+  }, [pricingType]);
+
   useEffect(() => {
     if (user?.data?.userType === 'attendee') {
       setShowInfoModal(true);
@@ -83,9 +110,26 @@ const Organizer = () => {
     setEventData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleVenueAddressChange = (field, value) => {
+    setEventData(prev => ({
+      ...prev,
+      venueAddress: {
+        ...prev.venueAddress,
+        [field]: value
+      }
+    }));
+  };
+
   const handleTicketChange = (index, field, value) => {
     const updatedTickets = [...ticketTypes];
-    updatedTickets[index][field] = value;
+    
+    // ADDED: Auto-set price to 0 if changing to free event
+    if (field === 'price' && pricingType === 'free') {
+      updatedTickets[index][field] = '0';
+    } else {
+      updatedTickets[index][field] = value;
+    }
+    
     setTicketTypes(updatedTickets);
   };
 
@@ -112,7 +156,7 @@ const Organizer = () => {
   const addTicketType = () => {
     setTicketTypes([...ticketTypes, { 
       type: '', 
-      price: '', 
+      price: pricingType === 'free' ? '0' : '', // ADDED: Auto-set price based on pricing type
       quantity: '', 
       description: '',
       benefits: [''],
@@ -147,10 +191,9 @@ const Organizer = () => {
     // Validate tickets - Updated validation logic
     const validTickets = ticketTypes.filter(ticket => 
       ticket.type.trim() && 
-      ticket.price && 
       ticket.quantity && 
       ticket.salesEnd &&
-      ticket.benefits.some(benefit => benefit.trim()) // This now works because we have benefit inputs
+      ticket.benefits.some(benefit => benefit.trim())
     );
 
     if (validTickets.length === 0) {
@@ -158,14 +201,27 @@ const Organizer = () => {
       return;
     }
 
+    // ADDED: Validate price for paid events
+    if (pricingType === 'paid') {
+      const hasInvalidPrice = validTickets.some(ticket => 
+        !ticket.price || parseFloat(ticket.price) <= 0
+      );
+      if (hasInvalidPrice) {
+        showError('Please set valid prices for all ticket types');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
       const newEvent = {
         ...eventData,
+        // ADDED: Include pricing type
+        pricingType: pricingType,
         tickets: validTickets.map(ticket => ({
           type: ticket.type.trim(),
-          price: parseFloat(ticket.price),
+          price: pricingType === 'free' ? 0 : parseFloat(ticket.price), // ADDED: Force 0 for free events
           quantity: parseInt(ticket.quantity),
           available: parseInt(ticket.quantity),
           description: ticket.description.trim(),
@@ -175,10 +231,14 @@ const Organizer = () => {
           maxOrder: parseInt(ticket.maxOrder) || 10
         })),
         organizer: user.data.organizerProfile._id,
-        image: eventData.image || 'https://images.pexels.com/photos/1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=800',
+        image: eventData.image || 'https://images.pexels.com/photos-1105666/pexels-photo-1105666.jpeg?auto=compress&cs=tinysrgb&w=800',
         tags: eventData.tags
           ? eventData.tags.split(',').map(tag => tag.trim()).filter(Boolean)
-          : []
+          : [],
+        // NEW: Include venue address only if fields are filled
+        venueAddress: eventData.venueAddress.street || eventData.venueAddress.city || eventData.venueAddress.state || eventData.venueAddress.zipCode
+          ? eventData.venueAddress
+          : undefined
       };
 
       console.log('Payload sent to backend (newEvent):', newEvent);
@@ -196,8 +256,20 @@ const Organizer = () => {
         time: '',
         venue: '',
         image: '',
-        tags: ''
+        tags: '',
+        duration: '2-3 hours',
+        ageRestriction: 'All ages welcome',
+        ticketDelivery: 'E-tickets provided',
+        eventType: 'in_person',
+        venueAddress: {
+          street: '',
+          city: '',
+          state: '',
+          zipCode: ''
+        }
       });
+      // ADDED: Reset pricing type
+      setPricingType('paid');
       setTicketTypes([{ 
         type: '', 
         price: '', 
@@ -275,27 +347,27 @@ const Organizer = () => {
       <div className="max-w-7xl mx-auto container-padding py-8">
         {/* Header */}
         <div className="mb-8">
-  <div className="bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row">
-    {/* Left: Text content */}
-    <div className="flex-1 p-6 md:p-8 flex flex-col justify-center text-center md:text-left">
-      <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-        Create Your Event
-      </h1>
-      <p className="text-xl text-gray-600 leading-relaxed">
-        Share your passion with the world. Create an amazing event that people will love to attend.
-      </p>
-    </div>
-    
-    {/* Right: Image with clip-path */}
-    <div
-      className="flex-1 bg-cover bg-center min-h-[150px] md:min-h-[180px]"
-      style={{
-        backgroundImage: "url('https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&h=600&fit=crop')",
-        clipPath: "polygon(30% 0, 100% 0, 100% 100%, 0 100%, 0 50%)"
-      }}
-    ></div>
-  </div>
-</div>
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row">
+            {/* Left: Text content */}
+            <div className="flex-1 p-6 md:p-8 flex flex-col justify-center text-center md:text-left">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Create Your Event
+              </h1>
+              <p className="text-xl text-gray-600 leading-relaxed">
+                Share your passion with the world. Create an amazing event that people will love to attend.
+              </p>
+            </div>
+            
+            {/* Right: Image with clip-path */}
+            <div
+              className="flex-1 bg-cover bg-center min-h-[150px] md:min-h-[180px]"
+              style={{
+                backgroundImage: "url('https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&h=600&fit=crop')",
+                clipPath: "polygon(30% 0, 100% 0, 100% 100%, 0 100%, 0 50%)"
+              }}
+            ></div>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Form - Left Column */}
@@ -331,6 +403,62 @@ const Organizer = () => {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                             required
                           ></textarea>
+                        </div>
+
+                        {/* ADDED: Pricing Type Selection */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Event Type <span className="text-red-500">*</span>
+                          </label>
+                          <div className="grid grid-cols-2 gap-4">
+                            <label className={`relative flex cursor-pointer rounded-lg border p-4 focus:outline-none ${
+                              pricingType === 'paid' 
+                                ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500' 
+                                : 'border-gray-300'
+                            }`}>
+                              <input
+                                type="radio"
+                                name="pricingType"
+                                value="paid"
+                                checked={pricingType === 'paid'}
+                                onChange={(e) => setPricingType(e.target.value)}
+                                className="sr-only"
+                              />
+                              <div className="flex w-full items-center justify-between">
+                                <div className="flex items-center">
+                                  <DollarSign className="h-6 w-6 text-gray-400" />
+                                  <div className="ml-3">
+                                    <p className="text-sm font-medium text-gray-900">Paid Event</p>
+                                    <p className="text-xs text-gray-500">Charge for tickets</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </label>
+
+                            <label className={`relative flex cursor-pointer rounded-lg border p-4 focus:outline-none ${
+                              pricingType === 'free' 
+                                ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-500' 
+                                : 'border-gray-300'
+                            }`}>
+                              <input
+                                type="radio"
+                                name="pricingType"
+                                value="free"
+                                checked={pricingType === 'free'}
+                                onChange={(e) => setPricingType(e.target.value)}
+                                className="sr-only"
+                              />
+                              <div className="flex w-full items-center justify-between">
+                                <div className="flex items-center">
+                                  <Ticket className="h-6 w-6 text-gray-400" />
+                                  <div className="ml-3">
+                                    <p className="text-sm font-medium text-gray-900">Free Event</p>
+                                    <p className="text-xs text-gray-500">Reserve spots</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </label>
+                          </div>
                         </div>
 
                         <div>
@@ -377,6 +505,81 @@ const Organizer = () => {
                     {/* Divider after Basic Information */}
                     <hr aria-hidden="true" className="w-full border-t border-gray-300 my-6" />
 
+                    {/* NEW: Event Details Section */}
+                    <section>
+                      <h2 className="text-xl font-semibold text-gray-900 mb-6">Event Details</h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Duration
+                          </label>
+                          <select
+                            value={eventData.duration}
+                            onChange={(e) => handleInputChange('duration', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          >
+                            <option value="1-2 hours">1-2 hours</option>
+                            <option value="2-3 hours">2-3 hours</option>
+                            <option value="3-4 hours">3-4 hours</option>
+                            <option value="4+ hours">4+ hours</option>
+                            <option value="All day">All day</option>
+                            <option value="Multiple days">Multiple days</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Age Restriction
+                          </label>
+                          <select
+                            value={eventData.ageRestriction}
+                            onChange={(e) => handleInputChange('ageRestriction', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          >
+                            <option value="All ages welcome">All ages welcome</option>
+                            <option value="13+">13+</option>
+                            <option value="16+">16+</option>
+                            <option value="18+">18+</option>
+                            <option value="21+">21+</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Ticket Delivery
+                          </label>
+                          <select
+                            value={eventData.ticketDelivery}
+                            onChange={(e) => handleInputChange('ticketDelivery', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          >
+                            <option value="E-tickets provided">E-tickets provided</option>
+                            <option value="Mobile tickets">Mobile tickets</option>
+                            <option value="Print at home">Print at home</option>
+                            <option value="Will call">Will call</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Event Type
+                          </label>
+                          <select
+                            value={eventData.eventType}
+                            onChange={(e) => handleInputChange('eventType', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          >
+                            <option value="in_person">In Person</option>
+                            <option value="virtual">Virtual</option>
+                            <option value="hybrid">Hybrid</option>
+                          </select>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Divider after Event Details */}
+                    <hr aria-hidden="true" className="w-full border-t border-gray-300 my-6" />
+
                     {/* Date & Time */}
                     <section>
                       <h2 className="text-xl font-semibold text-gray-900 mb-6">Date & Time</h2>
@@ -404,13 +607,45 @@ const Organizer = () => {
                     {/* Location */}
                     <section>
                       <h2 className="text-xl font-semibold text-gray-900 mb-6">Location</h2>
-                      <Input
-                        label="Venue Address"
-                        placeholder="Where will your event take place?"
-                        value={eventData.venue}
-                        onChange={(e) => handleInputChange('venue', e.target.value)}
-                        required
-                      />
+                      <div className="space-y-4">
+                        <Input
+                          label="Venue Name"
+                          placeholder="e.g., Convention Center, Hotel Ballroom"
+                          value={eventData.venue}
+                          onChange={(e) => handleInputChange('venue', e.target.value)}
+                          required
+                        />
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <Input
+                            label="Street Address"
+                            placeholder="123 Main Street"
+                            value={eventData.venueAddress.street}
+                            onChange={(e) => handleVenueAddressChange('street', e.target.value)}
+                          />
+                          <Input
+                            label="City"
+                            placeholder="City"
+                            value={eventData.venueAddress.city}
+                            onChange={(e) => handleVenueAddressChange('city', e.target.value)}
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <Input
+                            label="State/Province"
+                            placeholder="State"
+                            value={eventData.venueAddress.state}
+                            onChange={(e) => handleVenueAddressChange('state', e.target.value)}
+                          />
+                          <Input
+                            label="ZIP/Postal Code"
+                            placeholder="12345"
+                            value={eventData.venueAddress.zipCode}
+                            onChange={(e) => handleVenueAddressChange('zipCode', e.target.value)}
+                          />
+                        </div>
+                      </div>
                     </section>
 
                     {/* Divider after Location */}
@@ -436,12 +671,21 @@ const Organizer = () => {
 
                     {/* Enhanced Ticket Types Section */}
                     <section>
-                      <h2 className="text-xl font-semibold text-gray-900 mb-6">Ticket Types</h2>
+                      <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-semibold text-gray-900">
+                          {pricingType === 'free' ? 'Reservation Types' : 'Ticket Types'}
+                        </h2>
+                        <div className="px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-sm font-medium">
+                          {pricingType === 'free' ? 'Free Event' : 'Paid Event'}
+                        </div>
+                      </div>
                       <div className="space-y-6">
                         {ticketTypes.map((ticket, index) => (
                           <div key={ticket.id} className="border border-gray-200 rounded-lg p-6 bg-gray-50">
                             <div className="flex justify-between items-center mb-4">
-                              <h3 className="font-semibold text-gray-900">Ticket Type #{index + 1}</h3>
+                              <h3 className="font-semibold text-gray-900">
+                                {pricingType === 'free' ? 'Reservation Type' : 'Ticket Type'} #{index + 1}
+                              </h3>
                               {ticketTypes.length > 1 && (
                                 <button
                                   type="button"
@@ -458,11 +702,11 @@ const Organizer = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Ticket Type <span className="text-red-500">*</span>
+                                  {pricingType === 'free' ? 'Reservation Type' : 'Ticket Type'} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                   type="text"
-                                  placeholder="e.g., General, VIP, Early Bird"
+                                  placeholder={pricingType === 'free' ? "e.g., General, VIP, Early Access" : "e.g., General, VIP, Early Bird"}
                                   value={ticket.type}
                                   onChange={(e) => handleTicketChange(index, 'type', e.target.value)}
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -471,7 +715,7 @@ const Organizer = () => {
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Price ($) <span className="text-red-500">*</span>
+                                  {pricingType === 'free' ? 'Price' : 'Price ($)'} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                   type="number"
@@ -480,13 +724,19 @@ const Organizer = () => {
                                   placeholder="0.00"
                                   value={ticket.price}
                                   onChange={(e) => handleTicketChange(index, 'price', e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                                    pricingType === 'free' ? 'bg-gray-100 cursor-not-allowed' : ''
+                                  }`}
                                   required
+                                  disabled={pricingType === 'free'}
                                 />
+                                {pricingType === 'free' && (
+                                  <p className="text-xs text-gray-500 mt-1">Free events have $0 tickets</p>
+                                )}
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Quantity <span className="text-red-500">*</span>
+                                  Spots Available <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                   type="number"
@@ -503,11 +753,11 @@ const Organizer = () => {
                             {/* Description Row */}
                             <div className="mb-4">
                               <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Ticket Description
+                                {pricingType === 'free' ? 'Reservation Description' : 'Ticket Description'}
                               </label>
                               <textarea
                                 rows={2}
-                                placeholder="Brief description of this ticket type"
+                                placeholder={pricingType === 'free' ? "Brief description of this reservation type" : "Brief description of this ticket type"}
                                 value={ticket.description}
                                 onChange={(e) => handleTicketChange(index, 'description', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
@@ -556,7 +806,7 @@ const Organizer = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Sales End Date <span className="text-red-500">*</span>
+                                  {pricingType === 'free' ? 'Registration End Date' : 'Sales End Date'} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                   type="datetime-local"
@@ -602,7 +852,7 @@ const Organizer = () => {
                           className="flex items-center space-x-2"
                         >
                           <Plus className="w-4 h-4" />
-                          <span>Add Another Ticket Type</span>
+                          <span>Add Another {pricingType === 'free' ? 'Reservation Type' : 'Ticket Type'}</span>
                         </Button>
                       </div>
                     </section>
@@ -617,7 +867,7 @@ const Organizer = () => {
                          disabled={loading || categoriesLoading}
                          className="w-1/2 mx-auto"
                        >
-                         {loading ? 'Creating Event...' : 'Create Event'}
+                         {loading ? 'Creating Event...' : `Create ${pricingType === 'free' ? 'Free' : 'Paid'} Event`}
                        </Button>
                     </div>
 
@@ -633,6 +883,16 @@ const Organizer = () => {
               <div className="bg-primary-50 rounded-lg p-6 mb-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Tips for Success</h2>
                 <div className="space-y-4">
+                  {/* ADDED: Free Event Tip */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2 text-sm flex items-center">
+                      <DollarSign className="w-4 h-4 mr-2 text-primary-600" />
+                      Free vs Paid Events
+                    </h3>
+                    <p className="text-gray-600 text-xs">
+                      Choose free for community events, workshops, or networking. Use paid for premium experiences with higher value.
+                    </p>
+                  </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2 text-sm flex items-center">
                       <Ticket className="w-4 h-4 mr-2 text-primary-600" />
@@ -678,6 +938,34 @@ const Organizer = () => {
                       Use specific tags to help your target audience discover your event.
                     </p>
                   </div>
+                  {/* NEW TIPS */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2 text-sm flex items-center">
+                      <Clock className="w-4 h-4 mr-2 text-primary-600" />
+                      Clear Duration
+                    </h3>
+                    <p className="text-gray-600 text-xs">
+                      Set realistic event duration to help attendees plan their schedule.
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2 text-sm flex items-center">
+                      <Users className="w-4 h-4 mr-2 text-primary-600" />
+                      Age Restrictions
+                    </h3>
+                    <p className="text-gray-600 text-xs">
+                      Clearly state age requirements to set proper expectations.
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2 text-sm flex items-center">
+                      <FileCheck className="w-4 h-4 mr-2 text-primary-600" />
+                      Ticket Delivery
+                    </h3>
+                    <p className="text-gray-600 text-xs">
+                      Choose the right ticket delivery method for your event type.
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -708,10 +996,45 @@ const Organizer = () => {
                     </div>
                   </button>
 
+                  {/* ADDED: Free Event Sample */}
                   <button
                     type="button"
                     className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors duration-200"
                     onClick={() => {
+                      setPricingType('free');
+                      const tomorrow = new Date();
+                      tomorrow.setDate(tomorrow.getDate() + 1);
+                      const salesEndDate = tomorrow.toISOString().slice(0, 16);
+                      
+                      setTicketTypes([
+                        { 
+                          type: 'General Admission', 
+                          price: '0', 
+                          quantity: '100', 
+                          description: 'Free community event access',
+                          benefits: ['Access to all sessions', 'Networking opportunities'],
+                          salesEnd: salesEndDate,
+                          minOrder: 1,
+                          maxOrder: 5,
+                          id: 1 
+                        }
+                      ]);
+                    }}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Ticket className="w-5 h-5 text-primary-600" />
+                      <div>
+                        <div className="font-medium text-gray-900 text-sm">Free Event Setup</div>
+                        <div className="text-gray-500 text-xs">Create a free community event</div>
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                    onClick={() => {
+                      setPricingType('paid');
                       const tomorrow = new Date();
                       tomorrow.setDate(tomorrow.getDate() + 1);
                       const salesEndDate = tomorrow.toISOString().slice(0, 16);
@@ -754,9 +1077,9 @@ const Organizer = () => {
                     }}
                   >
                     <div className="flex items-center space-x-3">
-                      <Ticket className="w-5 h-5 text-primary-600" />
+                      <DollarSign className="w-5 h-5 text-primary-600" />
                       <div>
-                        <div className="font-medium text-gray-900 text-sm">Sample Tickets</div>
+                        <div className="font-medium text-gray-900 text-sm">Paid Event Setup</div>
                         <div className="text-gray-500 text-xs">Add 3 complete ticket types</div>
                       </div>
                     </div>
@@ -790,8 +1113,20 @@ const Organizer = () => {
                         time: '',
                         venue: '',
                         image: '',
-                        tags: ''
+                        tags: '',
+                        duration: '2-3 hours',
+                        ageRestriction: 'All ages welcome',
+                        ticketDelivery: 'E-tickets provided',
+                        eventType: 'in_person',
+                        venueAddress: {
+                          street: '',
+                          city: '',
+                          state: '',
+                          zipCode: ''
+                        }
                       });
+                      // ADDED: Reset pricing type
+                      setPricingType('paid');
                       setTicketTypes([{ 
                         type: '', 
                         price: '', 

@@ -41,6 +41,16 @@ const storyValidation = [
     .withMessage('CTA link must be a valid URL')
 ];
 
+// Free reservation validation
+const freeReservationValidation = [
+  body('ticketId')
+    .isMongoId()
+    .withMessage('Valid ticket ID is required'),
+  body('quantity')
+    .isInt({ min: 1, max: 50 })
+    .withMessage('Quantity must be between 1 and 50')
+];
+
 // ===== PUBLIC ROUTES =====
 
 // Event routes
@@ -58,6 +68,13 @@ router.use(protect);
 
 // Event registration
 router.post('/:id/register', eventController.registerForEvent);
+
+// ADDED: Free event reservation (bypasses checkout)
+router.post(
+  '/:id/reserve', 
+  freeReservationValidation,
+  eventController.reserveFreeSpots
+);
 
 // ===== ORGANIZER ROUTES (Require approved organizer status) =====
 

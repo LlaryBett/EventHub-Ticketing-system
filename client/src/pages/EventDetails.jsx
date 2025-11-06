@@ -14,8 +14,10 @@ const EventDetails = () => {
   const { id } = useParams();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reservationLoading, setReservationLoading] = useState(false);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [selectedTicketIndex, setSelectedTicketIndex] = useState(0);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const { addToCart } = useCart();
   const { showSuccess, showError } = useUI();
   const navigate = useNavigate();
@@ -37,6 +39,84 @@ const EventDetails = () => {
 
     fetchEvent();
   }, [id, showError]);
+
+  // ADDED: Free reservation handler
+  const handleReserveSpot = async () => {
+    try {
+      setReservationLoading(true);
+      
+      const selectedTicket = tickets[selectedTicketIndex];
+      if (!selectedTicket) {
+        showError('Please select a reservation type');
+        return;
+      }
+
+      const result = await eventService.reserveFreeSpots(
+        event.id, 
+        selectedTicket.id, 
+        selectedQuantity
+      );
+      
+      if (result.success) {
+        setShowSuccessModal(true);
+        // Refresh event data to update available spots
+        const updatedEvent = await eventService.getEventById(id);
+        setEvent(updatedEvent.data);
+      }
+      
+    } catch (error) {
+      showError(error.message || 'Failed to reserve spots');
+    } finally {
+      setReservationLoading(false);
+    }
+  };
+
+  // ADDED: Success Modal Component
+  const SuccessModal = () => (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-auto text-center">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <FaCheck className="w-8 h-8 text-green-600" />
+        </div>
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">You're In! 🎉</h3>
+        <p className="text-gray-600 mb-4">
+          {selectedQuantity} spot(s) reserved for <strong>{event.title}</strong>
+        </p>
+        <p className="text-sm text-gray-500 mb-6">
+          Check your email for confirmation and event details. 
+          Add it to your calendar so you don't forget!
+        </p>
+        <div className="flex flex-col gap-3">
+          <Button 
+            fullWidth 
+            onClick={() => setShowSuccessModal(false)}
+          >
+            Continue Browsing
+          </Button>
+          <Button 
+            fullWidth 
+            variant="outline"
+            onClick={() => {
+              // Share event with friends
+              if (navigator.share) {
+                navigator.share({
+                  title: event.title,
+                  text: `Join me at ${event.title} - it's free!`,
+                  url: window.location.href
+                });
+              } else {
+                // Fallback: copy to clipboard
+                navigator.clipboard.writeText(window.location.href);
+                showSuccess('Event link copied to clipboard!');
+              }
+            }}
+          >
+            Share with Friends
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 
   const handleAddToCart = () => {
     console.log('Event object in handleAddToCart:', event);
@@ -117,6 +197,7 @@ const EventDetails = () => {
   const minOrder = selectedTicket.minOrder || 1;
   const maxOrder = Math.min(selectedTicket.maxOrder || 10, selectedTicket.available || 10);
   const available = selectedTicket.available || 0;
+  const isFreeEvent = event.pricingType === 'free';
 
   const TicketCard = ({ ticket, index, isSelected, onSelect }) => {
     const isAvailable = ticket.available > 0;
@@ -147,7 +228,7 @@ const EventDetails = () => {
               {ticket.type}
             </h3>
             <p className={`text-2xl font-bold ${isSelected ? 'text-primary-600' : isAvailable ? 'text-gray-900' : 'text-gray-400'}`}>
-              {formatPrice(ticket.price)}
+              {ticket.price === 0 ? 'Free' : formatPrice(ticket.price)}
             </p>
           </div>
           
@@ -157,7 +238,6 @@ const EventDetails = () => {
               : 'border-gray-300'
           }`}>
             {isSelected && (
-              // replaced inline svg with react-icon
               <FaCheck className="w-3 h-3 text-white" />
             )}
           </div>
@@ -190,7 +270,6 @@ const EventDetails = () => {
           <div className="space-y-1">
             {ticket.benefits.slice(0, 3).map((benefit, idx) => (
               <div key={idx} className="flex items-center text-sm text-gray-600">
-                {/* replaced inline svg check with react-icon */}
                 <FaCheck className="w-4 h-4 mr-2 text-green-500 flex-shrink-0" />
                 <span className="truncate">{benefit}</span>
               </div>
@@ -214,6 +293,9 @@ const EventDetails = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Success Modal */}
+      {showSuccessModal && <SuccessModal />}
+      
       {/* Breadcrumb Navigation */}
       <nav className="max-w-5xl mx-auto pt-8 px-4" aria-label="Breadcrumb">
         <ol className="flex items-center space-x-2 text-sm text-gray-500">
@@ -243,6 +325,11 @@ const EventDetails = () => {
                 <span className="bg-primary-600 text-white px-3 py-1 rounded-full text-sm font-medium capitalize mr-4">
                   {event.category?.name}
                 </span>
+                {isFreeEvent && (
+                  <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                    Free Event
+                  </span>
+                )}
                 {event.featured && (
                   <span className="bg-yellow-400 text-gray-900 px-3 py-1 rounded-full text-sm font-medium">
                     Featured Event
@@ -252,15 +339,20 @@ const EventDetails = () => {
               <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">{event.title}</h1>
               <div className="flex flex-wrap items-center gap-6 text-lg drop-shadow">
                 <div className="flex items-center">
-                  {/* replaced inline calendar svg with react-icon */}
                   <FiCalendar className="w-6 h-6 mr-2" />
                   {formatDate(event.date)} at {event.time}
                 </div>
                 <div className="flex items-center">
-                  {/* replaced inline location svg with react-icon */}
                   <FiMapPin className="w-6 h-6 mr-2" />
                   {event.venue}
                 </div>
+                {isFreeEvent && (
+                  <div className="flex items-center">
+                    <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                      Free Admission
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -304,6 +396,16 @@ const EventDetails = () => {
                       >
                         {spotsLeft} spots left
                       </p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Event Type</h3>
+                      <p className="text-gray-600">
+                        {isFreeEvent ? 'Free Event' : 'Paid Event'}
+                      </p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Duration</h3>
+                      <p className="text-gray-600">{event.duration || '2-3 hours'}</p>
                     </div>
                   </div>
                 </div>
@@ -352,10 +454,7 @@ const EventDetails = () => {
                   {/* Address Info */}
                   <div className="p-6 bg-gray-50 border-b">
                     <div className="flex items-start space-x-3">
-                      <svg className="w-6 h-6 text-primary-600 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
+                      <FiMapPin className="w-6 h-6 text-primary-600 mt-1 flex-shrink-0" />
                       <div>
                         <h3 className="font-semibold text-gray-900 text-lg">{event.venue}</h3>
                         {event.address && (
@@ -385,7 +484,6 @@ const EventDetails = () => {
                     {/* Fallback for when map doesn't load */}
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-100 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                       <div className="text-center">
-                        {/* replaced complex inline svg with react-icon */}
                         <FiMapPin className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                         <p className="text-gray-500 text-sm">Interactive Map</p>
                       </div>
@@ -414,10 +512,21 @@ const EventDetails = () => {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-6 sticky top-8">
+              {/* Free Event Badge */}
+              {isFreeEvent && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+                  <span className="text-green-800 font-semibold text-sm">
+                    🎉 Free Event - No Payment Required
+                  </span>
+                </div>
+              )}
+
               {/* Ticket Selection */}
               {tickets.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose Your Ticket</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    {isFreeEvent ? 'Choose Your Reservation' : 'Choose Your Ticket'}
+                  </h3>
                   <div className="space-y-3">
                     {tickets.map((ticket, index) => (
                       <div 
@@ -449,7 +558,7 @@ const EventDetails = () => {
                   <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-700">Price:</span>
                     <span className="text-xl font-bold text-primary-600">
-                      {formatPrice(selectedTicket.price)}
+                      {isFreeEvent ? 'Free' : formatPrice(selectedTicket.price)}
                     </span>
                   </div>
                 </div>
@@ -459,7 +568,7 @@ const EventDetails = () => {
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-2">
-                      Number of tickets
+                      Number of {isFreeEvent ? 'spots' : 'tickets'}
                     </label>
                     <select
                       id="quantity"
@@ -479,29 +588,41 @@ const EventDetails = () => {
                     <div className="flex justify-between items-center mb-4">
                       <span className="font-medium">Total:</span>
                       <span className="text-xl font-bold text-primary-600">
-                        {formatPrice(ticketPrice * selectedQuantity)}
+                        {isFreeEvent ? 'Free' : formatPrice(ticketPrice * selectedQuantity)}
                       </span>
                     </div>
                   </div>
 
-                  <Button fullWidth size="large" onClick={() => {
-                    const ticket = tickets[selectedTicketIndex] || {};
-                    navigate('/checkout', {
-                      state: {
-                        item: {
-                          eventId: event._id || event.id,
-                          title: event.title,
-                          price: ticket.price || 0,
-                          quantity: selectedQuantity,
-                          image: event.image,
-                          type: ticket.type,
-                          _id: ticket.id // Use ticket.id for _id
+                  {/* UPDATED: Different behavior for free vs paid events */}
+                  {isFreeEvent ? (
+                    <Button 
+                      fullWidth 
+                      size="large" 
+                      onClick={handleReserveSpot}
+                      loading={reservationLoading}
+                    >
+                      {reservationLoading ? 'Reserving...' : 'Reserve Spot'}
+                    </Button>
+                  ) : (
+                    <Button fullWidth size="large" onClick={() => {
+                      const ticket = tickets[selectedTicketIndex] || {};
+                      navigate('/checkout', {
+                        state: {
+                          item: {
+                            eventId: event._id || event.id,
+                            title: event.title,
+                            price: ticket.price || 0,
+                            quantity: selectedQuantity,
+                            image: event.image,
+                            type: ticket.type,
+                            _id: ticket.id
+                          }
                         }
-                      }
-                    });
-                  }}>
-                    Buy Your ticket
-                  </Button>
+                      });
+                    }}>
+                      Buy Your ticket
+                    </Button>
+                  )}
 
                   {daysUntil <= 7 && daysUntil > 0 && (
                     <p className="text-sm text-orange-600 text-center">
@@ -521,7 +642,7 @@ const EventDetails = () => {
                     Sold Out
                   </Button>
                   <p className="text-sm text-gray-500 mt-2">
-                    This ticket type is currently sold out
+                    This {isFreeEvent ? 'reservation type' : 'ticket type'} is currently sold out
                   </p>
                 </div>
               ) : (
@@ -538,19 +659,22 @@ const EventDetails = () => {
               {/* Event Info */}
               <div className="mt-6 pt-6 border-t space-y-3">
                 <div className="flex items-center text-sm text-gray-600">
-                  {/* replaced clock svg with react-icon */}
                   <FiClock className="w-4 h-4 mr-2" />
-                  Duration: 2-3 hours
+                  Duration: {event.duration || '2-3 hours'}
                 </div>
                 <div className="flex items-center text-sm text-gray-600">
-                  {/* replaced users svg with react-icon */}
                   <FiUsers className="w-4 h-4 mr-2" />
-                  Age: All ages welcome
+                  Age: {event.ageRestriction || 'All ages welcome'}
                 </div>
                 <div className="flex items-center text-sm text-gray-600">
-                  {/* replaced document svg with react-icon */}
                   <FiFileText className="w-4 h-4 mr-2" />
-                  E-tickets provided
+                  {event.ticketDelivery || 'E-tickets provided'}
+                </div>
+                <div className="flex items-center text-sm text-gray-600">
+                  <span className="w-4 h-4 mr-2 flex items-center justify-center">
+                    {isFreeEvent ? '🎉' : '💰'}
+                  </span>
+                  {isFreeEvent ? 'Free Admission' : 'Paid Event'}
                 </div>
               </div>
             </div>

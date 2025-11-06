@@ -54,6 +54,19 @@ class EventService {
     }
   }
 
+  // ADDED: Reserve spots for free events (bypasses checkout)
+  async reserveFreeSpots(eventId, ticketId, quantity) {
+    try {
+      const response = await api.post(`/events/${eventId}/reserve`, {
+        ticketId,
+        quantity
+      });
+      return response.data;
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
   // Create a new event (admin/organizer only)
   async createEvent(eventData) {
     try {
