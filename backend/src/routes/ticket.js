@@ -14,10 +14,16 @@ router.get('/event/:eventId', ticketController.getEventTickets);
 // Get a single ticket by ID
 router.get('/:id', ticketController.getTicket);
 
+// Lookup tickets by email (public route for guest users)
+router.get('/lookup/email', ticketController.lookupTicketsByEmail);
+
 // -------------------
 // Protected routes
 // -------------------
 router.use(protect);
+
+// Get current user's tickets
+router.get('/user/mytickets', ticketController.getMyTickets);
 
 // Organizer and Admin routes
 router.post(

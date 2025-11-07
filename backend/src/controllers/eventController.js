@@ -5,7 +5,9 @@ const Event = require('../models/Event');
 const Organizer = require('../models/Organizer');
 const Discover = require('../models/Discover');
 const Ticket = require('../models/Ticket');
+const IssuedTicket = require('../models/IssuedTicket');
 const Story = require('../models/Story');
+const User = require('../models/User');
 const Order = require('../models/Order'); // ADD THIS IMPORT
 const { validationResult } = require('express-validator');
 const { uploadImage, deleteImage } = require('../utils/helpers');
@@ -933,11 +935,21 @@ const reserveFreeSpots = async (req, res) => {
   try {
     const { ticketId, quantity } = req.body;
     const eventId = req.params.id;
-    const userId = req.user._id; // From auth middleware
+    const userId = req.user._id;
 
     console.log('🎫 Free reservation request:', { eventId, ticketId, quantity, userId });
 
-    // 1. Validate event exists and is free
+    // ... existing validation code (steps 1-6) ...
+ // 1. Get user data for order
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // 2. Validate event exists and is free
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({
@@ -954,7 +966,7 @@ const reserveFreeSpots = async (req, res) => {
       });
     }
 
-    // 2. Validate ticket
+    // 3. Validate ticket
     const ticket = await Ticket.findById(ticketId);
     if (!ticket) {
       return res.status(404).json({
@@ -963,7 +975,7 @@ const reserveFreeSpots = async (req, res) => {
       });
     }
 
-    // 3. Check ticket belongs to this event
+    // 4. Check ticket belongs to this event
     if (ticket.event.toString() !== eventId) {
       return res.status(400).json({
         success: false,
@@ -971,7 +983,7 @@ const reserveFreeSpots = async (req, res) => {
       });
     }
 
-    // 4. Check availability
+    // 5. Check availability
     if (ticket.available < quantity) {
       return res.status(400).json({
         success: false,
@@ -979,10 +991,10 @@ const reserveFreeSpots = async (req, res) => {
       });
     }
 
-    // 5. Check if user already registered for this event
+    // 6. Check if user already registered for this event
     const existingOrder = await Order.findOne({
-      user: userId,
-      event: eventId,
+      userId: userId,
+      'items.eventId': eventId,
       status: { $in: ['confirmed', 'completed'] }
     });
 
@@ -993,45 +1005,70 @@ const reserveFreeSpots = async (req, res) => {
       });
     }
 
-    // 6. CREATE ORDER DIRECTLY (No checkout needed)
+    // 7. CREATE ORDER DIRECTLY (No checkout needed) - UPDATED TO MATCH SCHEMA
     const order = await Order.create({
-      user: userId,
-      event: eventId,
-      tickets: [{
+      userId: userId,
+      customerEmail: user.email,
+      customerName: user.name,
+      items: [{
+        eventId: eventId,
         ticket: ticketId,
         quantity: quantity,
         price: 0, // Free!
-        ticketType: ticket.type
+        title: event.title,
+        image: event.image
       }],
-      totalAmount: 0,
-      status: 'confirmed', // Auto-confirm since it's free
-      paymentStatus: 'free', // Special status for free events
-      orderType: 'free_reservation'
+      totalAmount: 0, // This triggers free order logic
+      status: 'completed', // Auto-complete free orders
+      orderType: 'free'
     });
-
-    // 7. Update ticket availability
+    // 8. Update ticket availability
     ticket.available -= quantity;
     await ticket.save();
 
-    // 8. Add user to event attendees
+    // 9. ADDED: Create issued tickets for each reserved spot
+    const issuedTickets = [];
+    for (let i = 0; i < quantity; i++) {
+      const ticketCode = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
+      const qrCode = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${ticketCode}`;
+      
+      const issuedTicket = await IssuedTicket.create({
+        ticketId: ticketId,
+        orderId: order._id,
+        userId: userId,
+        eventId: eventId,
+        eventTitle: event.title,
+        eventVenue: event.venue,
+        ticketCode: ticketCode,
+        qrCode: qrCode,
+        attendeeName: user.name,
+        attendeeEmail: user.email,
+        price: 0,
+        ticketType: ticket.type
+      });
+      
+      issuedTickets.push(issuedTicket);
+    }
+
+    // 10. Add user to event attendees
     event.attendees.push(userId);
     await event.save();
 
-    // 9. Send confirmation email (optional but recommended)
+    // 11. Send confirmation email with issued tickets
     try {
-      await sendFreeEventConfirmation(userId, order._id, event, quantity);
+      await sendFreeEventConfirmation(userId, order._id, event, quantity, issuedTickets);
     } catch (emailError) {
       console.log('Email sending failed but reservation completed:', emailError);
-      // Don't fail the reservation if email fails
     }
 
-    console.log(`✅ Free reservation completed: Order ${order._id}, ${quantity} spots`);
+    console.log(`✅ Free reservation completed: Order ${order._id}, ${quantity} spots, ${issuedTickets.length} tickets issued`);
 
     res.status(200).json({
       success: true,
       message: `Successfully reserved ${quantity} spot(s)!`,
       data: {
         orderId: order._id,
+        orderNumber: order.orderNumber,
         event: {
           title: event.title,
           date: event.date,
@@ -1042,6 +1079,11 @@ const reserveFreeSpots = async (req, res) => {
           type: ticket.type,
           quantity: quantity
         },
+        issuedTickets: issuedTickets.map(t => ({ // ADDED: Include issued tickets in response
+          ticketCode: t.ticketCode,
+          qrCode: t.qrCode,
+          attendeeName: t.attendeeName
+        })),
         confirmation: 'Check your email for event details and tickets'
       }
     });

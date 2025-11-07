@@ -6,7 +6,7 @@ const orderItemSchema = new mongoose.Schema({
     ref: 'Event',
     required: true
   },
-  ticket: { // <-- Add this field
+  ticket: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Ticket',
     required: true
@@ -67,7 +67,7 @@ const paymentInfoSchema = new mongoose.Schema({
   method: {
     type: String,
     required: true,
-    enum: ['mpesa', 'card', 'paypal']
+    enum: ['mpesa', 'card', 'paypal', 'free'] // ADDED 'free'
   },
   phone: {
     type: String,
@@ -78,7 +78,7 @@ const paymentInfoSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'completed', 'failed', 'refunded'],
+    enum: ['pending', 'completed', 'failed', 'refunded', 'free'], // ADDED 'free'
     default: 'pending'
   },
   processedAt: {
@@ -143,22 +143,28 @@ const orderSchema = new mongoose.Schema({
   },
   customerEmail: {
     type: String,
-    required: true,
+    required: function() {
+      return this.totalAmount > 0; // Only required for paid orders
+    },
     lowercase: true,
     trim: true,
     index: true
   },
   customerName: {
     type: String,
-    required: true,
+    required: function() {
+      return this.totalAmount > 0; // Only required for paid orders
+    },
     trim: true
   },
   items: [orderItemSchema],
   billingAddress: billingInfoSchema,
   paymentMethod: {
     type: String,
-    required: true,
-    enum: ['mpesa', 'card', 'paypal']
+    required: function() {
+      return this.totalAmount > 0; // Only required for paid orders
+    },
+    enum: ['mpesa', 'card', 'paypal', 'free'] // ADDED 'free'
   },
   paymentDetails: {
     type: Map,
@@ -197,12 +203,24 @@ const orderSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ['pending', 'processing', 'completed', 'failed', 'refunded'],
+    enum: ['pending', 'processing', 'completed', 'failed', 'refunded', 'free'], // ADDED 'free'
     default: 'pending'
   },
   paymentGatewayResponse: {
     type: Map,
     of: mongoose.Schema.Types.Mixed
+  },
+  // ADDED: Order type to distinguish free vs paid
+  orderType: {
+    type: String,
+    enum: ['paid', 'free'],
+    default: 'paid'
+  },
+  // ADDED: Total amount for easier validation
+  totalAmount: {
+    type: Number,
+    required: true,
+    min: 0
   }
 }, {
   timestamps: true
@@ -213,11 +231,15 @@ orderSchema.index({ customerEmail: 1, createdAt: -1 });
 orderSchema.index({ isGuestOrder: 1, status: 1 });
 orderSchema.index({ claimToken: 1 });
 orderSchema.index({ paymentStatus: 1 });
-orderSchema.index({ 'paymentDetails.phone': 1 }); // For M-Pesa lookups
+orderSchema.index({ 'paymentDetails.phone': 1 });
+orderSchema.index({ orderType: 1 }); // ADDED: Index for order type
 
 // Virtual for formatted order total
 orderSchema.virtual('formattedTotal').get(function() {
-  return `KES ${this.totals.total.toLocaleString()}`;
+  if (this.totalAmount === 0) {
+    return 'Free';
+  }
+  return `KES ${this.totalAmount.toLocaleString()}`;
 });
 
 // Virtual for order age
@@ -238,10 +260,18 @@ orderSchema.pre('save', function(next) {
     this.guestOrderId = `GUEST-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
   }
   
+  // Auto-set free order properties
+  if (this.totalAmount === 0) {
+    this.orderType = 'free';
+    this.paymentMethod = 'free';
+    this.paymentStatus = 'free';
+    this.status = 'completed'; // Auto-complete free orders
+  }
+  
   // Update payment status based on order status
   if (this.isModified('status')) {
     if (this.status === 'completed') {
-      this.paymentStatus = 'completed';
+      this.paymentStatus = this.totalAmount === 0 ? 'free' : 'completed';
     } else if (this.status === 'cancelled' || this.status === 'failed') {
       this.paymentStatus = 'failed';
     }
@@ -267,7 +297,7 @@ orderSchema.methods.updatePaymentStatus = function(status, gatewayResponse = {})
   this.paymentStatus = status;
   this.paymentGatewayResponse = gatewayResponse;
   
-  if (status === 'completed') {
+  if (status === 'completed' || status === 'free') {
     this.status = 'completed';
   } else if (status === 'failed') {
     this.status = 'failed';
@@ -280,7 +310,8 @@ orderSchema.methods.getPaymentMethodDisplay = function() {
   const methodMap = {
     'mpesa': 'M-Pesa',
     'card': 'Credit/Debit Card',
-    'paypal': 'PayPal'
+    'paypal': 'PayPal',
+    'free': 'Free Event'
   };
   return methodMap[this.paymentMethod] || this.paymentMethod;
 };
@@ -302,6 +333,11 @@ orderSchema.statics.findByPaymentTransactionId = function(transactionId) {
   return this.findOne({ 'paymentDetails.transactionId': transactionId });
 };
 
+// ADDED: Find free orders
+orderSchema.statics.findFreeOrders = function() {
+  return this.find({ orderType: 'free' });
+};
+
 // Query helpers
 orderSchema.query.byStatus = function(status) {
   return this.where({ status });
@@ -313,6 +349,11 @@ orderSchema.query.byPaymentMethod = function(method) {
 
 orderSchema.query.byCustomerEmail = function(email) {
   return this.where({ customerEmail: email.toLowerCase() });
+};
+
+// ADDED: Query helper for free orders
+orderSchema.query.freeOrders = function() {
+  return this.where({ orderType: 'free' });
 };
 
 module.exports = mongoose.model('Order', orderSchema);

@@ -7,7 +7,8 @@ import {
   RiLogoutBoxRLine,
   RiUser3Line,
   RiMailLine,
-  RiSettings4Line 
+  RiSettings4Line,
+  RiTicketLine  // added ticket icon
 } from 'react-icons/ri';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -15,7 +16,7 @@ import { useUI } from '../../context/UIContext';
 
 const Header = () => {
   const { user, logout } = useAuth();
-  const { getTotalItems, toggleCart } = useCart();
+  const { getTotalItems } = useCart(); // removed toggleCart
   const { mobileMenuOpen, toggleMobileMenu } = useUI();
   const navigate = useNavigate();
   const location = useLocation();
@@ -123,7 +124,7 @@ const Header = () => {
                 className={`relative px-4 py-2.5 rounded-lg font-bold text-lg transition-all duration-300 group ${
                   isActive(link.path)
                     ? 'text-blue-600 bg-blue-50 shadow-sm'
-                    : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                    : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50 hover:rounded-lg'
                 }`}
                 style={{ fontWeight: 'bold', fontSize: '1.15rem' }} // extra font size and bold for clarity
               >
@@ -140,18 +141,17 @@ const Header = () => {
 
           {/* Enhanced Right Side */}
           <div className="flex items-center space-x-3">
-            {/* Enhanced Cart Button */}
+            {/* Find My Tickets Button */}
             <button
-              onClick={toggleCart}
-              className={`relative p-2.5 text-gray-500 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition-all duration-200 group ${
-                cartBounce ? 'animate-bounce' : ''
-              }`}
+              onClick={() => navigate('/tickets')}
+              className="relative flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
+              aria-label="Find my tickets"
             >
-              <svg className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 7.5L5.5 20.5M7 13l-2-5m8 5a1 1 0 100 2 1 1 0 000-2zm-8 0a1 1 0 100 2 1 1 0 000-2z" />
-              </svg>
+              <RiTicketLine className="w-5 h-5" />
+              <span className="hidden sm:inline font-medium">Find my tickets</span>
+
               {getTotalItems() > 0 && (
-                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg animate-pulse">
+                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
                   {getTotalItems()}
                 </span>
               )}
@@ -204,7 +204,7 @@ const Header = () => {
                     
                     <Link
                       to="/dashboard"
-                      className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                      className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-200"
                       onClick={() => setUserMenuOpen(false)}
                     >
                       <RiDashboardLine className="w-4 h-4 mr-3 text-blue-500" />
@@ -215,7 +215,7 @@ const Header = () => {
                     {(user.data?.userType === 'admin') && (
                       <Link
                         to="/admin"
-                        className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                        className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-200"
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <RiAdminLine className="w-4 h-4 mr-3 text-emerald-500" />
@@ -226,7 +226,7 @@ const Header = () => {
                     {(user.data?.userType === 'organizer' || user.data?.userType === 'admin') && (
                       <Link
                         to="/organizer"
-                        className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                        className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-200"
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <RiCalendarEventLine className="w-4 h-4 mr-3 text-indigo-500" />
@@ -237,7 +237,7 @@ const Header = () => {
                     <div className="border-t border-gray-100 mt-2 pt-2">
                       <button
                         onClick={handleLogout}
-                        className="flex items-center w-full px-4 py-3 text-red-600 hover:bg-red-50 transition-colors duration-200"
+                        className="flex items-center w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
                       >
                         <RiLogoutBoxRLine className="w-4 h-4 mr-3 text-red-500" />
                         Sign Out
@@ -292,7 +292,7 @@ const Header = () => {
                     className={`flex items-center px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
                       isActive(link.path)
                         ? 'text-blue-600 bg-blue-50'
-                        : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                        : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50 hover:rounded-lg'
                     }`}
                     onClick={toggleMobileMenu}
                   >

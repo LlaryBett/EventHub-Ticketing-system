@@ -516,7 +516,7 @@ const EventDetails = () => {
               {isFreeEvent && (
                 <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-center">
                   <span className="text-green-800 font-semibold text-sm">
-                    🎉 Free Event - No Payment Required
+                    Free Event - No Payment Required
                   </span>
                 </div>
               )}

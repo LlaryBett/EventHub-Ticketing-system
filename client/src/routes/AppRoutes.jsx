@@ -19,6 +19,7 @@ import Register from '../pages/Register';
 import NotFound from '../pages/NotFound';
 import HowItWorks from '../pages/HowItWorks'; // 👈 added import
 import PaymentConfirmation from '../pages/PaymentConfirmation';
+import TicketsPage from '../pages/TicketsPage'; // 👈 added import
 
 // Admin Pages
 import AdminDashboard from '../pages/Admin/AdminDashboard';
@@ -42,6 +43,7 @@ const AppRoutes = () => {
       <Route path="/about" element={<Layout><About /></Layout>} />
       <Route path="/contact" element={<Layout><Contact /></Layout>} />
       <Route path="/how-it-works" element={<Layout><HowItWorks /></Layout>} /> {/* new route */}
+      <Route path="/tickets" element={<Layout><TicketsPage /></Layout>} /> {/* 👈 added tickets route */}
 
       {/* Protected Routes with Layout */}
       <Route path="/checkout" element={<Layout><Checkout /></Layout>} />
@@ -64,6 +66,3 @@ const AppRoutes = () => {
 };
 
 export default AppRoutes;
-
-
-

@@ -31,10 +31,24 @@ const EventCard = ({ event }) => {
   const firstTicket = Array.isArray(event.tickets) && event.tickets.length > 0
     ? event.tickets[0]
     : null;
-  const hasPrice = firstTicket && typeof firstTicket.price === 'number';
   
   const daysUntil = getDaysUntilEvent(event.date);
   const isUpcoming = daysUntil >= 0;
+  const isFreeEvent = event.pricingType === 'free';
+
+  // Get the lowest price for display
+  const getLowestPrice = () => {
+    if (!event.tickets || event.tickets.length === 0) return null;
+    
+    const prices = event.tickets
+      .filter(ticket => ticket.price > 0)
+      .map(ticket => ticket.price);
+    
+    return prices.length > 0 ? Math.min(...prices) : 0;
+  };
+
+  const lowestPrice = getLowestPrice();
+  const hasMultipleTickets = event.tickets && event.tickets.length > 1;
 
   return (
     <Link
@@ -60,9 +74,19 @@ const EventCard = ({ event }) => {
               </span>
             </div>
           )}
+          
+          {/* ADDED: Free Event Badge */}
+          {isFreeEvent && (
+            <div className="absolute top-4 right-4">
+              <span className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                Free Event
+              </span>
+            </div>
+          )}
+          
           {!isUpcoming && (
             <div className="absolute top-4 right-4">
-              <span className="bg-red-500 text-white px-4 py-2 rounded-lg font-medium">
+              <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
                 Event Passed
               </span>
             </div>
@@ -70,7 +94,7 @@ const EventCard = ({ event }) => {
         </div>
 
         <div className="p-4 flex-1 flex flex-col">
-          <div className="flex items-center justify-between mb-2">
+          <div className="mb-2">
             <span className="text-sm text-primary-600 font-medium capitalize">
               {event.category?.name}
             </span>
@@ -114,7 +138,7 @@ const EventCard = ({ event }) => {
             tabIndex={-1}
             onClick={e => e.stopPropagation()}
           >
-            Buy Tickets
+            {event.actionButtonText || (isFreeEvent ? 'Reserve Spot' : 'Buy Tickets')}
             <svg 
               className="w-4 h-4 ml-1 group-hover/link:translate-x-1 transition-transform duration-200" 
               fill="none" 
@@ -125,13 +149,17 @@ const EventCard = ({ event }) => {
             </svg>
           </Link>
 
-          {hasPrice && isUpcoming ? (
+          {firstTicket && isUpcoming ? (
             <Button
               fullWidth={false}
               onClick={e => handleAddToCart(e, firstTicket)}
-              className="group-hover:bg-primary-700 min-w-[140px]"
+              className={`group-hover:bg-primary-700 min-w-[140px] ${
+                isFreeEvent ? 'bg-green-600 hover:bg-green-700' : ''
+              }`}
             >
-              {formatPrice(firstTicket.price)}
+              {isFreeEvent ? 'Free' : (
+                hasMultipleTickets ? `From ${formatPrice(lowestPrice)}` : formatPrice(lowestPrice || firstTicket.price)
+              )}
             </Button>
           ) : !isUpcoming ? null : (
             <Button fullWidth={false} disabled variant="secondary" className="min-w-[100px]">

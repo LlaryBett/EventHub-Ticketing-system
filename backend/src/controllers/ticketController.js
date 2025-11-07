@@ -1,5 +1,6 @@
 const Ticket = require('../models/Ticket');
 const Event = require('../models/Event');
+const IssuedTicket = require('../models/IssuedTicket');
 const Organization = require('../models/Organizer'); // Add this line
 const { validationResult } = require('express-validator');
 
@@ -54,6 +55,8 @@ exports.getEventTickets = async (req, res, next) => {
     next(error);
   }
 };
+
+
 
 // Create new ticket (organizer only)
 exports.createTicket = async (req, res, next) => {
@@ -187,6 +190,60 @@ exports.updateTicket = async (req, res, next) => {
   }
 };
 
+
+// Get tickets for authenticated user
+exports.getMyTickets = async (req, res, next) => {
+  try {
+    const tickets = await IssuedTicket.find({ 
+      $or: [
+        { userId: req.user.id },
+        { attendeeEmail: req.user.email }
+      ],
+      isUsed: false // Only show active tickets
+    })
+    .populate('eventId', 'title date venue image organizer') // Changed 'dates' to 'date'
+    .populate('ticketId', 'type price')
+    .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: tickets.length,
+      data: tickets
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Lookup tickets by email (for logged-out users)
+exports.lookupTicketsByEmail = async (req, res, next) => {
+  try {
+    const { email } = req.query;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    const tickets = await IssuedTicket.find({ 
+      attendeeEmail: email.toLowerCase(),
+      isUsed: false // Only show active tickets
+    })
+    .populate('eventId', 'title date venue image organizer') // Changed 'dates' to 'date'
+    .populate('ticketId', 'type price')
+    .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: tickets.length,
+      data: tickets
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 // Delete ticket (organizer only)
 exports.deleteTicket = async (req, res, next) => {
   try {
