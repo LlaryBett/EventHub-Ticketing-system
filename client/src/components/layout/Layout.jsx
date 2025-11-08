@@ -18,7 +18,7 @@ const Layout = ({ children }) => {
       
       {/* Cart Sidebar */}
       <CartSidebar />
-      
+    
       {/* Notifications */}
       <NotificationSystem />
     </div>

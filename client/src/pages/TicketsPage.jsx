@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 import ticketService from '../services/ticketService';
 
 const TicketsPage = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [lookupEmail, setLookupEmail] = useState('');
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -15,6 +17,16 @@ const TicketsPage = () => {
       fetchUserTickets();
     }
   }, [user]);
+
+  // Handle email from URL params
+  useEffect(() => {
+    const emailParam = searchParams.get('email');
+    if (emailParam && !user) {
+      setLookupEmail(emailParam);
+      // Auto-trigger lookup
+      handleEmailLookup(null, emailParam);
+    }
+  }, [searchParams, user]);
 
   const fetchUserTickets = async () => {
     setLoading(true);
@@ -33,12 +45,17 @@ const TicketsPage = () => {
     setLoading(false);
   };
 
-  const handleEmailLookup = async (e) => {
-    e.preventDefault();
+  // Modified to accept direct email parameter
+  const handleEmailLookup = async (e, emailOverride) => {
+    if (e) e.preventDefault();
+    
+    const emailToLookup = emailOverride || lookupEmail;
+    if (!emailToLookup) return;
+
     setLoading(true);
     setError('');
     try {
-      const response = await ticketService.lookupTicketsByEmail(lookupEmail);
+      const response = await ticketService.lookupTicketsByEmail(emailToLookup);
       if (response.success) {
         setTickets(response.data);
         if (response.data.length === 0) {

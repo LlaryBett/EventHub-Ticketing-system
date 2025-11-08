@@ -7,6 +7,9 @@ import Testimonials from '../components/sections/Testimonials';
 const Home = () => {
   return (
     <div>
+      {/* Add curve divider right before Hero */}
+      <div className="header-hero-curve"></div>
+      
       <Hero />
       <EventsShowcase />
       <Features />

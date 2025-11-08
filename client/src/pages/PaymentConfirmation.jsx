@@ -384,7 +384,7 @@ const PaymentConfirmation = () => {
   </Button>
 
   <Button
-    onClick={() => navigate(`/orders/${orderId}`)}
+    onClick={() => navigate(`/tickets?email=${encodeURIComponent(orderData.customerEmail)}`)}
     className="flex-1 sm:flex-none bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
   >
     View My Tickets

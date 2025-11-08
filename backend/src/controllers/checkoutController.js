@@ -534,6 +534,7 @@ processCheckout: async (req, res) => {
           paymentDetails: req.body.paymentDetails,
           discountCode: checkoutData.discountCode,
           totals: checkoutData.totals,
+          totalAmount: checkoutData.totals.total, // Add this line
           isGuestOrder: true,
           status: 'pending'
         });
@@ -548,6 +549,7 @@ processCheckout: async (req, res) => {
           paymentDetails: req.body.paymentDetails,
           discountCode: checkoutData.discountCode,
           totals: checkoutData.totals,
+          totalAmount: checkoutData.totals.total, // Add this line
           isGuestOrder: false,
           status: 'pending'
         });
