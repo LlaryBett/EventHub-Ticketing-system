@@ -114,7 +114,7 @@ app.use(
       'http://localhost:3001',
       'http://localhost:5173',
       'http://192.168.137.1:5173',   // your PC Wi-Fi IP
-      'http://172.17.88.193:5173'    // extra network adapter IP
+      'http://172.17.88.193:5173',    // extra network adapter IP
       'https://event-hub-ticketing-system-stqx.vercel.app'
     ],
     credentials: true,
