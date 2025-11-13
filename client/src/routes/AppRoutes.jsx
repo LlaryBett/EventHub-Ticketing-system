@@ -6,9 +6,9 @@ import Layout from '../components/layout/Layout';
 import Home from '../pages/Home';
 import Events from '../pages/Events';
 import EventDetails from '../pages/EventDetails';
-import Discover from '../pages/Discover';  // Changed from Categories
+import Discover from '../pages/Discover';
 import Checkout from '../pages/Checkout';
-import Dashboard from '../pages/Dashboard';
+import UserAccount from '../pages/UserAccount'; // Updated from Dashboard
 import Organizer from '../pages/Organizer';
 import OrganizerDashboard from '../pages/OrganizerDashboard';
 import Pricing from '../pages/Pricing';
@@ -16,10 +16,12 @@ import About from '../pages/About';
 import Contact from '../pages/Contact';
 import Login from '../pages/Login';
 import Register from '../pages/Register';
+import ForgotPassword from '../pages/ForgotPassword';
+import ResetPassword from '../pages/ResetPassword';
 import NotFound from '../pages/NotFound';
-import HowItWorks from '../pages/HowItWorks'; // 👈 added import
+import HowItWorks from '../pages/HowItWorks';
 import PaymentConfirmation from '../pages/PaymentConfirmation';
-import TicketsPage from '../pages/TicketsPage'; // 👈 added import
+import TicketsPage from '../pages/TicketsPage';
 
 // Admin Pages
 import AdminDashboard from '../pages/Admin/AdminDashboard';
@@ -38,29 +40,31 @@ const AppRoutes = () => {
       <Route path="/" element={<Layout><Home /></Layout>} />
       <Route path="/events" element={<Layout><Events /></Layout>} />
       <Route path="/events/:id" element={<Layout><EventDetails /></Layout>} />
-      <Route path="/discover" element={<Layout><Discover /></Layout>} />  {/* Changed from categories */}
+      <Route path="/discover" element={<Layout><Discover /></Layout>} />
       <Route path="/pricing" element={<Layout><Pricing /></Layout>} />
       <Route path="/about" element={<Layout><About /></Layout>} />
       <Route path="/contact" element={<Layout><Contact /></Layout>} />
-      <Route path="/how-it-works" element={<Layout><HowItWorks /></Layout>} /> {/* new route */}
-      <Route path="/tickets" element={<Layout><TicketsPage /></Layout>} /> {/* 👈 added tickets route */}
+      <Route path="/how-it-works" element={<Layout><HowItWorks /></Layout>} />
+      <Route path="/tickets" element={<Layout><TicketsPage /></Layout>} />
 
-      {/* Protected Routes with Layout */}
-      <Route path="/checkout" element={<Layout><Checkout /></Layout>} />
-      <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
-      <Route path="/organizer" element={<Layout><Organizer /></Layout>} />
-      <Route path="/organizer-dashboard" element={<Layout><OrganizerDashboard /></Layout>} />
-      
-      {/* Auth Routes with Layout (between header & footer) */}
+      {/* Auth Routes with Layout */}
       <Route path="/login" element={<Layout><Login /></Layout>} />
       <Route path="/register" element={<Layout><Register /></Layout>} />
+      <Route path="/forgot-password" element={<Layout><ForgotPassword /></Layout>} />
+      <Route path="/reset-password/:resetToken" element={<Layout><ResetPassword /></Layout>} />
+      
+      {/* Protected Routes with Layout */}
+      <Route path="/checkout" element={<Layout><Checkout /></Layout>} />
+      <Route path="/account" element={<Layout><UserAccount /></Layout>} /> {/* Updated from /dashboard */}
+      <Route path="/organizer" element={<Layout><Organizer /></Layout>} />
+      <Route path="/organizer-dashboard" element={<Layout><OrganizerDashboard /></Layout>} />
+      <Route path="/payment-confirmation/:orderId?" element={<Layout><PaymentConfirmation /></Layout>} />
       
       {/* Admin Routes - No Layout */}
       <Route path="/admin/*" element={<AdminDashboard />} />
 
       {/* 404 Route */}
       <Route path="*" element={<NotFound />} />
-      <Route path="/payment-confirmation/:orderId?" element={<Layout><PaymentConfirmation /></Layout>} />
     </Routes>
   );
 };

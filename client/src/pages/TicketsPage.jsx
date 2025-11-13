@@ -11,19 +11,16 @@ const TicketsPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // For logged-in users - fetch their tickets automatically
   useEffect(() => {
     if (user) {
       fetchUserTickets();
     }
   }, [user]);
 
-  // Handle email from URL params
   useEffect(() => {
     const emailParam = searchParams.get('email');
     if (emailParam && !user) {
       setLookupEmail(emailParam);
-      // Auto-trigger lookup
       handleEmailLookup(null, emailParam);
     }
   }, [searchParams, user]);
@@ -45,7 +42,6 @@ const TicketsPage = () => {
     setLoading(false);
   };
 
-  // Modified to accept direct email parameter
   const handleEmailLookup = async (e, emailOverride) => {
     if (e) e.preventDefault();
     
@@ -73,10 +69,8 @@ const TicketsPage = () => {
 
   const formatDate = (dateInput) => {
     if (!dateInput) return 'TBA';
-    // accept Date object or string
     const d = (dateInput instanceof Date) ? dateInput : new Date(dateInput);
     if (isNaN(d.getTime())) {
-      // try to handle common nested formats (e.g. { start: "...", end: "..." })
       if (typeof dateInput === 'object' && dateInput !== null) {
         const candidate = dateInput.start || dateInput.date || dateInput.datetime;
         if (candidate) {
@@ -86,7 +80,6 @@ const TicketsPage = () => {
           });
         }
       }
-      // fallback: return a safe label instead of "Invalid Date"
       return 'TBA';
     }
     return d.toLocaleDateString('en-US', {
@@ -97,15 +90,8 @@ const TicketsPage = () => {
     });
   };
 
-  // normalize date fields from a ticket payload
   const normalizeDateFromTicket = (ticket) => {
     if (!ticket) return null;
-    // payload variations observed:
-    // ticket.eventId?.date (ISO string)
-    // ticket.event?.date
-    // ticket.eventId?.dates?.start
-    // ticket.event?.dates?.start
-    // ticket.createdAt as fallback
     const candidates = [
       ticket.eventId?.date,
       ticket.event?.date,
@@ -117,14 +103,12 @@ const TicketsPage = () => {
     ];
     for (const c of candidates) {
       if (c) {
-        // return the raw value (string or Date) to formatDate which will validate
         return c;
       }
     }
     return null;
   };
 
-  // Mask ticket code for display (show only last 4 chars)
   const maskTicketCode = (code) => {
     if (!code) return '';
     const s = String(code);
@@ -132,21 +116,16 @@ const TicketsPage = () => {
     return '****' + s.slice(-4);
   };
 
-  // Return numeric price (may be 0) or null
   const getTicketPrice = (ticket) => {
     return ticket?.price ?? ticket?.ticketId?.price ?? null;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex justify-center items-center h-64">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading tickets...</p>
-            </div>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading tickets...</p>
         </div>
       </div>
     );
@@ -154,62 +133,70 @@ const TicketsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex flex-col lg:flex-row gap-12">
-          {/* Left Side - Tickets Content */}
-          <div className="flex-1">
-            <div className="max-w-2xl">
-              <h1 className="text-4xl font-bold text-gray-900 mb-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Single responsive layout */}
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
+          
+          {/* Main content area - adapts to available space */}
+          <div className="w-full lg:flex-1">
+            
+            {/* Header */}
+            <div className="text-center lg:text-left mb-8">
+              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
                 Find Your Tickets
               </h1>
-              <p className="text-lg text-gray-600 mb-8">
+              <p className="text-base lg:text-lg text-gray-600 max-w-2xl mx-auto lg:mx-0">
                 Access your event tickets and manage your bookings in one place.
               </p>
+            </div>
 
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-                  {error}
-                </div>
-              )}
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 max-w-2xl mx-auto lg:mx-0">
+                {error}
+              </div>
+            )}
 
-              {/* Logged-out users see lookup form */}
-              {!user && (
-                <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 mb-8">
-                  <h2 className="text-xl font-semibold mb-4">Lookup by Email</h2>
-                  
-                  <form onSubmit={handleEmailLookup} className="flex gap-3">
-  <input
-    type="email"
-    placeholder="Enter your booking email"
-    value={lookupEmail}
-    onChange={(e) => setLookupEmail(e.target.value)}
-    className="flex-1 p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
-    required
-  />
-  <button 
-    type="submit"
-    className="bg-blue-600 text-white px-6 py-4 rounded-xl hover:bg-blue-700 transition-colors duration-200 font-semibold text-lg shadow-lg hover:shadow-xl"
-  >
-    Find My Tickets
-  </button>
-</form>
+            {/* Email Lookup Form - only for logged out users */}
+            {!user && (
+              <div className="bg-white p-6 lg:p-8 rounded-2xl shadow-sm border border-gray-100 mb-8 max-w-2xl mx-auto lg:mx-0">
+                <h2 className="text-lg lg:text-xl font-semibold mb-4 text-center lg:text-left">
+                  Lookup by Email
+                </h2>
+                
+                <form onSubmit={handleEmailLookup} className="space-y-3 lg:space-y-0 lg:flex lg:gap-3">
+                  <input
+                    type="email"
+                    placeholder="Enter your booking email"
+                    value={lookupEmail}
+                    onChange={(e) => setLookupEmail(e.target.value)}
+                    className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base lg:text-lg"
+                    required
+                  />
+                  <button 
+                    type="submit"
+                    className="w-full lg:w-auto lg:flex-shrink-0 bg-blue-600 text-white px-6 py-4 rounded-xl hover:bg-blue-700 transition-colors duration-200 font-semibold text-base lg:text-lg shadow-lg hover:shadow-xl"
+                  >
+                    Find My Tickets
+                  </button>
+                </form>
 
-                  <p className="text-sm text-gray-600 mt-4 text-center">
-                    Enter the email address you used when booking the tickets
-                  </p>
-                </div>
-              )}
+                <p className="text-sm text-gray-600 mt-4 text-center lg:text-left">
+                  Enter the email address you used when booking the tickets
+                </p>
+              </div>
+            )}
 
-              {/* Tickets List */}
+            {/* Tickets List */}
+            <div className="max-w-2xl mx-auto lg:mx-0">
               {tickets.length > 0 ? (
                 <div className="space-y-4">
-                  <h3 className="text-2xl font-semibold text-gray-900 mb-6">
+                  <h3 className="text-xl lg:text-2xl font-semibold text-gray-900 mb-6 text-center lg:text-left">
                     Your Tickets ({tickets.length})
                   </h3>
                   {tickets.map(ticket => (
                     <div key={ticket._id || ticket.id} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200">
-                      <div className="flex justify-between items-start mb-4">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                         <div className="flex-1">
                           <h4 className="text-lg font-semibold text-gray-900 line-clamp-2">
                             {ticket.eventId?.title || ticket.event?.title}
@@ -218,7 +205,7 @@ const TicketsPage = () => {
                             {ticket.eventId?.venue || ticket.event?.venue}
                           </p>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        <span className={`self-start sm:self-auto px-3 py-1 rounded-full text-xs font-semibold ${
                           ticket.isUsed 
                             ? 'bg-red-100 text-red-800' 
                             : 'bg-green-100 text-green-800'
@@ -227,39 +214,39 @@ const TicketsPage = () => {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-3 text-sm">
-                        <div className="flex justify-between">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div>
                           <span className="text-gray-600">Attendee:</span>
-                          <span className="font-medium">{ticket.attendeeName}</span>
+                          <span className="font-medium ml-2">{ticket.attendeeName}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div>
                           <span className="text-gray-600">Ticket Type:</span>
-                          <span className="font-medium">{ticket.ticketType || ticket.ticketId?.type}</span>
+                          <span className="font-medium ml-2">{ticket.ticketType || ticket.ticketId?.type}</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div>
                           <span className="text-gray-600">Event Date:</span>
-                          <span className="font-medium text-right">
+                          <span className="font-medium ml-2">
                             {formatDate(normalizeDateFromTicket(ticket))}
                           </span>
                         </div>
-                        <div className="flex justify-between">
+                        <div>
                           <span className="text-gray-600">Price:</span>
                           {(() => {
                             const priceVal = getTicketPrice(ticket);
                             return priceVal === 0 ? (
-                              <span className="font-medium">
-                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                              <span className="font-medium ml-2">
+                                <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
                                   Free
                                 </span>
                               </span>
                             ) : (
-                              <span className="font-medium">ksh {priceVal ?? 'TBA'}</span>
+                              <span className="font-medium ml-2">ksh {priceVal ?? 'TBA'}</span>
                             );
                           })()}
                         </div>
-                        <div className="flex justify-between">
+                        <div className="sm:col-span-2">
                           <span className="text-gray-600">Ticket Code:</span>
-                          <span className="font-mono font-medium bg-gray-100 px-2 py-1 rounded text-xs">
+                          <span className="font-mono font-medium bg-gray-100 px-2 py-1 rounded text-xs ml-2">
                             {maskTicketCode(ticket.ticketCode)}
                           </span>
                         </div>
@@ -282,7 +269,7 @@ const TicketsPage = () => {
                 </div>
               ) : (
                 !loading && !error && (
-                  <div className="text-center py-8 bg-white rounded-2xl shadow-sm border border-gray-100">
+                  <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
                     <div className="text-gray-400 text-6xl mb-4">🎫</div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">No tickets found</h3>
                     <p className="text-gray-600">
@@ -297,16 +284,14 @@ const TicketsPage = () => {
             </div>
           </div>
 
-          {/* Right Side - Background Image with Sticky Positioning */}
-          <div className="hidden lg:flex items-start justify-center flex-1">
-            <div className="sticky top-24 w-full">
-              <div className="flex justify-center">
-                <img 
-                  src="https://img.freepik.com/free-vector/illustration-people-with-cloud_53876-26646.jpg" 
-                  alt="Tickets Background"
-                  className="w-full max-w-md h-auto object-contain"
-                />
-              </div>
+          {/* Side Image - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:block flex-1 sticky top-8">
+            <div className="flex justify-center">
+              <img 
+                src="https://img.freepik.com/free-vector/illustration-people-with-cloud_53876-26646.jpg" 
+                alt="Tickets Background"
+                className="w-full max-w-md object-contain"
+              />
             </div>
           </div>
         </div>

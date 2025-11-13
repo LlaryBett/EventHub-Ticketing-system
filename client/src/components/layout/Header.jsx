@@ -8,7 +8,7 @@ import {
   RiUser3Line,
   RiMailLine,
   RiSettings4Line,
-  RiTicketLine  // added ticket icon
+  RiTicketLine
 } from 'react-icons/ri';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -16,7 +16,7 @@ import { useUI } from '../../context/UIContext';
 
 const Header = () => {
   const { user, logout } = useAuth();
-  const { getTotalItems } = useCart(); // removed toggleCart
+  const { getTotalItems } = useCart();
   const { mobileMenuOpen, toggleMobileMenu } = useUI();
   const navigate = useNavigate();
   const location = useLocation();
@@ -25,7 +25,7 @@ const Header = () => {
   const [cartBounce, setCartBounce] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const totalItems = getTotalItems(); // read once for effects
+  const totalItems = getTotalItems();
 
   // Handle scroll effect
   useEffect(() => {
@@ -45,9 +45,7 @@ const Header = () => {
     }
   }, [totalItems]);
 
-  // Auth initialization: if there's a token but user is not yet populated,
-  // wait a short grace period so AuthContext can finish getMe. If no token or user present,
-  // mark authReady immediately.
+  // Auth initialization
   useEffect(() => {
     if (user) {
       setAuthReady(true);
@@ -57,9 +55,8 @@ const Header = () => {
       setAuthReady(true);
       return;
     }
-    // token exists but user not yet loaded — wait briefly
     setAuthReady(false);
-    const timer = setTimeout(() => setAuthReady(true), 800); // tune if needed
+    const timer = setTimeout(() => setAuthReady(true), 800);
     return () => clearTimeout(timer);
   }, [user, token]);
 
@@ -75,7 +72,6 @@ const Header = () => {
     {
       path: '/',
       label: 'Home',
-      // Use a different home icon (e.g. Heroicons HomeSolid)
       icon: (
         <svg className="w-5 h-5 mr-2 inline" fill="currentColor" viewBox="0 0 20 20">
           <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7A1 1 0 003 11h1v6a1 1 0 001 1h4a1 1 0 001-1v-4h2v4a1 1 0 001 1h4a1 1 0 001-1v-6h1a1 1 0 00.707-1.707l-7-7z" />
@@ -84,8 +80,6 @@ const Header = () => {
     },
     { path: '/discover', label: 'Discover', icon: <svg className="w-5 h-5 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> },
     { path: '/events', label: 'Events', icon: <svg className="w-5 h-5 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4h3a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2h3z" /></svg> },
-    // Pricing link temporarily disabled
-    // { path: '/pricing', label: 'Pricing', icon: <svg className="w-5 h-5 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.343-3 3s1.343 3 3 3 3-1.343 3-3-1.343-3-3-3zm0 0V4m0 8v8" /></svg> },
     { path: '/about', label: 'About', icon: <svg className="w-5 h-5 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20h.01" /></svg> },
     { path: '/contact', label: 'Contact', icon: <svg className="w-5 h-5 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10a9 9 0 11-18 0 9 9 0 0118 0zm-9 4v2m0-8v2" /></svg> }
   ];
@@ -126,7 +120,7 @@ const Header = () => {
                     ? 'text-blue-600 bg-blue-50 shadow-sm'
                     : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50 hover:rounded-lg'
                 }`}
-                style={{ fontWeight: 'bold', fontSize: '1.15rem' }} // extra font size and bold for clarity
+                style={{ fontWeight: 'bold', fontSize: '1.15rem' }}
               >
                 <span className="flex items-center">
                   {link.icon}
@@ -159,7 +153,6 @@ const Header = () => {
 
             {/* Enhanced User Menu */}
             { !authReady ? (
-              // while auth not ready (token present but user not fetched) show skeleton
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
                 <div className="hidden sm:flex flex-col">
@@ -203,7 +196,7 @@ const Header = () => {
                     </div>
                     
                     <Link
-                      to="/dashboard"
+                      to="/account"
                       className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-200"
                       onClick={() => setUserMenuOpen(false)}
                     >
@@ -255,7 +248,7 @@ const Header = () => {
                   Sign In
                 </Link>
                 <Link
-                  to="/register"
+                  to="/register?type=organizer"
                   className="relative inline-flex items-center px-5 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 overflow-hidden group whitespace-nowrap"
                 >
                   <span className="relative z-10">Create Events</span>
@@ -302,21 +295,23 @@ const Header = () => {
                 ))}
                 
                 {!user && (
-                  <div className="pt-3 flex flex-col gap-2 border-t border-gray-100 mt-3">
-                    <Link
-                      to="/login"
-                      className="flex items-center px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 font-medium rounded-lg transition-all duration-200"
-                      onClick={toggleMobileMenu}
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      to="/register"
-                      className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg transition-all duration-200"
-                      onClick={toggleMobileMenu}
-                    >
-                      Create Events
-                    </Link>
+                  <div className="pt-3 border-t border-gray-100 mt-3">
+                    <div className="flex gap-2">
+                      <Link
+                        to="/login"
+                        className="flex-1 flex items-center justify-center px-4 py-3 text-gray-600 hover:text-blue-600 hover:bg-gray-50 font-medium rounded-lg transition-all duration-200 border border-gray-200"
+                        onClick={toggleMobileMenu}
+                      >
+                        Sign In
+                      </Link>
+                      <Link
+                        to="/register?type=organizer"
+                        className="flex-1 flex items-center justify-center px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                        onClick={toggleMobileMenu}
+                      >
+                        Create Events
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>

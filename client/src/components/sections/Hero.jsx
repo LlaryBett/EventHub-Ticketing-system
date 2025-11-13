@@ -154,7 +154,7 @@ const Hero = () => {
                   </span>
                 </Button>
               </Link>
-              <Link to="/organizer">
+              <Link to="/register?role=organizer">
                 <Button
                   variant="outline"
                   size="large"

@@ -1,12 +1,17 @@
 const User = require('../models/User');
 const Organizer = require('../models/Organizer');
-const Order = require('../models/Order'); // Assuming you have an Order model
+const Order = require('../models/Order');
 const IssuedTicket = require('../models/IssuedTicket');
 const Notification = require('../models/Notification');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
-const { sendEmail } = require('../utils/emailService');
+const { 
+  sendAccountClaimEmail, 
+  sendPasswordResetEmail, 
+  sendOrganizerApplicationConfirmation, 
+  sendOrganizerApplicationNotification 
+} = require('../utils/emailService');
 const crypto = require('crypto');
 
 // Generate JWT Token
@@ -35,14 +40,13 @@ const sendTokenResponse = (user, statusCode, res, userType, migratedCount = 0) =
     success: true,
     token,
     userType,
-    migratedCount, // 🔄 how many guest orders were linked
+    migratedCount,
     data: {
-      ...user._doc,   // includes all mongoose fields
-      id: user._id    // add plain `id` for frontend convenience
+      ...user._doc,
+      id: user._id
     }
   });
 };
-
 
 // @desc    Register attendee during checkout
 // @route   POST /api/auth/register/checkout
@@ -62,7 +66,6 @@ exports.registerAtCheckout = async (req, res, next) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      // If user exists, they should login instead
       return res.status(400).json({
         success: false,
         message: 'User already exists with this email. Please log in.'
@@ -196,7 +199,7 @@ exports.claimAccount = async (req, res, next) => {
     const user = await User.create({
       email,
       password,
-      name: order.customerName, // If you collected name during checkout
+      name: order.customerName,
       userType: 'attendee',
       status: 'active'
     });
@@ -270,21 +273,12 @@ exports.registerAttendee = async (req, res, next) => {
       await Promise.all(
         guestOrders.map(async (order) => {
           console.log('📝 Migrating guest order:', order._id);
-          console.log('📦 Order items before migration:', JSON.stringify(order.items, null, 2));
-
-          // Optional: skip orders with missing tickets
-          order.items.forEach((item, index) => {
-            if (!item.ticket) {
-              console.warn(`⚠️ Order ${order._id} item[${index}] missing ticket:`, item);
-            }
-          });
 
           order.isGuestOrder = false;
           order.convertedToUser = true;
           order.userId = user._id;
           order.hasAccount = true;
 
-          // Save with validation disabled to avoid errors on missing tickets
           await order.save({ validateBeforeSave: false });
 
           // Migrate issued tickets
@@ -308,7 +302,6 @@ exports.registerAttendee = async (req, res, next) => {
       });
     }
 
-    // Send token response
     sendTokenResponse(user, 201, res, 'attendee', migratedCount);
 
   } catch (error) {
@@ -319,8 +312,6 @@ exports.registerAttendee = async (req, res, next) => {
     });
   }
 };
-
-
 
 // @desc    Send account claim email
 // @route   POST /api/auth/send-claim-email
@@ -354,21 +345,8 @@ exports.sendClaimEmail = async (req, res, next) => {
     // Create claim URL
     const claimUrl = `${req.protocol}://${req.get('host')}/claim-account?token=${claimToken}&email=${email}`;
 
-    // Email message
-    const message = `
-      <h2>Claim Your EventHub Account</h2>
-      <p>Thank you for your purchase! To access your tickets and manage your orders, please create an account using the link below:</p>
-      <a href="${claimUrl}" style="display: inline-block; padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;">Create Account</a>
-      <p>This link will expire in 24 hours.</p>
-      <p>If you did not make this purchase, please ignore this email.</p>
-    `;
-
     try {
-      await sendEmail({
-        to: email,
-        subject: 'Claim Your EventHub Account',
-        html: message
-      });
+      await sendAccountClaimEmail(email, claimUrl);
 
       res.status(200).json({
         success: true,
@@ -424,8 +402,6 @@ exports.validateClaimToken = async (req, res, next) => {
   }
 };
 
-
-
 // @desc    Register organizer (step 1 - personal info)
 // @route   POST /api/auth/register/organizer/step1
 // @access  Public
@@ -445,7 +421,6 @@ exports.registerOrganizerStep1 = async (req, res, next) => {
     const existingUser = await User.findOne({ email });
     
     if (existingUser) {
-      // AUTO-DETECT: This is an existing user trying to register
       if (existingUser.userType === 'organizer') {
         return res.status(400).json({
           success: false,
@@ -454,7 +429,6 @@ exports.registerOrganizerStep1 = async (req, res, next) => {
       }
       
       if (existingUser.userType === 'attendee') {
-        // This is an upgrade scenario - validate
         if (existingUser.name !== name) {
           return res.status(400).json({
             success: false,
@@ -470,12 +444,10 @@ exports.registerOrganizerStep1 = async (req, res, next) => {
           });
         }
 
-        // IGNORE the password since user already exists
-        // Store as upgrade scenario
         req.session.organizerStep1 = {
           name,
           email,
-          password: undefined, // No password needed for existing users
+          password: undefined,
           phone: phone || existingUser.phone,
           isUpgrade: true,
           existingUserId: existingUser._id,
@@ -490,7 +462,6 @@ exports.registerOrganizerStep1 = async (req, res, next) => {
       }
     }
 
-    // NEW REGISTRATION: User doesn't exist - require password
     if (!password) {
       return res.status(400).json({
         success: false,
@@ -498,7 +469,6 @@ exports.registerOrganizerStep1 = async (req, res, next) => {
       });
     }
 
-    // Generate a temporary registration token
     const tempToken = jwt.sign(
       { 
         email: email,
@@ -509,7 +479,6 @@ exports.registerOrganizerStep1 = async (req, res, next) => {
       { expiresIn: '1h' }
     );
 
-    // Store step 1 data in session
     req.session.organizerStep1 = {
       name,
       email,
@@ -527,7 +496,7 @@ exports.registerOrganizerStep1 = async (req, res, next) => {
         email, 
         isUpgrade: false 
       },
-      token: tempToken // Include the token in response
+      token: tempToken
     });
   } catch (error) {
     console.error('Organizer step 1 error:', error);
@@ -551,7 +520,6 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
       });
     }
 
-    // Get token from request headers
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
       return res.status(401).json({
@@ -560,7 +528,6 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
       });
     }
 
-    // Verify the token
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -574,7 +541,6 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
       });
     }
 
-    // Check if step 1 data exists
     if (!req.session.organizerStep1) {
       return res.status(400).json({
         success: false,
@@ -582,7 +548,6 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
       });
     }
 
-    // Add session expiration check (30 minutes)
     const SESSION_TIMEOUT = 30 * 60 * 1000;
     if (Date.now() - req.session.organizerStep1.timestamp > SESSION_TIMEOUT) {
       delete req.session.organizerStep1;
@@ -609,7 +574,6 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
     let user;
 
     if (step1Data.isUpgrade) {
-      // Upgrade scenario: use existing user by ID
       user = await User.findById(step1Data.existingUserId);
       
       if (!user || user.userType !== 'attendee') {
@@ -620,21 +584,18 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
         });
       }
 
-      // Update user to organizer type
       user.userType = 'organizer';
       user.acceptTerms = acceptTerms;
       user.marketingConsent = marketingConsent;
       user.status = 'pending_verification';
-      user.phone = step1Data.phone; // Update phone if changed
+      user.phone = step1Data.phone;
       await user.save();
 
     } else {
-      // New registration scenario - NO redundant check needed
-      // Create new user with organizer role
       user = await User.create({
         name: step1Data.name,
         email: step1Data.email,
-        password: step1Data.password, // Make sure this is hashed
+        password: step1Data.password,
         phone: step1Data.phone,
         userType: 'organizer',
         acceptTerms,
@@ -643,7 +604,6 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
       });
     }
 
-    // Create organizer profile
     const organizer = await Organizer.create({
       userId: user._id,
       organizationName,
@@ -659,54 +619,38 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
       upgradedFromAttendee: step1Data.isUpgrade
     });
 
-    // Send approval notification email to admin
+    // Send admin notification
     try {
-      await sendEmail({
-        to: process.env.ADMIN_EMAIL || 'admin@example.com',
-        subject: 'New Organizer Application',
-        html: `
-          <h2>New Organizer Application</h2>
-          <p><strong>Organization:</strong> ${organizationName}</p>
-          <p><strong>Contact:</strong> ${step1Data.name} (${step1Data.email})</p>
-          <p><strong>Business Type:</strong> ${businessType}</p>
-          <p><strong>Address:</strong> ${businessAddress}, ${city}, ${state} ${zipCode}</p>
-          <p><strong>Type:</strong> ${step1Data.isUpgrade ? 'Upgrade from attendee' : 'New registration'}</p>
-          <p>Please review this application in the admin panel.</p>
-        `
-      });
+      await sendOrganizerApplicationNotification(
+        process.env.ADMIN_EMAIL || 'admin@example.com',
+        {
+          name: step1Data.name,
+          email: step1Data.email,
+          organizationName,
+          businessType,
+          businessAddress,
+          city,
+          state,
+          zipCode,
+          isUpgrade: step1Data.isUpgrade
+        }
+      );
     } catch (emailError) {
       console.error('Failed to send admin notification:', emailError);
     }
 
-    // Send confirmation email to user
+    // Send user confirmation
     try {
-      const subject = step1Data.isUpgrade 
-        ? 'Organizer Upgrade Application Received'
-        : 'Organizer Application Received';
-
-      const message = step1Data.isUpgrade
-        ? `<p>Dear ${step1Data.name},</p>
-           <p>We've received your application to upgrade your EventHub account to an organizer account for <strong>${organizationName}</strong>.</p>`
-        : `<p>Dear ${step1Data.name},</p>
-           <p>We've received your application to become an EventHub organizer for <strong>${organizationName}</strong>.</p>`;
-
-      await sendEmail({
-        to: step1Data.email,
-        subject: subject,
-        html: `
-          <h2>Thank you for your application!</h2>
-          ${message}
-          <p>Our team will review your application within 2-3 business days. You'll receive an email notification once your account has been approved.</p>
-          <p>If you have any questions, please contact our support team.</p>
-          <br>
-          <p>Best regards,<br>The EventHub Team</p>
-        `
-      });
+      await sendOrganizerApplicationConfirmation(
+        step1Data.email,
+        step1Data.name,
+        organizationName,
+        step1Data.isUpgrade
+      );
     } catch (emailError) {
       console.error('Failed to send confirmation email:', emailError);
     }
 
-    // Clear session data
     delete req.session.organizerStep1;
 
     res.status(201).json({
@@ -730,8 +674,6 @@ exports.registerOrganizerStep2 = async (req, res, next) => {
   }
 };
 
-
-
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
@@ -739,7 +681,6 @@ exports.login = async (req, res, next) => {
   try {
     console.log("📥 Incoming login request:", req.body);
 
-    // ✅ Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.log("❌ Validation failed:", errors.array());
@@ -751,7 +692,6 @@ exports.login = async (req, res, next) => {
 
     const { email, password } = req.body;
 
-    // 🔍 Check if user exists
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
       console.log(`❌ No user found for email: ${email}`);
@@ -760,9 +700,7 @@ exports.login = async (req, res, next) => {
         message: 'Invalid credentials'
       });
     }
-    console.log(`👤 Found user: ${user._id}, status: ${user.status}, type: ${user.userType}`);
 
-    // 🔑 Check if password matches
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       console.log(`❌ Invalid password for user: ${user._id}`);
@@ -771,9 +709,7 @@ exports.login = async (req, res, next) => {
         message: 'Invalid credentials'
       });
     }
-    console.log(`✅ Password match for user: ${user._id}`);
 
-    // 🚫 Check account status - ALLOW 'pending_verification' but block suspended/inactive
     if (user.status === 'suspended' || user.status === 'inactive') {
       console.log(`🚫 Blocked login: user ${user._id} status is '${user.status}'`);
       return res.status(401).json({
@@ -786,7 +722,6 @@ exports.login = async (req, res, next) => {
     let organizerApprovalStatus = 'not-applicable';
     let canAccessOrganizerFeatures = false;
 
-    // 👤 If organizer, check approval status
     if (user.userType === 'organizer') {
       console.log(`🔍 Checking organizer approval for user ${user._id}`);
       const organizer = await Organizer.findOne({ userId: user._id });
@@ -795,22 +730,15 @@ exports.login = async (req, res, next) => {
         organizerApprovalStatus = organizer.approvalStatus;
         isApprovedOrganizer = organizer.approvalStatus === 'approved';
         
-        // Update user's approval status for JWT token
         user.isApprovedOrganizer = isApprovedOrganizer;
         await user.save({ validateBeforeSave: false });
         
-        // ✅ Organizer can access features only if BOTH conditions are met:
-        // 1. User status is 'active' (not just pending_verification)
-        // 2. Organizer is approved
         canAccessOrganizerFeatures = (user.status === 'active' && isApprovedOrganizer);
         
         console.log(`📌 Organizer ${user._id} - Status: ${user.status}, Approval: ${organizerApprovalStatus}, CanAccessFeatures: ${canAccessOrganizerFeatures}`);
-      } else {
-        console.log(`⚠️ No organizer record found for user ${user._id}`);
       }
     }
 
-    // 🔗 Guest order migration
     let migratedCount = 0;
     const guestOrders = await Order.find({
       customerEmail: email,
@@ -837,7 +765,6 @@ exports.login = async (req, res, next) => {
       migratedCount = guestOrders.length;
     }
 
-    // 🔍 Fetch ALL orders for this email or userId
     const allOrders = await Order.find({
       $or: [
         { customerEmail: email },
@@ -846,7 +773,6 @@ exports.login = async (req, res, next) => {
     });
     console.log(`📦 Total orders for ${email}:`, allOrders.length);
 
-    // 🎟️ Generate JWT (includes isApprovedOrganizer for middleware)
     const token = user.getSignedJwtToken();
     console.log(`🔑 JWT generated for user ${user._id}`);
 
@@ -860,11 +786,9 @@ exports.login = async (req, res, next) => {
       options.secure = true;
     }
 
-    // Update login stats
     await user.updateLoginStats();
     console.log(`📊 Updated login stats for user ${user._id}`);
 
-    // ✅ Successful login
     res
       .status(200)
       .cookie('token', token, options)
@@ -876,10 +800,10 @@ exports.login = async (req, res, next) => {
           name: user.name,
           email: user.email,
           userType: user.userType,
-          status: user.status, // ← Include user status in response
+          status: user.status,
           isApprovedOrganizer,
           organizerApprovalStatus,
-          canAccessOrganizerFeatures // ← New flag for frontend UI control
+          canAccessOrganizerFeatures
         },
         migratedOrders: migratedCount,
         message: getLoginMessage(user, isApprovedOrganizer, canAccessOrganizerFeatures)
@@ -909,12 +833,6 @@ function getLoginMessage(user, isApprovedOrganizer, canAccessOrganizerFeatures) 
   
   return 'Login successful';
 }
-
-
-
-
-
-
 
 // @desc    Log user out / clear cookie
 // @route   GET /api/auth/logout
@@ -961,22 +879,8 @@ exports.forgotPassword = async (req, res, next) => {
     // Create reset URL
     const resetUrl = `${req.protocol}://${req.get('host')}/api/auth/resetpassword/${resetToken}`;
 
-    // Email message
-    const message = `
-      <h2>Password Reset Request</h2>
-      <p>You are receiving this email because you (or someone else) has requested a password reset for your EventHub account.</p>
-      <p>Please click on the following link to reset your password:</p>
-      <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
-      <p>If you did not request this, please ignore this email and your password will remain unchanged.</p>
-      <p>This reset token is valid for 10 minutes.</p>
-    `;
-
     try {
-      await sendEmail({
-        to: user.email,
-        subject: 'Password Reset Request',
-        html: message
-      });
+      await sendPasswordResetEmail(user.email, resetUrl);
 
       res.status(200).json({
         success: true,
@@ -1098,6 +1002,7 @@ exports.updatePassword = async (req, res, next) => {
     });
   }
 };
+
 // @desc    Get current logged in user
 // @route   GET /api/auth/me
 // @access  Private

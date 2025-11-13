@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import EventCard from '../components/events/EventCard';
 import Button from '../components/common/Button';
-import EventMap from '../components/events/EventMap';
 import EventStories from '../components/events/EventStories';
 import { 
   Music, 
@@ -23,10 +22,19 @@ import {
   Handshake,
   Gift,
   Target,
-  Lightbulb
+  Lightbulb,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { eventService } from '../services/eventService';
 import { uiService } from '../services/uiService';
+
+// Import Swiper React components and styles
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, Autoplay } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 
 const Discover = () => {
   const { user } = useAuth();
@@ -35,8 +43,6 @@ const Discover = () => {
   const [recommendedEvents, setRecommendedEvents] = useState([]);
   const [thisWeekEvents, setThisWeekEvents] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [viewMode, setViewMode] = useState('grid');
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
   const [activeCategory, setActiveCategory] = useState(0);
   const [error, setError] = useState(null);
@@ -86,7 +92,7 @@ const Discover = () => {
     return iconMap[iconName] || <Heart className="w-8 h-8" />;
   };
 
-  // --- ADD: lightweight skeleton components ---
+  // Skeleton components
   const SkeletonEventCard = () => (
     <div className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse">
       <div className="h-48 bg-gray-200" />
@@ -114,9 +120,22 @@ const Discover = () => {
       </div>
     </div>
   );
-  // --- END ADD ---
 
-  const fetchDiscoverData = async () => {
+  const isUpcoming = useCallback((event) => {
+    if (!event?.date) return false;
+    try {
+      const d = new Date(event.date);
+      if (event.time) {
+        const [hours, minutes] = String(event.time).split(':').map(n => parseInt(n, 10));
+        if (!isNaN(hours)) d.setHours(hours, isNaN(minutes) ? 0 : minutes, 0, 0);
+      }
+      return d.getTime() >= Date.now();
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const fetchDiscoverData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -130,7 +149,7 @@ const Discover = () => {
 
       const trending = await eventService.getAllEvents({ sort: 'trending', limit: 8 });
       const trendingArr = trending?.data || [];
-      setTrendingEvents(trendingArr.filter(isUpcoming).slice(0, 4));
+      setTrendingEvents(trendingArr.filter(isUpcoming).slice(0, 8));
 
       const today = new Date();
       const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -141,7 +160,7 @@ const Discover = () => {
         limit: 8
       });
       const weekArr = weekEvents?.data || [];
-      setThisWeekEvents(weekArr.filter(isUpcoming).slice(0, 4));
+      setThisWeekEvents(weekArr.filter(isUpcoming).slice(0, 8));
 
       if (user) {
         const recommended = await eventService.getAllEvents({
@@ -149,20 +168,20 @@ const Discover = () => {
           limit: 8
         });
         const recArr = recommended?.data || [];
-        setRecommendedEvents(recArr.filter(isUpcoming).slice(0, 4));
+        setRecommendedEvents(recArr.filter(isUpcoming).slice(0, 8));
       }
 
       setLoading(false);
-    } catch (error) {
-      console.error('Error fetching discover data:', error);
-      setError(error.message);
+    } catch (fetchError) {
+      console.error('Error fetching discover data:', fetchError);
+      setError(fetchError.message);
       setLoading(false);
     }
-  };
+  }, [user, isUpcoming]);
 
   useEffect(() => {
     fetchDiscoverData();
-  }, [user]);
+  }, [fetchDiscoverData]);
 
   useEffect(() => {
     if (discoverData.heroSlides.length > 0) {
@@ -176,37 +195,14 @@ const Discover = () => {
     }
   }, [discoverData.heroSlides.length]);
 
-  const isUpcoming = (event) => {
-    if (!event?.date) return false;
-    try {
-      const d = new Date(event.date);
-      if (event.time) {
-        const [hours, minutes] = String(event.time).split(':').map(n => parseInt(n, 10));
-        if (!isNaN(hours)) d.setHours(hours, isNaN(minutes) ? 0 : minutes, 0, 0);
-      }
-      return d.getTime() >= Date.now();
-    } catch (err) {
-      return false;
-    }
-  };
-
-  // Replace the existing handleCategoryClick with this new version
   const handleCategoryClick = (categorySlug) => {
     navigate(`/events?category=${categorySlug}`);
   };
 
-  // helper to build safe filter slugs
   const slugify = (str = '') =>
-    String(str).toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '');
-  
-  const handleQuickFilterClick = (valueOrLabel) => {
-    const slug = slugify(valueOrLabel);
-    navigate(`/events?filter=${slug}`);
-  };
+    String(str).toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
   const currentHeroImage = discoverData.heroSlides[currentBgIndex]?.imageUrl || null;
-
-  const currentHeroSlide = discoverData.heroSlides[currentBgIndex] || {}; // ...existing code may still reference elsewhere
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -214,7 +210,6 @@ const Discover = () => {
       <section 
         className="relative text-white py-8 sm:py-10 md:py-12 overflow-hidden"
         style={{
-          // use a stable default gradient — images are applied as overlays below
           background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #ec4899 100%)'
         }}
       >
@@ -253,32 +248,6 @@ const Discover = () => {
               </button>
             </div>
           </div>
-
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
-            {/* Temporarily disabled - will be implemented later
-            {discoverData.quickFilters.length > 0 ? (
-              discoverData.quickFilters.map((filter, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleQuickFilterClick(filter.value || filter.label)}
-                  className="px-4 sm:px-6 py-1.5 sm:py-2 bg-gradient-to-r from-blue-50 to-purple-50 text-gray-700 rounded-full hover:from-blue-100 hover:to-purple-100 transition-all duration-200 font-medium border border-blue-200 hover:border-blue-300 text-sm sm:text-base"
-                >
-                  {filter.label}
-                </button>
-              ))
-            ) : (
-              ['Today', 'This Weekend', 'Free Events', 'Near Me', 'Virtual'].map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => handleQuickFilterClick(filter)}
-                  className="px-4 sm:px-6 py-1.5 sm:py-2 bg-gradient-to-r from-blue-50 to-purple-50 text-gray-700 rounded-full hover:from-blue-100 hover:to-purple-100 transition-all duration-200 font-medium border border-blue-200 hover:border-blue-300 text-sm sm:text-base"
-                >
-                  {filter}
-                </button>
-              ))
-            )}
-            */}
-          </div>
         </div>
       </div>
 
@@ -300,7 +269,7 @@ const Discover = () => {
 
         <EventStories />
 
-        {/* Trending Now Section */}
+        {/* Trending Now Section with Swiper - Updated Header */}
         <section className="mb-16">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -310,21 +279,77 @@ const Discover = () => {
               </h2>
               <p className="text-gray-600 mt-1">Hot events everyone's talking about</p>
             </div>
-            <Link to="/events?filter=trending" className="text-blue-600 hover:text-blue-700 font-semibold">
+            
+            {/* Navigation Arrows - Visible on mobile, hidden on desktop (where side arrows are used) */}
+            <div className="flex items-center gap-2 md:hidden">
+              <button 
+                className="trending-prev bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hover:scale-110 border border-gray-200"
+                aria-label="Previous trending events"
+              >
+                <ChevronLeft className="w-5 h-5 text-gray-700" />
+              </button>
+              <button 
+                className="trending-next bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hover:scale-110 border border-gray-200"
+                aria-label="Next trending events"
+              >
+                <ChevronRight className="w-5 h-5 text-gray-700" />
+              </button>
+            </div>
+
+            {/* View All Link - Hidden on mobile, visible on desktop */}
+            <Link to="/events?filter=trending" className="text-blue-600 hover:text-blue-700 font-semibold hidden md:block">
               View All →
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {loading ? (
-              [...Array(4)].map((_, i) => <SkeletonEventCard key={i} />)
-            ) : trendingEvents.length > 0 ? (
-              trendingEvents.map((event) => <EventCard key={event.id} event={event} />)
-            ) : (
-              <div className="col-span-4 text-center py-12 text-gray-500">
-                No trending events at the moment. Check back soon!
-              </div>
-            )}
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => <SkeletonEventCard key={i} />)}
+            </div>
+          ) : trendingEvents.length > 0 ? (
+            <div className="relative">
+              <Swiper
+                modules={[Navigation, Pagination, Autoplay]}
+                spaceBetween={20}
+                slidesPerView={1}
+                breakpoints={{
+                  640: { slidesPerView: 2 },
+                  1024: { slidesPerView: 4 }
+                }}
+                navigation={{
+                  nextEl: '.trending-next',
+                  prevEl: '.trending-prev',
+                }}
+                pagination={{ clickable: true }}
+                autoplay={{ delay: 5000 }}
+                className="trending-swiper"
+              >
+                {trendingEvents.map((event) => (
+                  <SwiperSlide key={event.id}>
+                    <EventCard event={event} />
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+              
+              {/* Custom Navigation Buttons - Hidden on mobile, visible on desktop */}
+              <button className="trending-prev absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all -ml-4 hidden md:block">
+                <ChevronLeft className="w-5 h-5 text-gray-700" />
+              </button>
+              <button className="trending-next absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all -mr-4 hidden md:block">
+                <ChevronRight className="w-5 h-5 text-gray-700" />
+              </button>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              No trending events at the moment. Check back soon!
+            </div>
+          )}
+
+          {/* View All Button - Visible only on mobile */}
+          <div className="mt-6 md:hidden text-center">
+            <Link to="/events?filter=trending" className="text-blue-600 hover:text-blue-700 font-semibold">
+              View All Trending Events →
+            </Link>
           </div>
         </section>
 
@@ -384,7 +409,7 @@ const Discover = () => {
                       key={category._id || index}
                       onClick={() => {
                         setActiveCategory(index);
-                        handleCategoryClick(category.slug); // Now uses the slug for navigation
+                        handleCategoryClick(category.slug);
                       }}
                       className="absolute transition-all duration-500 ease-out cursor-pointer group"
                       style={{
@@ -437,14 +462,7 @@ const Discover = () => {
                 className="bg-white/90 hover:bg-white p-2 sm:p-3 rounded-full shadow-md transition-all hover:scale-110"
                 aria-label="Previous category"
               >
-                <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6 text-gray-800"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
+                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-gray-800" />
               </button>
 
               <div className="flex justify-center gap-2">
@@ -467,20 +485,13 @@ const Discover = () => {
                 className="bg-white/90 hover:bg-white p-2 sm:p-3 rounded-full shadow-md transition-all hover:scale-110"
                 aria-label="Next category"
               >
-                <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6 text-gray-800"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-gray-800" />
               </button>
             </div>
           </section>
         )}
 
-        {/* Recommended For You */}
+        {/* Recommended For You with Swiper */}
         {user && (
           <section className="mb-16">
             <div className="flex items-center justify-between mb-6">
@@ -493,30 +504,59 @@ const Discover = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {loading ? (
-                [...Array(4)].map((_, i) => <SkeletonEventCard key={i} />)
-              ) : recommendedEvents.length > 0 ? (
-                recommendedEvents.map((event) => <EventCard key={event.id} event={event} />)
-              ) : (
-                <div className="col-span-4 bg-blue-50 border-2 border-blue-200 rounded-xl p-8 text-center">
-                  <div className="text-5xl mb-4">
-                    <Target className="w-16 h-16 mx-auto text-blue-500" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Start Building Your Profile</h3>
-                  <p className="text-gray-600 mb-4">
-                    Book or save events to get personalized recommendations
-                  </p>
-                  <Link to="/events">
-                    <Button>Explore Events</Button>
-                  </Link>
-                </div>
-              )}
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[...Array(4)].map((_, i) => <SkeletonEventCard key={i} />)}
             </div>
+            ) : recommendedEvents.length > 0 ? (
+              <div className="relative">
+                <Swiper
+                  modules={[Navigation, Pagination]}
+                  spaceBetween={20}
+                  slidesPerView={1}
+                  breakpoints={{
+                    640: { slidesPerView: 2 },
+                    1024: { slidesPerView: 4 }
+                  }}
+                  navigation={{
+                    nextEl: '.recommended-next',
+                    prevEl: '.recommended-prev',
+                  }}
+                  pagination={{ clickable: true }}
+                  className="recommended-swiper"
+                >
+                  {recommendedEvents.map((event) => (
+                    <SwiperSlide key={event.id}>
+                      <EventCard event={event} />
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+                
+                <button className="recommended-prev absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all -ml-4 hidden md:block">
+                  <ChevronLeft className="w-5 h-5 text-gray-700" />
+                </button>
+                <button className="recommended-next absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all -mr-4 hidden md:block">
+                  <ChevronRight className="w-5 h-5 text-gray-700" />
+                </button>
+              </div>
+            ) : (
+              <div className="col-span-4 bg-blue-50 border-2 border-blue-200 rounded-xl p-8 text-center">
+                <div className="text-5xl mb-4">
+                  <Target className="w-16 h-16 mx-auto text-blue-500" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Start Building Your Profile</h3>
+                <p className="text-gray-600 mb-4">
+                  Book or save events to get personalized recommendations
+                </p>
+                <Link to="/events">
+                  <Button>Explore Events</Button>
+                </Link>
+              </div>
+            )}
           </section>
         )}
 
-        {/* Happening This Week */}
+        {/* Happening This Week with Swiper - Updated Header */}
         <section className="mb-16">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -526,25 +566,81 @@ const Discover = () => {
               </h2>
               <p className="text-gray-600 mt-1">Don't miss out on these upcoming events</p>
             </div>
-            <Link to="/events?filter=this-week" className="text-blue-600 hover:text-blue-700 font-semibold">
+            
+            {/* Navigation Arrows - Visible on mobile, hidden on desktop */}
+            <div className="flex items-center gap-2 md:hidden">
+              <button 
+                className="thisweek-prev bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hover:scale-110 border border-gray-200"
+                aria-label="Previous this week events"
+              >
+                <ChevronLeft className="w-5 h-5 text-gray-700" />
+              </button>
+              <button 
+                className="thisweek-next bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hover:scale-110 border border-gray-200"
+                aria-label="Next this week events"
+              >
+                <ChevronRight className="w-5 h-5 text-gray-700" />
+              </button>
+            </div>
+
+            {/* View All Link - Hidden on mobile, visible on desktop */}
+            <Link to="/events?filter=this-week" className="text-blue-600 hover:text-blue-700 font-semibold hidden md:block">
               View All →
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {loading ? (
-              [...Array(4)].map((_, i) => <SkeletonEventCard key={i} />)
-            ) : thisWeekEvents.length > 0 ? (
-              thisWeekEvents.map((event) => <EventCard key={event.id} event={event} />)
-            ) : (
-              <div className="col-span-4 text-center py-12 text-gray-500">
-                No events scheduled for this week yet.
-              </div>
-            )}
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => <SkeletonEventCard key={i} />)}
+            </div>
+          ) : thisWeekEvents.length > 0 ? (
+            <div className="relative">
+              <Swiper
+                modules={[Navigation, Pagination, Autoplay]}
+                spaceBetween={20}
+                slidesPerView={1}
+                breakpoints={{
+                  640: { slidesPerView: 2 },
+                  1024: { slidesPerView: 4 }
+                }}
+                navigation={{
+                  nextEl: '.thisweek-next',
+                  prevEl: '.thisweek-prev',
+                }}
+                pagination={{ clickable: true }}
+                autoplay={{ delay: 4500 }}
+                className="thisweek-swiper"
+              >
+                {thisWeekEvents.map((event) => (
+                  <SwiperSlide key={event.id}>
+                    <EventCard event={event} />
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+              
+              {/* Custom Navigation Buttons - Hidden on mobile, visible on desktop */}
+              <button className="thisweek-prev absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all -ml-4 hidden md:block">
+                <ChevronLeft className="w-5 h-5 text-gray-700" />
+              </button>
+              <button className="thisweek-next absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all -mr-4 hidden md:block">
+                <ChevronRight className="w-5 h-5 text-gray-700" />
+              </button>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              No events scheduled for this week yet.
+            </div>
+          )}
+
+          {/* View All Button - Visible only on mobile */}
+          <div className="mt-6 md:hidden text-center">
+            <Link to="/events?filter=this-week" className="text-blue-600 hover:text-blue-700 font-semibold">
+              View All This Week's Events →
+            </Link>
           </div>
         </section>
 
-        {/* Curated Collections */}
+        {/* Curated Collections with Swiper - Updated Header with Right-side Navigation */}
         {loading ? (
           <section className="mb-16">
             <div className="mb-8">
@@ -556,101 +652,97 @@ const Discover = () => {
             </div>
           </section>
         ) : discoverData.collections.length > 0 && (
-           <section className="mb-16">
-             <div className="mb-8">
-               <h2 className="text-3xl font-bold text-gray-900 mb-2">Curated Collections</h2>
-               <p className="text-gray-600">Handpicked events for every occasion</p>
-             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {discoverData.collections.map((collection, index) => (
-                <Link
-                  key={collection._id || index}
-                  to={`/events?collection=${collection.slug || collection.title.toLowerCase().replace(/\s+/g, '-')}`}
-                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6 group"
+          <section className="mb-16">
+            {/* Updated Header with Navigation on Right */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">Curated Collections</h2>
+                <p className="text-gray-600">Handpicked events for every occasion</p>
+              </div>
+              
+              {/* Navigation Arrows on Right Side */}
+              <div className="flex items-center gap-2">
+                <button 
+                  className="collections-prev bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hover:scale-110 border border-gray-200"
+                  aria-label="Previous collections"
                 >
-                  <div className={`w-16 h-16 ${collection.color} rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform`}>
-                    {getCollectionIcon(collection.icon)}
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                    {collection.title}
-                  </h3>
-                  <p className="text-gray-600">{collection.description}</p>
-                </Link>
-              ))}
+                  <ChevronLeft className="w-5 h-5 text-gray-700" />
+                </button>
+                <button 
+                  className="collections-next bg-white/90 hover:bg-white p-3 rounded-full shadow-lg transition-all hover:scale-110 border border-gray-200"
+                  aria-label="Next collections"
+                >
+                  <ChevronRight className="w-5 h-5 text-gray-700" />
+                </button>
+              </div>
             </div>
-           </section>
-         )}
 
-         {/* Popular in Your Area */}
-         <section className="mb-16">
-           <div className="flex items-center justify-between mb-6">
-             <div>
-               <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                 <MapPin className="w-8 h-8 text-red-500" />
-                 Popular in Your Area
-               </h2>
-               <p className="text-gray-600 mt-1">Events happening near you</p>
-             </div>
-             <div className="flex gap-2">
-               <button
-                 onClick={() => setViewMode('grid')}
-                 className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
-               >
-                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                 </svg>
-               </button>
-               <button
-                 onClick={() => setViewMode('map')}
-                 className={`p-2 rounded-lg ${viewMode === 'map' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
-               >
-                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                 </svg>
-               </button>
-             </div>
-           </div>
-
-           {viewMode === 'grid' ? (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-               {loading ? (
-                 [...Array(4)].map((_, i) => <SkeletonEventCard key={i} />)
-               ) : (
-                 <div className="col-span-4 text-center py-12 text-gray-500">
-                   No local events found. Try expanding your search radius.
-                 </div>
-               )}
-             </div>
-           ) : (
-             <EventMap 
-               events={[]}
-               onEventClick={(event) => {
-                 navigate(`/events/${event.id}`);
-               }}
-             />
-           )}
-         </section>
+            <div className="relative">
+              <Swiper
+                modules={[Navigation, Pagination]}
+                spaceBetween={20}
+                slidesPerView={1}
+                breakpoints={{
+                  640: { slidesPerView: 2 },
+                  1024: { slidesPerView: 4 }
+                }}
+                navigation={{
+                  nextEl: '.collections-next',
+                  prevEl: '.collections-prev',
+                }}
+                pagination={{ 
+                  clickable: true,
+                }}
+                className="collections-swiper"
+              >
+                {discoverData.collections.map((collection, index) => (
+                  <SwiperSlide key={collection._id || index}>
+                    <Link
+                      to={`/events?collection=${collection.slug || collection.title.toLowerCase().replace(/\s+/g, '-')}`}
+                      className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6 group block h-full"
+                    >
+                      <div className={`w-16 h-16 ${collection.color} rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform`}>
+                        {getCollectionIcon(collection.icon)}
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                        {collection.title}
+                      </h3>
+                      <p className="text-gray-600">{collection.description}</p>
+                    </Link>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+          </section>
+        )}
 
         {/* CTA Section */}
         <div className="mt-20 mb-20">
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row w-full text-white">
-            <div className="flex-1 p-8 md:p-12 flex flex-col justify-center text-left">
-              <h2 className="text-3xl font-bold mb-4">
-                Can't Find What You're Looking For?
-              </h2>
-              <p className="text-xl text-blue-100 mb-6 max-w-2xl">
-                Create your own event and bring your community together.
-              </p>
-              <div className="flex flex-row gap-3">
-                <Link to="/organizer">
-                  <button className="px-5 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors duration-200 text-sm sm:text-base">
-                    Create Your Event
+            <div className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 text-white py-16 overflow-hidden flex-1 p-8 md:p-12 flex flex-col justify-center text-left">
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute -top-4 -left-4 w-24 h-24 bg-white rounded-full"></div>
+                <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white rounded-full"></div>
+                <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-white rounded-full"></div>
+              </div>
+              
+              <div className="relative z-10">
+                <h2 className="text-3xl font-bold mb-4">
+                  Can't Find What You're Looking For?
+                </h2>
+                <p className="text-xl text-blue-100 mb-6 max-w-2xl">
+                  Create your own event and bring your community together.
+                </p>
+                <div className="flex flex-row gap-3">
+                  <Link to="/organizer">
+                    <button className="px-5 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors duration-200 text-sm sm:text-base">
+                      Create Your Event
+                    </button>
+                  </Link>
+                  <button className="px-5 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors duration-200 text-sm sm:text-base">
+                    Learn More
                   </button>
-                </Link>
-                <button className="px-5 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors duration-200 text-sm sm:text-base">
-                  Learn More
-                </button>
+                </div>
               </div>
             </div>
 

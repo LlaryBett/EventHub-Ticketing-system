@@ -4,7 +4,7 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp-relay.brevo.com',
   port: process.env.EMAIL_PORT || 587,
-  secure: false, // Use TLS
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
@@ -38,6 +38,90 @@ const sendEmail = async ({ to, subject, html, text }) => {
     console.error('❌ Email sending error:', error);
     throw error;
   }
+};
+
+// Send account claim email
+const sendAccountClaimEmail = async (email, claimUrl) => {
+  const html = `
+    <h2>Claim Your EventHub Account</h2>
+    <p>Thank you for your purchase! To access your tickets and manage your orders, please create an account using the link below:</p>
+    <a href="${claimUrl}" style="display: inline-block; padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;">Create Account</a>
+    <p>This link will expire in 24 hours.</p>
+    <p>If you did not make this purchase, please ignore this email.</p>
+  `;
+
+  return await sendEmail({
+    to: email,
+    subject: 'Claim Your EventHub Account',
+    html
+  });
+};
+
+// Send password reset email
+const sendPasswordResetEmail = async (email, resetUrl) => {
+  const html = `
+    <h2>Password Reset Request</h2>
+    <p>You are receiving this email because you (or someone else) has requested a password reset for your EventHub account.</p>
+    <p>Please click on the following link to reset your password:</p>
+    <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
+    <p>If you did not request this, please ignore this email and your password will remain unchanged.</p>
+    <p>This reset token is valid for 10 minutes.</p>
+  `;
+
+  return await sendEmail({
+    to: email,
+    subject: 'Password Reset Request',
+    html
+  });
+};
+
+// Send organizer application confirmation
+const sendOrganizerApplicationConfirmation = async (email, name, organizationName, isUpgrade = false) => {
+  const subject = isUpgrade 
+    ? 'Organizer Upgrade Application Received'
+    : 'Organizer Application Received';
+
+  const message = isUpgrade
+    ? `<p>Dear ${name},</p>
+       <p>We've received your application to upgrade your EventHub account to an organizer account for <strong>${organizationName}</strong>.</p>`
+    : `<p>Dear ${name},</p>
+       <p>We've received your application to become an EventHub organizer for <strong>${organizationName}</strong>.</p>`;
+
+  const html = `
+    <h2>Thank you for your application!</h2>
+    ${message}
+    <p>Our team will review your application within 2-3 business days. You'll receive an email notification once your account has been approved.</p>
+    <p>If you have any questions, please contact our support team.</p>
+    <br>
+    <p>Best regards,<br>The EventHub Team</p>
+  `;
+
+  return await sendEmail({
+    to: email,
+    subject,
+    html
+  });
+};
+
+// Send organizer application notification to admin
+const sendOrganizerApplicationNotification = async (adminEmail, applicationData) => {
+  const { name, email, organizationName, businessType, businessAddress, city, state, zipCode, isUpgrade } = applicationData;
+
+  const html = `
+    <h2>New Organizer Application</h2>
+    <p><strong>Organization:</strong> ${organizationName}</p>
+    <p><strong>Contact:</strong> ${name} (${email})</p>
+    <p><strong>Business Type:</strong> ${businessType}</p>
+    <p><strong>Address:</strong> ${businessAddress}, ${city}, ${state} ${zipCode}</p>
+    <p><strong>Type:</strong> ${isUpgrade ? 'Upgrade from attendee' : 'New registration'}</p>
+    <p>Please review this application in the admin panel.</p>
+  `;
+
+  return await sendEmail({
+    to: adminEmail,
+    subject: 'New Organizer Application',
+    html
+  });
 };
 
 // Send contact form confirmation email to user
@@ -138,7 +222,8 @@ const sendContactResponse = async (email, { name, subject, response, referenceId
   });
 };
 
-async function sendOrganizerVerificationEmail({ to, name, organizationName, status, notes }) {
+// Send organizer verification email
+const sendOrganizerVerificationEmail = async ({ to, name, organizationName, status, notes }) => {
   let subject, text;
   if (status === 'verified') {
     subject = 'Your Organizer Application Has Been Approved';
@@ -152,13 +237,18 @@ async function sendOrganizerVerificationEmail({ to, name, organizationName, stat
   } else {
     return;
   }
-  return module.exports.sendEmail({ to, subject, text });
-}
+  
+  return await sendEmail({ to, subject, text });
+};
 
 module.exports = {
   sendEmail,
+  sendAccountClaimEmail,
+  sendPasswordResetEmail,
+  sendOrganizerApplicationConfirmation,
+  sendOrganizerApplicationNotification,
+  sendOrganizerVerificationEmail,
   sendContactConfirmation,
   sendContactNotification,
-  sendContactResponse,
-  sendOrganizerVerificationEmail
+  sendContactResponse
 };

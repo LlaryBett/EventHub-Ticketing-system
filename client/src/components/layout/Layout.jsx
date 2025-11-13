@@ -14,7 +14,11 @@ const Layout = ({ children }) => {
       <main className="flex-1">
         {children}
       </main>
-      <Footer />
+      
+      {/* Hide footer on mobile (lg breakpoint and below) */}
+      <div className="hidden lg:block">
+        <Footer />
+      </div>
       
       {/* Cart Sidebar */}
       <CartSidebar />
