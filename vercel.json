@@ -1,12 +1,11 @@
 {
   "buildCommand": "cd client && npm run build",
-  "devCommand": "npm run dev",
+  "devCommand": "cd client && npm run dev",
   "installCommand": "npm install",
   "framework": "vite",
   "outputDirectory": "client/dist",
-  "public": true,
   "env": {
-    "VITE_API_URL": "@vite_api_url"
+    "VITE_API_URL": "https://eventhub-ticketing-system.onrender.com/api/v1"
   },
   "git": {
     "deploymentEnabled": {
