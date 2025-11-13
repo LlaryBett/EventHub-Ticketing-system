@@ -1,9 +1,10 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "cd client && npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "vite",
-  "outputDirectory": "dist",
+  "outputDirectory": "client/dist",
+  "public": "client/dist",
   "env": {
     "VITE_API_URL": "@vite_api_url"
   },
@@ -11,5 +12,11 @@
     "deploymentEnabled": {
       "main": true
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

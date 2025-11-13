@@ -109,14 +109,26 @@ app.use(hpp());
 // Enable CORS
 app.use(
   cors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:5173',
-      'http://192.168.137.1:5173',   // your PC Wi-Fi IP
-      'http://172.17.88.193:5173',    // extra network adapter IP
-      'https://event-hub-ticketing-system-stqx.vercel.app'
-    ],
+    origin: function (origin, callback) {
+      const allowedOrigins = [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:5173',
+        'http://192.168.137.1:5173',
+        'http://172.17.88.193:5173',
+        'https://event-hub-ticketing-system-stqx.vercel.app',
+        // Allow all Vercel preview URLs
+        /^https:\/\/event-hub-ticketing-system.*\.vercel\.app$/
+      ];
+
+      if (!origin || allowedOrigins.some(allowed => 
+        allowed instanceof RegExp ? allowed.test(origin) : allowed === origin
+      )) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
     optionsSuccessStatus: 200,
   })
