@@ -71,7 +71,7 @@ const About = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
+      {/* Hero Section */} 
       <section className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 text-white py-16 overflow-hidden">
         {/* Background Image */}
         <div 
