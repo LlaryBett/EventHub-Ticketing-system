@@ -186,6 +186,8 @@ const Hero = () => {
             </div>
           </div>
 
+          {/* before */}
+
           {/* Hero Carousel - Hidden on mobile, visible on large screens */}
           <div className="relative justify-center hidden lg:flex">
             <div className="relative">
