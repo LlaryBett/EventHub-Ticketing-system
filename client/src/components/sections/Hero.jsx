@@ -4,10 +4,17 @@ import Button from '../common/Button';
 
 const Hero = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const videoRef1 = React.useRef(null);
+  const videoRef2 = React.useRef(null);
+  const videoRef3 = React.useRef(null);
+  
+  const videoFile = '/carousel.mp4';
+  const videoFile2 = '/carousel2.mp4';
+  const videoFile3 = '/carousel1.mp4';
 
   const carouselData = [
     {
-      image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+      video: videoFile2,
       alt: "Tech Conference",
       liveCounter: { count: "127 live" },
       cards: [
@@ -39,7 +46,7 @@ const Hero = () => {
       ]
     },
     {
-      image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+      video: videoFile,
       alt: "Music Festival",
       liveCounter: { count: "89 live" },
       cards: [
@@ -71,7 +78,7 @@ const Hero = () => {
       ]
     },
     {
-      image: "https://images.unsplash.com/photo-1505236858219-8359eb29e329?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+      video: videoFile3,
       alt: "Food Festival",
       liveCounter: { count: "156 live" },
       cards: [
@@ -97,7 +104,6 @@ const Hero = () => {
           bg: "bg-red-500",
           text: "text-white",
           size: "p-2",
-          icon: "👨‍🍳",
           label: "Chefs"
         }
       ]
@@ -122,6 +128,17 @@ const Hero = () => {
     }, 5000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleVideoHover = (videoRef, isHovering) => {
+    if (videoRef.current) {
+      if (isHovering) {
+        videoRef.current.play().catch(err => console.error('Video play error:', err));
+      } else {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+      }
+    }
+  };
 
   return (
     <section className="gradient-bg text-white section-padding">
@@ -186,111 +203,77 @@ const Hero = () => {
             </div>
           </div>
 
-          {/* before */}
-
-          {/* Hero Carousel - Hidden on mobile, visible on large screens */}
+          {/* Right Side - Wide Pentagon */}
           <div className="relative justify-center hidden lg:flex">
-            <div className="relative">
-              <div key={currentSlide} className="relative w-96 h-96 rounded-full overflow-hidden shadow-2xl border-4 border-white/20">
-                <img
-                  src={carouselData[currentSlide].image}
-                  alt={carouselData[currentSlide].alt}
-                  className="w-full h-full object-cover"
-                />
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/20" />
-                
-                {/* Static ring */}
-                <div className="absolute inset-0 rounded-full border-4 border-yellow-400/50" />
-              </div>
-
-              {/* Floating Cards */}
-              {carouselData[currentSlide].cards.map((card, index) => (
-                <div
-                  key={`${currentSlide}-${index}`}
-                  className={`absolute ${card.position} ${card.bg} ${card.text} ${card.size || 'p-4'} rounded-lg shadow-lg hover:shadow-xl transition-shadow cursor-pointer`}
-                >
-                  {card.number ? (
-                    <>
-                      <div className={`text-2xl font-bold ${card.numberColor || ''}`}>{card.number}</div>
-                      <div className="text-sm opacity-80">{card.label}</div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-lg font-bold">{card.icon}</div>
-                      <div className="text-xs">{card.label}</div>
-                    </>
-                  )}
-                  
-                  {/* Dynamic arrows based on position */}
-                  {card.position.includes('-top') && card.position.includes('-left') && (
-                    <div className={`absolute -bottom-2 -right-2 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[10px] border-l-transparent border-r-transparent ${card.bg === 'bg-white' ? 'border-t-white' : card.bg === 'bg-yellow-400' ? 'border-t-yellow-400' : 'border-t-current'} transform rotate-45`} />
-                  )}
-                  {card.position.includes('-bottom') && card.position.includes('-right') && (
-                    <div className={`absolute -top-2 -left-2 w-0 h-0 border-l-[10px] border-r-[10px] border-b-[10px] border-l-transparent border-r-transparent ${card.bg === 'bg-yellow-400' ? 'border-b-yellow-400' : card.bg === 'bg-blue-400' ? 'border-b-blue-400' : card.bg === 'bg-red-400' ? 'border-b-red-400' : 'border-b-current'} transform -rotate-45`} />
-                  )}
-                  {card.position.includes('top-1/2') && card.position.includes('-left') && (
-                    <div className={`absolute top-1/2 -right-2 w-0 h-0 border-t-[8px] border-b-[8px] border-l-[8px] border-t-transparent border-b-transparent ${card.bg === 'bg-blue-500' ? 'border-l-blue-500' : card.bg === 'bg-purple-500' ? 'border-l-purple-500' : card.bg === 'bg-red-500' ? 'border-l-red-500' : 'border-l-current'} transform -translate-y-1/2`} />
-                  )}
-                  {card.position.includes('top-8') && card.position.includes('-right') && (
-                    <div className={`absolute -bottom-2 -left-2 w-0 h-0 border-t-[10px] border-r-[10px] border-l-[10px] border-r-transparent border-l-transparent ${card.bg === 'bg-green-500' ? 'border-t-green-500' : card.bg === 'bg-orange-500' ? 'border-t-orange-500' : card.bg === 'bg-yellow-500' ? 'border-t-yellow-500' : 'border-t-current'} transform rotate-180`} />
-                  )}
-                </div>
-              ))}
-
-              {/* Live Event Counter */}
-              <div className="absolute -top-8 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-                <div className="flex items-center gap-1">
-                  <span className="w-2 h-2 bg-white rounded-full" />
-                  <span>{carouselData[currentSlide].liveCounter.count}</span>
-                </div>
-              </div>
-
-              {/* Carousel Navigation */}
-              <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 flex items-center gap-4">
-                {/* Dots Indicator */}
-                <div className="flex gap-2">
-                  {carouselData.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => goToSlide(index)}
-                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                        index === currentSlide 
-                          ? 'bg-yellow-400 scale-125' 
-                          : 'bg-white/50 hover:bg-white/80'
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                {/* Navigation Arrows */}
-                <div className="flex gap-2 ml-4">
-                  <button
-                    onClick={prevSlide}
-                    className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white hover:scale-110 transition-all"
+            <div className="relative h-[420px] w-[620px]">
+              <div 
+                className="absolute inset-0 overflow-hidden shadow-2xl"
+                style={{
+                  clipPath: 'polygon(0% 25%, 25% 0%, 75% 0%, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0% 75%)'
+                }}
+              >
+                <div className="flex h-full">
+                  <div 
+                    className="relative w-1/3 h-full overflow-hidden group bg-black"
+                    onMouseEnter={() => handleVideoHover(videoRef1, true)}
+                    onMouseLeave={() => handleVideoHover(videoRef1, false)}
                   >
-                    ←
-                  </button>
-                  <button
-                    onClick={nextSlide}
-                    className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white hover:scale-110 transition-all"
-                  >
-                    →
-                  </button>
-                </div>
-              </div>
+                    <video
+                      ref={videoRef1}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      muted
+                      loop
+                      playsInline
+                      onError={(e) => console.error('Video error:', e)}
+                    >
+                      <source src={videoFile2} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
 
-              {/* Slide Counter */}
-              <div className="absolute -bottom-16 right-0 text-white/70 text-sm">
-                {currentSlide + 1} / {carouselData.length}
+                  {/* Middle Section - Video */}
+                  <div 
+                    className="relative w-1/3 h-full overflow-hidden group bg-black"
+                    onMouseEnter={() => handleVideoHover(videoRef2, true)}
+                    onMouseLeave={() => handleVideoHover(videoRef2, false)}
+                  >
+                    <video
+                      ref={videoRef2}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      muted
+                      loop
+                      playsInline
+                      onError={(e) => console.error('Video error:', e)}
+                    >
+                      <source src={videoFile} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+
+                  <div 
+                    className="relative w-1/3 h-full overflow-hidden group bg-black"
+                    onMouseEnter={() => handleVideoHover(videoRef3, true)}
+                    onMouseLeave={() => handleVideoHover(videoRef3, false)}
+                  >
+                    <video
+                      ref={videoRef3}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      muted
+                      loop
+                      playsInline
+                      onError={(e) => console.error('Video error:', e)}
+                    >
+                      <source src={videoFile3} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </section>
-
-    // conclusion
   );
 };
 
