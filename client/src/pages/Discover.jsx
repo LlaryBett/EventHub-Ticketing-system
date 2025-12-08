@@ -643,14 +643,20 @@ const Discover = () => {
         {/* Curated Collections with Swiper - Updated Header with Right-side Navigation */}
         {loading ? (
           <section className="mb-16">
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Curated Collections</h2>
-              <p className="text-gray-600">Handpicked events for every occasion</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...Array(4)].map((_, i) => <SkeletonCollection key={i} />)}
-            </div>
-          </section>
+  <div className="mb-8">
+    <h2 className="text-3xl font-bold text-gray-900 mb-2">Curated Collections</h2>
+    <p className="text-gray-600">Handpicked events for every occasion</p>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    {[...Array(4)].map((_, i) => (
+      <div key={i} className="h-full">
+        <SkeletonCollection />
+      </div>
+    ))}
+  </div>
+</section>
+
         ) : discoverData.collections.length > 0 && (
           <section className="mb-16">
             {/* Updated Header with Navigation on Right */}
@@ -696,20 +702,38 @@ const Discover = () => {
                 className="collections-swiper"
               >
                 {discoverData.collections.map((collection, index) => (
-                  <SwiperSlide key={collection._id || index}>
-                    <Link
-                      to={`/events?collection=${collection.slug || collection.title.toLowerCase().replace(/\s+/g, '-')}`}
-                      className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 p-6 group block h-full"
-                    >
-                      <div className={`w-16 h-16 ${collection.color} rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform`}>
-                        {getCollectionIcon(collection.icon)}
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                        {collection.title}
-                      </h3>
-                      <p className="text-gray-600">{collection.description}</p>
-                    </Link>
-                  </SwiperSlide>
+                  <SwiperSlide key={collection._id || index} className="!h-auto">
+  <Link
+    to={`/events?collection=${collection.slug || collection.title.toLowerCase().replace(/\s+/g, '-')}`}
+    className="
+      bg-white 
+      rounded-xl 
+      shadow-md 
+      hover:shadow-xl 
+      transition-all 
+      duration-300 
+      p-6 
+      group 
+      block 
+      h-full 
+      flex flex-col
+    "
+  >
+    <div className={`w-16 h-16 ${collection.color} rounded-full flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform`}>
+      {getCollectionIcon(collection.icon)}
+    </div>
+
+    <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+      {collection.title}
+    </h3>
+
+    {/* THIS PART must not stretch the card */}
+    <p className="text-gray-600 line-clamp-3">
+      {collection.description}
+    </p>
+  </Link>
+</SwiperSlide>
+
                 ))}
               </Swiper>
             </div>
@@ -717,45 +741,84 @@ const Discover = () => {
         )}
 
         {/* CTA Section */}
-        <div className="mt-20 mb-20">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row w-full text-white">
-            <div className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-pink-500 text-white py-16 overflow-hidden flex-1 p-8 md:p-12 flex flex-col justify-center text-left">
-              <div className="absolute inset-0 opacity-10">
-                <div className="absolute -top-4 -left-4 w-24 h-24 bg-white rounded-full"></div>
-                <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white rounded-full"></div>
-                <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-white rounded-full"></div>
-              </div>
-              
-              <div className="relative z-10">
-                <h2 className="text-3xl font-bold mb-4">
-                  Can't Find What You're Looking For?
-                </h2>
-                <p className="text-xl text-blue-100 mb-6 max-w-2xl">
-                  Create your own event and bring your community together.
-                </p>
-                <div className="flex flex-row gap-3">
-                  <Link to="/organizer">
-                    <button className="px-5 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors duration-200 text-sm sm:text-base">
-                      Create Your Event
-                    </button>
-                  </Link>
-                  <button className="px-5 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white/10 transition-colors duration-200 text-sm sm:text-base">
-                    Learn More
-                  </button>
-                </div>
-              </div>
-            </div>
+       <div className="my-16 px-4 sm:px-6">
+  <div className="
+    relative 
+    rounded-2xl shadow-2xl overflow-hidden 
+    flex flex-col md:flex-row w-full text-white
+    bg-gradient-to-r from-blue-600 to-purple-600
+  ">
 
-            <div
-              className="flex-1 bg-cover bg-center min-h-[250px] md:min-h-auto"
-              style={{
-                backgroundImage:
-                  "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80')",
-                clipPath: "polygon(20% 0, 100% 0, 100% 100%, 5% 100%, 0 50%)",
-              }}
-            ></div>
-          </div>
+    {/* LEFT SIDE */}
+    <div className="
+      relative 
+      flex-1 
+      py-12 px-6 sm:px-10 md:px-12 
+      flex flex-col justify-center text-left
+    ">
+      {/* Soft Circles */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
+        <div className="absolute -top-4 -left-4 w-16 h-16 bg-white rounded-full"></div>
+        <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-white rounded-full"></div>
+        <div className="absolute top-1/2 left-1/4 w-12 h-12 bg-white rounded-full"></div>
+      </div>
+
+      <div className="relative z-10">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-4 leading-tight">
+          Can't Find What You're Looking For?
+        </h2>
+
+        <p className="text-base sm:text-lg text-blue-100 mb-6 max-w-xl">
+          Create your own event and bring your community together.
+        </p>
+
+        {/* BUTTONS */}
+        <div className="flex flex-row gap-3 sm:gap-4">
+          <Link to="/organizer">
+            <button className="
+              px-5 py-3 bg-white text-blue-600 
+              font-semibold rounded-lg hover:bg-gray-50 
+              transition duration-200 text-sm sm:text-base
+            ">
+              Create Your Event
+            </button>
+          </Link>
+
+          <button className="
+            px-5 py-3 border-2 border-white 
+            text-white font-semibold rounded-lg 
+            hover:bg-white/10 transition duration-200
+            text-sm sm:text-base
+          ">
+            Learn More
+          </button>
         </div>
+      </div>
+    </div>
+
+    {/* RIGHT SIDE IMAGE */}
+    <div
+      className="
+        hidden md:block flex-1 relative
+        [clip-path:polygon(20%_0,100%_0,100%_100%,5%_100%,0_50%)]
+      "
+    >
+      {/* IMAGE */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage:
+            "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80')",
+        }}
+      ></div>
+
+      {/* OVERLAY TO HIDE SEAM — does NOT change shape */}
+      <div className="absolute inset-0 bg-gradient-to-l from-transparent to-purple-600/70"></div>
+    </div>
+
+  </div>
+</div>
+
       </div>
     </div>
   );

@@ -71,37 +71,81 @@ const Features = () => {
           ))}
         </div>
 
-        {/* Your Original CTA Section - COMPLETELY UNTOUCHED */}
-        <div className="mt-20">
-          <div className="bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row w-full">
-            {/* Left: Text content */}
-            <div className="flex-1 p-6 md:p-10 flex flex-col justify-center text-left">
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
-                Ready to Get Started?
-              </h3>
-              <p className="text-base md:text-lg text-gray-600 mb-6 leading-relaxed">
-                Join EventHub today and discover a world of amazing events waiting for you.
-              </p>
-              <div className="flex flex-row gap-3">
-                <button className="px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm sm:text-base">
-                  Sign Up For Free
-                </button>
-                <button className="px-4 py-3 border-2 border-blue-600 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-colors duration-200 text-sm sm:text-base">
-                  Learn More
-                </button>
-              </div>
-            </div>
-            
-            {/* Right: Image with left < cut, top longer */}
-            <div
-              className="flex-1 bg-cover bg-center min-h-[250px] md:min-h-auto"
-              style={{
-                backgroundImage: "url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&h=400&fit=crop')",
-                clipPath: "polygon(20% 0, 100% 0, 100% 100%, 5% 100%, 0 50%)"
-              }}
-            ></div>
-          </div>
+        <div className="my-16 px-4 sm:px-6">
+  <div className="
+    relative 
+    rounded-2xl shadow-2xl overflow-hidden 
+    flex flex-col md:flex-row w-full
+    bg-gradient-to-r from-blue-600 to-purple-600
+    text-white
+  ">
+
+    {/* LEFT SIDE — MATCHED EXACTLY TO PREVIOUS CTA */}
+    <div className="
+      relative 
+      flex-1 
+      py-12 px-6 sm:px-10 md:px-12 
+      flex flex-col justify-center text-left
+    ">
+      {/* Soft Circles */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none">
+        <div className="absolute -top-4 -left-4 w-16 h-16 bg-white rounded-full"></div>
+        <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-white rounded-full"></div>
+        <div className="absolute top-1/2 left-1/4 w-12 h-12 bg-white rounded-full"></div>
+      </div>
+
+      <div className="relative z-10">
+        <h3 className="text-2xl sm:text-3xl font-bold mb-4 leading-tight">
+          Ready to Get Started?
+        </h3>
+
+        <p className="text-base sm:text-lg text-blue-100 mb-6 max-w-xl leading-relaxed">
+          Join EventHub today and discover a world of amazing events waiting for you.
+        </p>
+
+        {/* BUTTONS (never vertical) */}
+        <div className="flex flex-row gap-3 sm:gap-4">
+          <button className="
+            px-5 py-3 bg-white text-blue-600 
+            font-semibold rounded-lg hover:bg-gray-50 
+            transition duration-200 text-sm sm:text-base
+          ">
+            Sign Up For Free
+          </button>
+
+          <button className="
+            px-5 py-3 border-2 border-white 
+            text-white font-semibold rounded-lg 
+            hover:bg-white/10 transition duration-200
+            text-sm sm:text-base
+          ">
+            Learn More
+          </button>
         </div>
+      </div>
+    </div>
+
+    {/* RIGHT SIDE IMAGE — SAME CLIP PATH AS BEFORE */}
+    <div className="
+      hidden md:block flex-1 
+      relative 
+      [clip-path:polygon(18%_0,100%_0,100%_100%,5%_100%)]
+    ">
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage:
+            "url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&h=400&fit=crop')",
+        }}
+      ></div>
+
+      {/* Soft overlay to hide seam */}
+      <div className="absolute inset-0 bg-gradient-to-l from-transparent to-purple-600/60"></div>
+    </div>
+
+  </div>
+</div>
+
       </div>
     </section>
   );

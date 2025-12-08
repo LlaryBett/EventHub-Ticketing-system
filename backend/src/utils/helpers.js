@@ -183,40 +183,289 @@ const createIssuedTickets = async (order, user) => {
 
 // Send tickets email
 const sendTicketsEmail = async (order, user, issuedTickets) => {
-  const emailContent = `
-    <h2>Thank you for your order!</h2>
-    <p>Your order #${order.orderNumber} has been confirmed.</p>
-    <p>You have ${issuedTickets.length} ticket(s):</p>
-    <ul>
-      ${issuedTickets
-        .map(
-          (ticket) => `
-        <li>
-          <strong>${ticket.eventId?.title || ''}</strong> - ${
-            ticket.ticketType || ''
-          }<br>
-          Ticket Code: ${ticket.ticketCode}<br>
-          <img src="${ticket.qrCode}" alt="QR Code" width="100">
-        </li>`
-        )
-        .join('')}
-    </ul>
-    ${
-      order.isGuestOrder
-        ? `
-    <p>You checked out as a guest. <a href="${
-      process.env.FRONTEND_URL
-    }/claim-account?email=${order.customerEmail}">Claim your account</a> to access your tickets anytime.</p>
-    `
-        : ''
+  // Debug logging at the start
+  console.log('========== SEND TICKETS EMAIL DEBUG ==========');
+  console.log('Order ID:', order._id);
+  console.log('Order Number:', order.orderNumber);
+  console.log('Customer Email:', order.customerEmail);
+  console.log('User:', user ? `${user.data?.name} (${user.data?.email})` : 'No user');
+  console.log('Total Tickets:', issuedTickets.length);
+  console.log('Is Guest Order:', order.isGuestOrder);
+  
+  // Debug each ticket's QR code
+  console.log('\n--- TICKET QR CODE ANALYSIS ---');
+  issuedTickets.forEach((ticket, index) => {
+    console.log(`\nTicket ${index + 1}:`);
+    console.log('  Ticket Code:', ticket.ticketCode);
+    console.log('  Event Title:', ticket.eventId?.title || 'N/A');
+    console.log('  Has QR Code:', !!ticket.qrCode);
+    console.log('  QR Code Type:', typeof ticket.qrCode);
+    
+    if (ticket.qrCode) {
+      console.log('  QR Code Length:', ticket.qrCode.length);
+      console.log('  First 100 chars:', ticket.qrCode.substring(0, 100));
+      
+      // Check QR code format
+      if (ticket.qrCode.startsWith('data:image')) {
+        console.log('  Format: Base64 Data URL');
+        console.log('  Is Base64 valid:', ticket.qrCode.includes('base64,'));
+        console.log('  Mime type:', ticket.qrCode.substring(5, ticket.qrCode.indexOf(';')));
+      } else if (ticket.qrCode.startsWith('http')) {
+        console.log('  Format: URL');
+        console.log('  URL:', ticket.qrCode);
+      } else if (ticket.qrCode.startsWith('<svg') || ticket.qrCode.includes('svg')) {
+        console.log('  Format: SVG');
+      } else {
+        console.log('  Format: Unknown');
+      }
+    } else {
+      console.log('  WARNING: QR code is null/undefined!');
     }
-  `;
-
-  await sendEmail({
-    to: order.customerEmail,
-    subject: 'Your Tickets Are Ready!',
-    html: emailContent,
+    
+    // Check for any image-related properties
+    const imageProps = Object.keys(ticket).filter(key => 
+      key.toLowerCase().includes('qr') || 
+      key.toLowerCase().includes('code') ||
+      key.toLowerCase().includes('image')
+    );
+    if (imageProps.length > 1) {
+      console.log('  Other image properties:', imageProps);
+    }
   });
+  
+  // Check environment variables
+  console.log('\n--- ENVIRONMENT CHECK ---');
+  console.log('FRONTEND_URL exists:', !!process.env.FRONTEND_URL);
+  if (process.env.FRONTEND_URL) {
+    console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
+  }
+  
+  // Sample the email content for debugging
+  console.log('\n--- EMAIL CONTENT PREVIEW ---');
+  if (issuedTickets[0]?.qrCode) {
+    const sampleQR = issuedTickets[0].qrCode;
+    const qrPreview = sampleQR.startsWith('data:image') 
+      ? 'Base64 data (truncated)...' 
+      : sampleQR;
+    console.log('Sample QR in HTML:', `<img src="${qrPreview.substring(0, 100)}...">`);
+  }
+  
+  // Create a test ticket with a known image for debugging
+  const testTicket = {
+    ...issuedTickets[0],
+    qrCode: 'https://via.placeholder.com/200x200/667eea/ffffff?text=TEST+QR'
+  };
+  
+  console.log('\n--- TEST TICKET ---');
+  console.log('Test QR URL:', testTicket.qrCode);
+  
+  // Simple, clean design that focuses on the tickets
+  const emailContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          line-height: 1.6;
+          color: #333;
+          margin: 0;
+          padding: 0;
+        }
+        .container {
+          max-width: 600px;
+          margin: 0 auto;
+        }
+        .header {
+          padding: 30px 20px;
+          text-align: center;
+          background: #667eea;
+          color: white;
+        }
+        .content {
+          padding: 30px 20px;
+        }
+        .ticket {
+          border: 2px solid #e5e7eb;
+          border-radius: 10px;
+          margin: 25px 0;
+          padding: 20px;
+          background: white;
+        }
+        .ticket-header {
+          margin-bottom: 20px;
+        }
+        .ticket-title {
+          font-size: 18px;
+          font-weight: 600;
+          margin: 0 0 8px 0;
+          color: #111827;
+        }
+        .ticket-meta {
+          color: #6b7280;
+          font-size: 14px;
+        }
+        .ticket-body {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+        .ticket-code {
+          background: #f9fafb;
+          padding: 12px;
+          border-radius: 6px;
+          font-family: monospace;
+          font-size: 16px;
+          text-align: center;
+        }
+        .qr-container {
+          text-align: center;
+          padding: 20px;
+        }
+        .qr-code {
+          max-width: 200px;
+          height: auto;
+          margin: 0 auto;
+          border: 1px solid #ddd; /* Add border to make visible even if image fails */
+        }
+        .btn {
+          display: inline-block;
+          background: #667eea;
+          color: white;
+          padding: 12px 24px;
+          text-decoration: none;
+          border-radius: 6px;
+          font-weight: 600;
+        }
+        .footer {
+          margin-top: 40px;
+          padding-top: 20px;
+          border-top: 1px solid #e5e7eb;
+          color: #6b7280;
+          font-size: 14px;
+        }
+        @media (min-width: 480px) {
+          .ticket-body {
+            flex-direction: row;
+            align-items: center;
+          }
+          .ticket-code {
+            flex: 1;
+          }
+          .qr-container {
+            flex-shrink: 0;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0; font-size: 24px;">🎟 Your Tickets</h1>
+          <p style="margin: 10px 0 0; opacity: 0.9;">
+            Order #${order.orderNumber}
+          </p>
+        </div>
+        
+        <div class="content">
+          <p>Hi ${user?.data?.name?.split(' ')[0] || 'there'},</p>
+          <p>Your order has been confirmed! Here are your ${issuedTickets.length} ticket${issuedTickets.length > 1 ? 's' : ''}:</p>
+          
+          ${issuedTickets.map(ticket => `
+            <div class="ticket">
+              <div class="ticket-header">
+                <h2 class="ticket-title">${ticket.eventId?.title || 'Event Ticket'}</h2>
+                <div class="ticket-meta">
+                  ${ticket.ticketType || 'General Admission'}
+                  ${ticket.seatNumber ? ` • Seat ${ticket.seatNumber}` : ''}
+                </div>
+              </div>
+              
+              <div class="ticket-body">
+                <div class="ticket-code">
+                  <div style="font-size: 12px; margin-bottom: 4px; color: #6b7280;">TICKET CODE</div>
+                  ${ticket.ticketCode}
+                </div>
+                
+                <div class="qr-container">
+                  <img 
+                    src="${ticket.qrCode || 'https://via.placeholder.com/200x200/ff0000/ffffff?text=QR+NOT+FOUND'}" 
+                    alt="QR Code for ${ticket.ticketCode}" 
+                    class="qr-code"
+                    style="border: ${!ticket.qrCode ? '2px solid #ff0000' : '1px solid #ddd'};"
+                  >
+                  <div style="font-size: 12px; margin-top: 8px; color: #6b7280;">
+                    Scan at entry
+                    ${!ticket.qrCode ? '<br><span style="color: #ff0000;">(QR code missing - using fallback)</span>' : ''}
+                  </div>
+                </div>
+              </div>
+              
+              ${!ticket.qrCode ? `
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; padding: 12px; margin-top: 16px;">
+                  <p style="margin: 0; font-size: 14px; color: #856404;">
+                    ⚠️ <strong>Note:</strong> QR code could not be loaded. Please present your ticket code at entry: 
+                    <strong>${ticket.ticketCode}</strong>
+                  </p>
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || '#'}/orders/${order._id}" class="btn">
+              View Order Details
+            </a>
+          </div>
+          
+          ${order.isGuestOrder ? `
+            <div style="background: #f0f4ff; padding: 16px; border-radius: 6px; margin: 20px 0;">
+              <p style="margin: 0; color: #374151;">
+                <strong>Guest Checkout:</strong> 
+                <a href="${process.env.FRONTEND_URL || '#'}/claim-account?email=${order.customerEmail}" 
+                   style="color: #667eea; font-weight: 600;">
+                  Claim your account
+                </a> to access tickets anytime.
+              </p>
+            </div>
+          ` : ''}
+          
+          <div class="footer">
+            <p style="margin: 0; text-align: center;">
+              Need help? <a href="mailto:support@eventhub.com" style="color: #667eea;">Contact Support</a>
+            </p>
+            <p style="margin: 10px 0 0; text-align: center; font-size: 12px; color: #9ca3af;">
+              © ${new Date().getFullYear()} EventHub
+            </p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  // Debug the email content size
+  console.log('\n--- EMAIL STATISTICS ---');
+  console.log('Email content length:', emailContent.length, 'characters');
+  console.log('Email HTML preview (first 500 chars):', emailContent.substring(0, 500));
+  
+  try {
+    console.log('\n--- SENDING EMAIL ---');
+    await sendEmail({
+      to: order.customerEmail,
+      subject: `Your Tickets for Order #${order.orderNumber}`,
+      html: emailContent,
+    });
+    console.log('✅ Email sent successfully to:', order.customerEmail);
+  } catch (error) {
+    console.error('❌ Failed to send email:', error);
+    console.error('Error details:', error.message);
+    throw error;
+  }
+  
+  console.log('\n========== DEBUG COMPLETE ==========\n');
 };
 
 module.exports = {

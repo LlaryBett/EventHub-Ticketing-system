@@ -11,18 +11,17 @@ const Layout = ({ children }) => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
+
       <main className="flex-1">
         {children}
       </main>
-      
-      {/* Hide footer on mobile (lg breakpoint and below) */}
-      <div className="hidden lg:block">
-        <Footer />
-      </div>
-      
+
+      {/* Footer should always be visible */}
+      <Footer />
+
       {/* Cart Sidebar */}
       <CartSidebar />
-    
+
       {/* Notifications */}
       <NotificationSystem />
     </div>
