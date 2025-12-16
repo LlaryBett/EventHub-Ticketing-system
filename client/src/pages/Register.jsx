@@ -226,17 +226,7 @@ const Register = () => {
         {/* Left Column - Benefits */}
         <div className="hidden lg:flex lg:w-1/2 flex-col justify-center px-12">
           <div className="max-w-2xl w-full">
-            <div className="flex items-center space-x-2 mb-6">
-              <div className={`w-10 h-10 ${isAttendee ? 'bg-blue-600' : 'bg-purple-600'} rounded-lg flex items-center justify-center`}>
-                <span className="text-white font-bold text-xl">E</span>
-              </div>
-              <span className="text-2xl font-bold text-gray-900">EventHub</span>
-              <span className={`text-sm px-2 py-1 rounded-full ${isAttendee ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
-                {isAttendee ? 'Attendee' : 'Organizer'}
-              </span>
-            </div>
-
-            {/* Dynamic content based on registration type */}
+            {/* Logo/name removed to avoid duplication with the app header */}
             <h1 className="text-3xl font-bold text-gray-900 mb-3">
               {isAttendee ? 'Join EventHub' : 'Become an Event Organizer'}
             </h1>
@@ -317,15 +307,6 @@ const Register = () => {
           <div className="max-w-md w-full">
             {/* Mobile Header */}
             <div className="lg:hidden text-center mb-6">
-              <Link to="/" className="flex items-center justify-center space-x-2 mb-4">
-                <div className={`w-8 h-8 ${isAttendee ? 'bg-blue-600' : 'bg-purple-600'} rounded-lg flex items-center justify-center`}>
-                  <span className="text-white font-bold text-lg">E</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">EventHub</span>
-                <span className={`text-xs px-2 py-1 rounded-full ${isAttendee ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
-                  {isAttendee ? 'Attendee' : 'Organizer'}
-                </span>
-              </Link>
               <h1 className="text-xl font-bold text-gray-900 mb-1">{isAttendee ? 'Become an Attendee' : 'Become an Organizer'}</h1>
               <p className="text-sm text-gray-600">{isAttendee ? 'Register to attend amazing events' : 'Create and manage amazing events'}</p>
             </div>

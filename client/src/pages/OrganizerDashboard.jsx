@@ -496,8 +496,8 @@ const OrganizerDashboard = () => {
     <div className={`min-h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
       <div className="max-w-7xl mx-auto container-padding py-8">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-center">
-          <div>
+        <div className="mb-8">
+          <div className="mb-4">
             <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
               Organizer Dashboard
             </h1>
@@ -505,7 +505,7 @@ const OrganizerDashboard = () => {
               Manage your events and track your success
             </p>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Button
               variant="outline"
               onClick={() => setDarkMode(!darkMode)}
@@ -513,25 +513,24 @@ const OrganizerDashboard = () => {
             >
               {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </Button>
-            <Button variant="outline" className="relative">
+            <Button variant="outline" className="relative p-2">
               <Bell className="w-4 h-4" />
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
             </Button>
-            <Link to="/organizer">
-              <Button className="flex items-center space-x-2">
+            <Link to="/organizer" className="flex-1 sm:flex-none">
+              <Button className="w-full sm:w-auto flex items-center justify-center space-x-2">
                 <Plus className="w-4 h-4" />
                 <span>Create Event</span>
               </Button>
             </Link>
           </div>
         </div>
-        {/* mobile */}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar Navigation */}
           <div className="lg:col-span-1">
-            <div className={`rounded-lg shadow-md p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-              <div className="flex items-center mb-6">
+            <div className={`rounded-lg shadow-md p-4 lg:p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className="hidden lg:flex items-center mb-6">
                 <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
                   {user.data.name?.charAt(0)}
                 </div>
@@ -551,23 +550,24 @@ const OrganizerDashboard = () => {
                 </div>
               </div>
 
-              <nav className="space-y-2">
+              <nav className="flex lg:flex-col space-x-2 lg:space-x-0 lg:space-y-2 overflow-x-auto lg:overflow-x-visible">
                 {tabs.map((tab) => {
                   const IconComponent = tab.icon;
                   return (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors duration-200 ${
+                      title={tab.label}
+                      className={`flex-shrink-0 lg:flex-shrink w-12 h-12 lg:w-full flex items-center justify-center lg:justify-start lg:px-4 lg:py-3 rounded-lg transition-colors duration-200 ${
                         activeTab === tab.id
-                          ? 'bg-primary-50 text-primary-700 border-r-4 border-primary-700'
+                          ? 'bg-primary-50 text-primary-700 lg:border-r-4 lg:border-primary-700'
                           : darkMode 
                             ? 'text-gray-300 hover:bg-gray-700' 
                             : 'text-gray-600 hover:bg-gray-50'
                       }`}
                     >
-                      <IconComponent className="w-5 h-5 mr-3" />
-                      {tab.label}
+                      <IconComponent className="w-5 h-5" />
+                      <span className="hidden lg:inline ml-3">{tab.label}</span>
                     </button>
                   );
                 })}
@@ -720,15 +720,15 @@ const OrganizerDashboard = () => {
                     </h2>
                     
                     {/* Search and Filters */}
-                    <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                      <div className="relative">
+                    <div className="flex flex-wrap gap-2 sm:gap-4 w-full">
+                      <div className="relative flex-1 min-w-[200px] sm:flex-none sm:w-64">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                           type="text"
                           placeholder="Search events..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className={`pl-10 pr-4 py-2 border rounded-lg w-full sm:w-64 ${
+                          className={`pl-10 pr-4 py-2 border rounded-lg w-full ${
                             darkMode 
                               ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
                               : 'bg-white border-gray-300'
@@ -739,7 +739,7 @@ const OrganizerDashboard = () => {
                       <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className={`px-3 py-2 border rounded-lg ${
+                        className={`px-3 py-2 border rounded-lg flex-1 min-w-[140px] sm:flex-none ${
                           darkMode 
                             ? 'bg-gray-700 border-gray-600 text-white' 
                             : 'bg-white border-gray-300'
@@ -755,7 +755,7 @@ const OrganizerDashboard = () => {
                       <select
                         value={categoryFilter}
                         onChange={(e) => setCategoryFilter(e.target.value)}
-                        className={`px-3 py-2 border rounded-lg ${
+                        className={`px-3 py-2 border rounded-lg flex-1 min-w-[140px] sm:flex-none ${
                           darkMode 
                             ? 'bg-gray-700 border-gray-600 text-white' 
                             : 'bg-white border-gray-300'
@@ -765,20 +765,13 @@ const OrganizerDashboard = () => {
                           <option key={cat.value} value={cat.value}>{cat.label}</option>
                         ))}
                       </select>
-                      
-                      <Link to="/organizer">
-                        <Button className="flex items-center space-x-2">
-                          <Plus className="w-4 h-4" />
-                          <span>Create Event</span>
-                        </Button>
-                      </Link>
                     </div>
                   </div>
                 </div>
                 
-                <div className="p-6">
+                <div className="overflow-x-auto">
                   {filteredEvents.length === 0 ? (
-                    <div className="text-center py-8">
+                    <div className="p-6 text-center">
                       <Calendar className={`w-16 h-16 mx-auto mb-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
                       <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray'}`}>
                         You haven't created any events yet.
@@ -788,152 +781,154 @@ const OrganizerDashboard = () => {
                       </Link>
                     </div>
                   ) : (
-                    <>
-                      <div className="space-y-4">
-                        {filteredEvents.slice(indexOfFirstEvent, indexOfLastEvent).map((event) => (
-                          <React.Fragment key={event.eventId}>
-                            <div className={`mb-2 text-base font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {event.title}
-                              <span className="ml-2 text-primary-600">
-                                {event.registered !== undefined ? event.registered : event.attendees || 0} registered attendees
-                              </span>
-                            </div>
-                            <div className={`border rounded-lg p-6 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                    {event.title}
-                                  </h3>
-                                  <div className={`space-y-1 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                    <p>{formatDate(event.date)}</p>
-                                    <p className="flex items-center">
-                                      <Users className="w-4 h-4 mr-2" />
-                                      {event.attendees}/{event.capacity} registered
-                                    </p>
-                                    <p className="flex items-center">
-                                      <DollarSign className="w-4 h-4 mr-2" />
-                                      {formatPrice(event.revenue)} revenue
-                                    </p>
-                                  </div>
-                                  <div className="mt-2 flex items-center space-x-2">
-                                    <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                                      event.isUpcoming
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-gray-100 text-gray-800'
-                                    }`}>
-                                      {event.isUpcoming ? 'Upcoming' : 'Past'}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="flex space-x-2">
-                                  <Button 
-                                    size="small" 
-                                    variant="outline"
-                                    onClick={() => {
-                                      setSelectedEvent(event);
-                                      setShowAttendeesModal(true);
-                                    }}
-                                  >
-                                    <Users className="w-4 h-4" />
-                                  </Button>
-                                  <Button 
-                                    size="small" 
-                                    variant="outline"
-                                    onClick={() => {
-                                      setSelectedEvent(event);
-                                      setShowEditModal(true);
-                                    }}
-                                  >
-                                    <Edit className="w-4 h-4" />
-                                  </Button>
-                                  <Button 
-                                    size="small" 
-                                    variant="outline"
-                                    onClick={() => {
-                                      setSelectedEvent(event);
-                                      setShowDuplicateModal(true);
-                                    }}
-                                  >
-                                    <Copy className="w-4 h-4" />
-                                  </Button>
-                                  <Button 
-                                    size="small" 
-                                    variant="outline"
-                                    onClick={() => {
-                                      setSelectedEvent(event);
-                                      setShowNotificationModal(true);
-                                    }}
-                                  >
-                                    <Mail className="w-4 h-4" />
-                                  </Button>
-                                  <Button 
-                                    size="small" 
-                                    variant="danger"
-                                    onClick={() => {
-                                      setSelectedEvent(event);
-                                      setShowDeleteModal(true);
-                                    }}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
+                    <div className="divide-y">
+                      {filteredEvents.slice(indexOfFirstEvent, indexOfLastEvent).map((event) => (
+                        <div key={event.eventId} className={`p-4 sm:p-6 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                              <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {event.title}
+                              </h3>
+                              <div className={`space-y-1 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                <p>{formatDate(event.date)}</p>
+                                <p className="flex items-center">
+                                  <Users className="w-4 h-4 mr-2" />
+                                  {event.attendees}/{event.capacity} registered
+                                </p>
+                                <p className="flex items-center">
+                                  <DollarSign className="w-4 h-4 mr-2" />
+                                  {formatPrice(event.revenue)} revenue
+                                </p>
                               </div>
-                              <div className={`mt-4 pt-4 border-t ${darkMode ? 'border-gray-700' : ''}`}>
-                                <div className="grid grid-cols-3 gap-4 text-center">
-                                  <div>
-                                    <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                      {event.attendees}
-                                    </p>
-                                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                      Attendees
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-2xl font-bold text-green-600">
-                                      {formatPrice(event.revenue)}
-                                    </p>
-                                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                      Revenue
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-2xl font-bold text-blue-600">
-                                      {event.capacityUtilization}%
-                                    </p>
-                                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                      Capacity
-                                    </p>
-                                  </div>
+                              <div className="mt-2">
+                                <span className={`inline-block px-2 py-1 text-xs rounded-full ${
+                                  event.isUpcoming
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {event.isUpcoming ? 'Upcoming' : 'Past'}
+                                </span>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="grid grid-cols-3 gap-2 text-center">
+                                <div className={`p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                  <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    {event.attendees}
+                                  </p>
+                                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    Attendees
+                                  </p>
+                                </div>
+                                <div className={`p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                  <p className="text-sm font-bold text-green-600">
+                                    {formatPrice(event.revenue)}
+                                  </p>
+                                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    Revenue
+                                  </p>
+                                </div>
+                                <div className={`p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                                  <p className="text-sm font-bold text-blue-600">
+                                    {event.capacityUtilization}%
+                                  </p>
+                                  <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    Capacity
+                                  </p>
                                 </div>
                               </div>
                             </div>
-                          </React.Fragment>
-                        ))}
-                      </div>
-                      {totalPages > 1 && (
-                        <div className="flex justify-center items-center space-x-4 mt-6">
-                          <Button
-                            variant="outline"
-                            disabled={currentPage === 1}
-                            onClick={() => setCurrentPage(prev => prev - 1)}
-                          >
-                            Previous
-                          </Button>
-                          <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                            Page {currentPage} of {totalPages}
-                          </span>
-                          <Button
-                            variant="outline"
-                            disabled={currentPage === totalPages}
-                            onClick={() => setCurrentPage(prev => prev + 1)}
-                          >
-                            Next
-                          </Button>
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-2">
+                            <Button 
+                              size="small" 
+                              variant="outline"
+                              title="View Attendees"
+                              onClick={() => {
+                                setSelectedEvent(event);
+                                setShowAttendeesModal(true);
+                              }}
+                            >
+                              <Users className="w-4 h-4" />
+                              <span className="hidden sm:inline ml-1">Attendees</span>
+                            </Button>
+                            <Button 
+                              size="small" 
+                              variant="outline"
+                              title="Edit Event"
+                              onClick={() => {
+                                setSelectedEvent(event);
+                                setShowEditModal(true);
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                              <span className="hidden sm:inline ml-1">Edit</span>
+                            </Button>
+                            <Button 
+                              size="small" 
+                              variant="outline"
+                              title="Duplicate Event"
+                              onClick={() => {
+                                setSelectedEvent(event);
+                                setShowDuplicateModal(true);
+                              }}
+                            >
+                              <Copy className="w-4 h-4" />
+                              <span className="hidden sm:inline ml-1">Duplicate</span>
+                            </Button>
+                            <Button 
+                              size="small" 
+                              variant="outline"
+                              title="Send Notification"
+                              onClick={() => {
+                                setSelectedEvent(event);
+                                setShowNotificationModal(true);
+                              }}
+                            >
+                              <Mail className="w-4 h-4" />
+                              <span className="hidden sm:inline ml-1">Notify</span>
+                            </Button>
+                            <Button 
+                              size="small" 
+                              variant="danger"
+                              title="Delete Event"
+                              onClick={() => {
+                                setSelectedEvent(event);
+                                setShowDeleteModal(true);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              <span className="hidden sm:inline ml-1">Delete</span>
+                            </Button>
+                          </div>
                         </div>
-                      )}
-                    </>
+                      ))}
+                    </div>
                   )}
                 </div>
+                
+                {filteredEvents.length > 0 && totalPages > 1 && (
+                  <div className="flex justify-center items-center space-x-4 p-6 border-t">
+                    <Button
+                      variant="outline"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(prev => prev - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage(prev => prev + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1715,7 +1710,7 @@ const OrganizerDashboard = () => {
         >
           <div className="space-y-4">
             <p className={`${darkMode ? 'text-gray-300' : 'text-gray'}`}>
-              Create a copy of "{selectedEvent?.title}"?
+              Create a copy of "{selectedEvent?.title}"
             </p>
             <div className="space-y-4">
               <div>
@@ -1749,6 +1744,7 @@ const OrganizerDashboard = () => {
             <div className="flex justify-end space-x-4">
               <Button variant="outline" onClick={() => setShowDuplicateModal(false)}>
                 Cancel
+             
               </Button>
               <Button onClick={() => handleDuplicateEvent({})}>
                 Duplicate Event

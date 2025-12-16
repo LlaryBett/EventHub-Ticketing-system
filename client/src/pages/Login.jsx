@@ -134,14 +134,8 @@ const Login = () => {
         {/* Right Column - Form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center p-4">
           <div className="max-w-xs w-full">
-            {/* Header */}
+            {/* Header (logo/name removed — app header provides branding) */}
             <div className="text-center mb-4">
-              <Link to="/" className="flex items-center justify-center space-x-2 mb-2">
-                <div className="w-7 h-7 bg-primary-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-base">E</span>
-                </div>
-                <span className="text-4xl font-bold text-gray-900 ">EventHub</span>
-              </Link>
               <h1 className="text-base font-bold text-gray-900 mb-1">Welcome Back</h1>
               <p className="text-xs text-gray-600">Sign in to your account to continue</p>
             </div>
