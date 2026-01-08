@@ -816,7 +816,7 @@ const deleteEvent = async (req, res) => {
 // Get featured events - FIXED VERSION
 const getFeaturedEvents = async (req, res) => {
   try {
-    const events = await Event.find({ featured: true, status: 'published' })
+    const events = await Event.find({ featured: true })
       .populate('organizer', 'organizationName businessType logo')
       .populate('tickets')
       .limit(10);
@@ -838,7 +838,9 @@ const getFeaturedEvents = async (req, res) => {
 
     // USE THE SAME TRANSFORMATION AS getAllEvents
     const transformedEvents = eventsWithRegisteredCounts.map(({ event, registeredCount }) => {
-      const categoryDetails = discoverCategories.find(cat => cat.slug === event.category);
+      const categoryDetails = discoverCategories.find(
+        cat => cat.slug === event.category
+      );
 
       return {
         id: event._id.toString(),
@@ -848,16 +850,20 @@ const getFeaturedEvents = async (req, res) => {
         date: event.date ? event.date.toISOString().split('T')[0] : null,
         time: event.time || null,
         venue: event.venue || null,
-        // ADDED: New event detail fields
+
+        // Event detail fields
         duration: event.duration,
         ageRestriction: event.ageRestriction,
         ticketDelivery: event.ticketDelivery,
         venueAddress: event.venueAddress,
         eventType: event.eventType,
-        // ADDED: Free event support - CRITICAL for frontend display
+
+        // Pricing logic
         pricingType: event.pricingType || 'paid',
         displayPrice: event.pricingType === 'free' ? 'Free' : 'Paid',
-        actionButtonText: event.pricingType === 'free' ? 'Reserve Spot' : 'Buy Tickets',
+        actionButtonText:
+          event.pricingType === 'free' ? 'Reserve Spot' : 'Buy Tickets',
+
         tickets: (event.tickets || []).map(ticket => ({
           id: ticket._id.toString(),
           type: ticket.type,
@@ -872,27 +878,33 @@ const getFeaturedEvents = async (req, res) => {
           salesEnd: ticket.salesEnd,
           isActive: ticket.isActive
         })),
-        category: categoryDetails ? {
-          id: categoryDetails.slug,
-          name: categoryDetails.name,
-          icon: categoryDetails.icon,
-          color: categoryDetails.colorGradient,
-          slug: categoryDetails.slug
-        } : {
-          id: event.category,
-          name: event.category,
-          icon: 'Users',
-          color: 'from-gray-500 to-gray-700',
-          slug: event.category
-        },
-        organizer: event.organizer ? {
-          id: event.organizer._id,
-          organizationName: event.organizer.organizationName,
-          businessType: event.organizer.businessType,
-          logo: event.organizer.logo
-        } : null,
+
+        category: categoryDetails
+          ? {
+              id: categoryDetails.slug,
+              name: categoryDetails.name,
+              icon: categoryDetails.icon,
+              color: categoryDetails.colorGradient,
+              slug: categoryDetails.slug
+            }
+          : {
+              id: event.category,
+              name: event.category,
+              icon: 'Users',
+              color: 'from-gray-500 to-gray-700',
+              slug: event.category
+            },
+
+        organizer: event.organizer
+          ? {
+              id: event.organizer._id,
+              organizationName: event.organizer.organizationName,
+              businessType: event.organizer.businessType,
+              logo: event.organizer.logo
+            }
+          : null,
+
         capacity: event.capacity,
-        // CHANGED: Use calculated count instead of stored field
         registered: registeredCount,
         featured: event.featured,
         tags: event.tags || [],
@@ -912,6 +924,7 @@ const getFeaturedEvents = async (req, res) => {
     });
   }
 };
+
 
 // Register user for an event
 const registerForEvent = async (req, res) => {

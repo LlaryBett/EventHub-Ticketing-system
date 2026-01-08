@@ -86,7 +86,7 @@ const EventCard = ({ event }) => {
       <div
         className="card overflow-hidden group flex flex-col h-full cursor-pointer"
         tabIndex={-1}
-        style={{ height: '440px' }} // Reduced from 480px to 440px
+        style={{ height: '420px' }} // Reduced from 440px to 420px
       >
         <div className="relative">
           <img
@@ -121,28 +121,29 @@ const EventCard = ({ event }) => {
         </div>
 
         <div className="p-4 flex-1 flex flex-col">
-          <div className="mb-2">
+          <div className="mb-1"> {/* Reduced from mb-2 */}
             <span className="text-sm text-primary-600 font-medium capitalize">
               {event.category?.name}
             </span>
           </div>
 
-          <h3 className="text-lg font-semibold text-gray-900 mb-3 line-clamp-2">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2"> {/* Reduced from mb-3 */}
             {event.title}
           </h3>
 
-          <div className="space-y-2 text-sm text-gray-600 mb-4">
-            {/* Date and Time combined in one line - now only 2 rows total */}
-            <div className="flex items-center gap-2">
-              <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Date/Time and Location combined - REDUCED SPACING */}
+          <div className="space-y-1.5 text-sm text-gray-600 mb-3"> {/* Reduced space-y and mb */}
+            {/* Date and Time combined in one line */}
+            <div className="flex items-start gap-1.5"> {/* Reduced gap */}
+              <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span className="text-gray-900 font-medium">{formattedDateTime}</span>
             </div>
 
             {event.venue && (
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-start gap-1.5"> {/* Reduced gap */}
+                <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
@@ -152,10 +153,11 @@ const EventCard = ({ event }) => {
           </div>
         </div>
 
-        <div className="px-4 pb-4 flex items-center justify-between mt-auto gap-2">
+        {/* Action buttons section with reduced padding and tighter layout */}
+        <div className="px-4 pb-3 pt-1 flex items-center justify-between gap-2"> {/* Reduced padding and added pt-1 */}
           <Link
             to={`/events/${event.id}`}
-            className="text-primary-600 hover:text-primary-700 text-sm font-medium inline-flex items-center group/link transition-colors duration-200"
+            className="text-primary-600 hover:text-primary-700 text-sm font-medium inline-flex items-center group/link transition-colors duration-200 py-1" // Added py-1
             tabIndex={-1}
             onClick={e => e.stopPropagation()}
           >
@@ -174,7 +176,7 @@ const EventCard = ({ event }) => {
             <Button
               fullWidth={false}
               onClick={e => handleAddToCart(e, firstTicket)}
-              className={`group-hover:bg-primary-700 min-w-[140px] ${
+              className={`group-hover:bg-primary-700 min-w-[140px] py-1.5 ${
                 isFreeEvent ? 'bg-green-600 hover:bg-green-700' : ''
               }`}
             >
@@ -183,7 +185,7 @@ const EventCard = ({ event }) => {
               )}
             </Button>
           ) : !isUpcoming ? null : (
-            <Button fullWidth={false} disabled variant="secondary" className="min-w-[100px]">
+            <Button fullWidth={false} disabled variant="secondary" className="min-w-[100px] py-1.5">
               No Tickets
             </Button>
           )}

@@ -206,27 +206,7 @@ const HowItWorks = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <a href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">E</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">EventHub</span>
-              <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700">
-                Organizers
-              </span>
-            </a>
-            <div className="flex items-center space-x-4">
-              <a href="/register?type=organizer" className="bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors">
-                Become an Organizer
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
+     
 
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-16">

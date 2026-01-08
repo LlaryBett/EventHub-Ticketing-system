@@ -732,42 +732,6 @@ const EventDetails = () => {
 
             {/* Main Content */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
-              {/* Booking Deadline & Countdown - Visible on All Screens */}
-              {isUpcoming && available > 0 && selectedTicketIndex < tickets.length && tickets[selectedTicketIndex]?.salesEnd && (
-                <div className="mb-6 pb-6 border-b border-gray-200">
-                  <p className="text-sm text-gray-600 mb-3">
-                    Booking will end on <span className="font-semibold">{new Date(tickets[selectedTicketIndex].salesEnd).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} at {new Date(tickets[selectedTicketIndex].salesEnd).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
-                  </p>
-                  <p className="text-xs text-gray-500 mb-3 font-medium">Time left to book this event</p>
-                  <div className="grid grid-cols-4 gap-2">
-                    <div className="text-center">
-                      <div className="bg-gray-50 rounded-lg p-2 mb-1">
-                        <p className="text-sm font-bold text-gray-900">{String(timeLeft.days).padStart(4, '0')}</p>
-                      </div>
-                      <p className="text-xs text-gray-600">days</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="bg-gray-50 rounded-lg p-2 mb-1">
-                        <p className="text-sm font-bold text-gray-900">{String(timeLeft.hours).padStart(4, '0')}</p>
-                      </div>
-                      <p className="text-xs text-gray-600">hours</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="bg-gray-50 rounded-lg p-2 mb-1">
-                        <p className="text-sm font-bold text-gray-900">{String(timeLeft.minutes).padStart(4, '0')}</p>
-                      </div>
-                      <p className="text-xs text-gray-600">minutes</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="bg-gray-50 rounded-lg p-2 mb-1">
-                        <p className="text-sm font-bold text-gray-900">{String(timeLeft.seconds).padStart(4, '0')}</p>
-                      </div>
-                      <p className="text-xs text-gray-600">seconds</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Description */}
               <section className="pb-4 border-b border-gray-200">
                 <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-3">About This Event</h2>
@@ -775,55 +739,55 @@ const EventDetails = () => {
               </section>
 
               {/* Event Details Grid */}
-<section className="py-4 border-b border-gray-200">
-  <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-4">Event Details</h2>
-  
-  <div className="grid grid-cols-2 gap-4 lg:gap-6">
-    
-    <div className="pb-4 border-b border-gray-100">
-      <div className="flex items-center space-x-3">
-        <FiUsers className="w-5 h-5 text-primary-600" />
-        <div>
-          <p className="text-xs lg:text-sm text-gray-500">Capacity</p>
-          <p className="font-semibold text-gray-900 text-sm lg:text-base">{event.capacity} attendees</p>
-        </div>
-      </div>
-    </div>
+              <section className="py-4 border-b border-gray-200">
+                <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-4">Event Details</h2>
+                
+                <div className="grid grid-cols-2 gap-4 lg:gap-6">
+                  
+                  <div className="pb-4 border-b border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <FiUsers className="w-5 h-5 text-primary-600" />
+                      <div>
+                        <p className="text-xs lg:text-sm text-gray-500">Capacity</p>
+                        <p className="font-semibold text-gray-900 text-sm lg:text-base">{event.capacity} attendees</p>
+                      </div>
+                    </div>
+                  </div>
 
-    <div className="pb-4 border-b border-gray-100">
-      <div className="flex items-center space-x-3">
-        <FiUsers className="w-5 h-5 text-green-600" />
-        <div>
-          <p className="text-xs lg:text-sm text-gray-500">Registered</p>
-          <p className="font-semibold text-gray-900 text-sm lg:text-base">{event.registered} people</p>
-        </div>
-      </div>
-    </div>
+                  <div className="pb-4 border-b border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <FiUsers className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="text-xs lg:text-sm text-gray-500">Registered</p>
+                        <p className="font-semibold text-gray-900 text-sm lg:text-base">{event.registered} people</p>
+                      </div>
+                    </div>
+                  </div>
 
-    <div className="pb-4 border-b border-gray-100">
-      <div className="flex items-center space-x-3">
-        <span className="text-blue-600 font-bold">🎫</span>
-        <div>
-          <p className="text-xs lg:text-sm text-gray-500">Available Spots</p>
-          <p className={`font-semibold text-sm lg:text-base ${spotsLeft <= 10 ? 'text-red-600' : 'text-green-600'}`}>
-            {spotsLeft} spots left
-          </p>
-        </div>
-      </div>
-    </div>
+                  <div className="pb-4 border-b border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-blue-600 font-bold">🎫</span>
+                      <div>
+                        <p className="text-xs lg:text-sm text-gray-500">Available Spots</p>
+                        <p className={`font-semibold text-sm lg:text-base ${spotsLeft <= 10 ? 'text-red-600' : 'text-green-600'}`}>
+                          {spotsLeft} spots left
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-    <div className="pb-4 border-b border-gray-100">
-      <div className="flex items-center space-x-3">
-        <span className="text-purple-600 font-bold">⏱️</span>
-        <div>
-          <p className="text-xs lg:text-sm text-gray-500">Duration</p>
-          <p className="font-semibold text-gray-900 text-sm lg:text-base">{event.duration || '2-3 hours'}</p>
-        </div>
-      </div>
-    </div>
+                  <div className="pb-4 border-b border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-purple-600 font-bold">⏱️</span>
+                      <div>
+                        <p className="text-xs lg:text-sm text-gray-500">Duration</p>
+                        <p className="font-semibold text-gray-900 text-sm lg:text-base">{event.duration || '2-3 hours'}</p>
+                      </div>
+                    </div>
+                  </div>
 
-  </div>
-</section>
+                </div>
+              </section>
 
 
               {/* Organizer Info */}

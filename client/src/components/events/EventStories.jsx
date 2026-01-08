@@ -261,17 +261,12 @@ const EventStories = () => {
     const fetchStories = async () => {
       try {
         setLoading(true);
-        setError(null);
-        const response = await eventService.getDiscoverStories();
-        if (response.success) {
-          setStories(response.data || []);
-        } else {
-          setError('Failed to load stories');
-        }
-      } catch (err) {
-        console.error('Error fetching stories:', err);
-        setError('Failed to load stories');
-        setStories([]); // Fallback to empty array
+        const response = await eventService.getOrganizerStories();
+        // Display up to 10 stories instead of 5
+        setStories((response?.data || []).slice(0, 12));
+      } catch (error) {
+        console.error('Failed to fetch stories:', error);
+        setStories([]);
       } finally {
         setLoading(false);
       }
@@ -318,7 +313,7 @@ const EventStories = () => {
     return (
       <section className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 -mt-6">
         <div className="flex gap-4 overflow-x-auto pb-4">
-          {[...Array(5)].map((_, index) => (
+          {[...Array(12)].map((_, index) => (
             <div key={index} className="flex flex-col items-center flex-shrink-0">
               <div className="w-20 h-20 rounded-full bg-gray-200 animate-pulse"></div>
               <div className="w-16 h-3 bg-gray-200 rounded mt-2 animate-pulse"></div>

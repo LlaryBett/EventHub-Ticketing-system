@@ -35,7 +35,7 @@ const Login = () => {
       if (userType === 'organizer') {
         navigate('/organizer-dashboard', { replace: true });
       } else {
-        navigate('/dashboard', { replace: true });
+        navigate('/account', { replace: true });
       }
     } catch (error) {
       // Show backend error messages

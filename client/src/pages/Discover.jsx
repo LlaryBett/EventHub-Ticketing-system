@@ -135,6 +135,27 @@ const Discover = () => {
     }
   }, []);
 
+  const isThisWeek = useCallback((event) => {
+    if (!event?.date) return false;
+    try {
+      const eventDate = new Date(event.date);
+      if (event.time) {
+        const [hours, minutes] = String(event.time).split(':').map(n => parseInt(n, 10));
+        if (!isNaN(hours)) eventDate.setHours(hours, isNaN(minutes) ? 0 : minutes, 0, 0);
+      }
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const nextWeek = new Date(today);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      
+      return eventDate >= today && eventDate <= nextWeek;
+    } catch {
+      return false;
+    }
+  }, []);
+
   const fetchDiscoverData = useCallback(async () => {
     try {
       setLoading(true);
@@ -147,20 +168,14 @@ const Discover = () => {
         throw new Error('Failed to load discover page configuration');
       }
 
-      const trending = await eventService.getAllEvents({ sort: 'trending', limit: 8 });
+      const trending = await eventService.getAllEvents({ featured: true, limit: 8 });
       const trendingArr = trending?.data || [];
       setTrendingEvents(trendingArr.filter(isUpcoming).slice(0, 8));
 
-      const today = new Date();
-      const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-      
-      const weekEvents = await eventService.getAllEvents({
-        startDate: today.toISOString(),
-        endDate: nextWeek.toISOString(),
-        limit: 8
-      });
-      const weekArr = weekEvents?.data || [];
-      setThisWeekEvents(weekArr.filter(isUpcoming).slice(0, 8));
+      // This Week: Filter events within next 7 days (client-side)
+      const allEvents = await eventService.getAllEvents({ limit: 50 });
+      const allArr = allEvents?.data || [];
+      setThisWeekEvents(allArr.filter(isThisWeek).filter(isUpcoming).slice(0, 8));
 
       if (user) {
         const recommended = await eventService.getAllEvents({
@@ -177,7 +192,7 @@ const Discover = () => {
       setError(fetchError.message);
       setLoading(false);
     }
-  }, [user, isUpcoming]);
+  }, [user, isUpcoming, isThisWeek]);
 
   useEffect(() => {
     fetchDiscoverData();

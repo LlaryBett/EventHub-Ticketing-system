@@ -96,9 +96,11 @@ const Header = () => {
           {/* Enhanced Logo */}
           <Link to="/" className="flex items-center space-x-3 group">
             <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                <span className="text-white font-bold text-lg">E</span>
-              </div>
+              <img 
+                src="/vite1.png" 
+                alt="EventHub Logo" 
+                className="w-10 h-10 object-contain group-hover:scale-105 transition-all duration-300"
+              />
               <div className="absolute -inset-1 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur"></div>
             </div>
             <div className="flex flex-col">
@@ -218,12 +220,12 @@ const Header = () => {
 
                     {(user.data?.userType === 'organizer' || user.data?.userType === 'admin') && (
                       <Link
-                        to="/organizer"
+                        to="/organizer-dashboard"
                         className="flex items-center px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-200"
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <RiCalendarEventLine className="w-4 h-4 mr-3 text-indigo-500" />
-                        Organizer Panel
+                        Organizer Dashboard
                       </Link>
                     )}
                     
