@@ -45,8 +45,6 @@ const calculateRegisteredCount = async (eventId) => {
 const getAllEvents = async (req, res) => {
   try {
     const {
-      page = 1,
-      limit = 10,
       category,
       featured,
       organizer,
@@ -60,7 +58,7 @@ const getAllEvents = async (req, res) => {
 
     // Log incoming query params
     console.log('➡️ getAllEvents called with query:', {
-      page, limit, category, featured, organizer, search, sortBy, order, startDate, endDate, filter,
+      category, featured, organizer, search, sortBy, order, startDate, endDate, filter,
       rawQuery: req.query
     });
 
@@ -173,11 +171,10 @@ const getAllEvents = async (req, res) => {
       console.log('📅 Applied explicit startDate/endDate:', { startDate: s, endDate: e });
     }
 
-    const skip = (page - 1) * limit;
     const sort = {};
     sort[sortBy] = order === 'desc' ? -1 : 1;
 
-    console.log('🔢 Pagination & sort:', { page, limit, skip, sort });
+    console.log('🔢 Sort:', sort);
 
     // Handle special 'free' filter: translate to event _id set from tickets with price 0
     if (filterQuery._requireFree) {
@@ -191,7 +188,7 @@ const getAllEvents = async (req, res) => {
         return res.status(200).json({
           success: true,
           data: [],
-          pagination: { page: parseInt(page), limit: parseInt(limit), total: 0, pages: 0 }
+          pagination: { page: 1, limit: 0, total: 0, pages: 0 }
         });
       }
       filterQuery._id = { $in: freeEventIds };
@@ -224,15 +221,13 @@ const getAllEvents = async (req, res) => {
     // Final filterQuery log before DB call
     console.log('✅ Final filterQuery to be used for Event.find():', JSON.stringify(filterQuery, null, 2));
 
-    // Query events
+    // Query events - REMOVED: pagination
     const events = await Event.find(filterQuery)
       .populate('organizer', 'organizationName businessType logo')
       .populate('tickets')
-      .sort(sort)
-      .skip(skip)
-      .limit(parseInt(limit));
+      .sort(sort);
 
-    console.log(`📦 Retrieved ${events.length} events from DB (limit ${limit}, skip ${skip})`);
+    console.log(`📦 Retrieved ${events.length} events from DB`);
 
     // Get discover categories for category info
     const discoverDataFinal = await Discover.findOne({ isActive: true });
@@ -314,19 +309,9 @@ const getAllEvents = async (req, res) => {
       };
     });
 
-    const total = await Event.countDocuments(filterQuery);
-
-    console.log('📊 Pagination result:', { page: parseInt(page), limit: parseInt(limit), total });
-
     res.status(200).json({
       success: true,
-      data: transformedEvents,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / limit)
-      }
+      data: transformedEvents
     });
   } catch (error) {
     console.error("❌ getAllEvents error:", error);

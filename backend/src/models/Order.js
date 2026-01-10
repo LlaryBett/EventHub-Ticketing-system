@@ -177,7 +177,7 @@ const orderSchema = new mongoose.Schema({
   totals: totalsSchema,
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'processing', 'completed', 'cancelled', 'refunded', 'failed'],
+    enum: ['pending', 'confirmed', 'processing', 'completed', 'cancelled', 'refunded', 'failed', 'expired'],
     default: 'pending',
     index: true
   },
@@ -203,7 +203,7 @@ const orderSchema = new mongoose.Schema({
   },
   paymentStatus: {
     type: String,
-    enum: ['pending', 'processing', 'completed', 'failed', 'refunded', 'free'], // ADDED 'free'
+    enum: ['pending', 'processing', 'completed', 'failed', 'refunded', 'free', 'cancelled' , 'expired'], // ADDED 'cancelled'
     default: 'pending'
   },
   paymentGatewayResponse: {

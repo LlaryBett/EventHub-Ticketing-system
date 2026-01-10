@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import Button from '../common/Button';
 
 const Hero = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
   const videoRef1 = React.useRef(null);
   const videoRef2 = React.useRef(null);
@@ -140,6 +143,17 @@ const Hero = () => {
     }
   };
 
+  const handleCreateEventClick = () => {
+    // Check if user exists and has organizer or admin userType
+    if (user?.data?.userType === 'organizer' || user?.data?.userType === 'admin') {
+      // User is already an organizer/admin, go to organizer dashboard
+      navigate('/organizer');
+    } else {
+      // User is not an organizer, redirect to register as organizer
+      navigate('/register?type=organizer');
+    }
+  };
+
   return (
     <section className="gradient-bg text-white section-padding">
       <div className="max-w-7xl mx-auto container-padding">
@@ -171,21 +185,18 @@ const Hero = () => {
                   </span>
                 </Button>
               </Link>
-              <Link to="/register?role=organizer">
-                <Button
-                  variant="outline"
-                  size="large"
-                  className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-gray-900 transition-all hover:scale-105 font-semibold text-sm sm:text-base px-4 py-3 min-h-[48px] whitespace-nowrap"
-                >
-                  <span className="flex items-center gap-2">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    <span className="hidden sm:inline">Create Event</span>
-                    <span className="sm:hidden">Create</span>
-                  </span>
-                </Button>
-              </Link>
+              <button
+                onClick={handleCreateEventClick}
+                className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-gray-900 transition-all hover:scale-105 font-semibold text-sm sm:text-base px-4 py-3 min-h-[48px] whitespace-nowrap rounded-lg cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <span className="hidden sm:inline">Create Event</span>
+                  <span className="sm:hidden">Create</span>
+                </span>
+              </button>
             </div>
 
             {/* Stats */}

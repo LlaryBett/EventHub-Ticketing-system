@@ -157,42 +157,52 @@ const Discover = () => {
   }, []);
 
   const fetchDiscoverData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  try {
+    setLoading(true);
+    setError(null);
 
-      const discoverResponse = await uiService.getDiscoverContent();
-      if (discoverResponse.success) {
-        setDiscoverData(discoverResponse.data);
-      } else {
-        throw new Error('Failed to load discover page configuration');
-      }
-
-      const trending = await eventService.getAllEvents({ featured: true, limit: 8 });
-      const trendingArr = trending?.data || [];
-      setTrendingEvents(trendingArr.filter(isUpcoming).slice(0, 8));
-
-      // This Week: Filter events within next 7 days (client-side)
-      const allEvents = await eventService.getAllEvents({ limit: 50 });
-      const allArr = allEvents?.data || [];
-      setThisWeekEvents(allArr.filter(isThisWeek).filter(isUpcoming).slice(0, 8));
-
-      if (user) {
-        const recommended = await eventService.getAllEvents({
-          categories: user.interests?.join(','),
-          limit: 8
-        });
-        const recArr = recommended?.data || [];
-        setRecommendedEvents(recArr.filter(isUpcoming).slice(0, 8));
-      }
-
-      setLoading(false);
-    } catch (fetchError) {
-      console.error('Error fetching discover data:', fetchError);
-      setError(fetchError.message);
-      setLoading(false);
+    const discoverResponse = await uiService.getDiscoverContent();
+    if (discoverResponse.success) {
+      setDiscoverData(discoverResponse.data);
+    } else {
+      console.warn('Discover content not loaded:', discoverResponse.error);
+      // Still set empty data structure
+      setDiscoverData({
+        heroSlides: [],
+        categories: [],
+        collections: [],
+        quickFilters: []
+      });
     }
-  }, [user, isUpcoming, isThisWeek]);
+
+    const trending = await eventService.getAllEvents({ featured: true, limit: 8 });
+    // Handle both response formats: data.data or just data
+    const trendingArr = trending?.data?.data || trending?.data || [];
+    setTrendingEvents(trendingArr.filter(isUpcoming).slice(0, 8));
+
+    // This Week: Filter events within next 7 days (client-side)
+    const allEvents = await eventService.getAllEvents({ limit: 50 });
+    const allArr = allEvents?.data?.data || allEvents?.data || [];
+    setThisWeekEvents(allArr.filter(isThisWeek).filter(isUpcoming).slice(0, 8));
+
+    if (user) {
+      const recommended = await eventService.getAllEvents({
+        categories: user.interests?.join(','),
+        limit: 8
+      });
+      const recArr = recommended?.data?.data || recommended?.data || [];
+      setRecommendedEvents(recArr.filter(isUpcoming).slice(0, 8));
+    } else {
+      setRecommendedEvents([]);
+    }
+
+    setLoading(false);
+  } catch (fetchError) {
+    console.error('Error fetching discover data:', fetchError);
+    setError(fetchError.message || 'Failed to load discover data');
+    setLoading(false);
+  }
+}, [user, isUpcoming, isThisWeek]);
 
   useEffect(() => {
     fetchDiscoverData();

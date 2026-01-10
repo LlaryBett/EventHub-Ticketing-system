@@ -8,7 +8,8 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import Button from '../components/common/Button';
 // Add react-icons imports
 import { FiCalendar, FiMapPin, FiClock, FiUsers, FiFileText, FiChevronDown, FiChevronUp, FiCopy, FiShare2, FiMenu } from 'react-icons/fi';
-import { FaFacebook, FaTwitter, FaCheck, FaWhatsapp, FaLinkedin, FaTicketAlt } from 'react-icons/fa';
+import { FaFacebook, FaCheck, FaWhatsapp, FaLinkedin, FaTicketAlt } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 import { IoShareSocialOutline, IoClose } from 'react-icons/io5';
 
 const EventDetails = () => {
@@ -229,12 +230,12 @@ const EventDetails = () => {
           
           <button 
             onClick={() => handleShare('twitter')}
-            className="flex flex-col items-center space-y-2 p-3 rounded-xl hover:bg-blue-50 transition-colors"
+            className="flex flex-col items-center space-y-2 p-3 rounded-xl hover:bg-gray-50 transition-colors"
           >
             <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center">
-              <FaTwitter className="w-6 h-6 text-white" />
+              <FaXTwitter className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xs font-medium">Twitter</span>
+            <span className="text-xs font-medium">X</span>
           </button>
           
           <button 

@@ -364,13 +364,13 @@ const Register = () => {
                   <div className="ml-3">
                     <p className="text-sm text-gray-600">
                       I agree to the{' '}
-                      <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
+                      <Link to="/terms-and-conditions" className="text-blue-600 hover:text-blue-700 font-medium" target="_blank">
                         Terms of Service
-                      </a>{' '}
-                      and{' '}
-                      <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
+                      </Link>
+                      {' '}and{' '}
+                      <Link to="/privacy-policy" className="text-blue-600 hover:text-blue-700 font-medium" target="_blank">
                         Privacy Policy
-                      </a>
+                      </Link>
                     </p>
                   </div>
                 </div>
@@ -587,13 +587,13 @@ const Register = () => {
                           <div className="ml-3">
                             <p className="text-sm text-gray-600">
                               I agree to the{' '}
-                              <a href="#" className="text-purple-600 hover:text-purple-700 font-medium">
+                              <Link to="/terms-and-conditions" className="text-purple-600 hover:text-purple-700 font-medium" target="_blank">
                                 Organizer Terms of Service
-                              </a>{' '}
-                              and{' '}
-                              <a href="#" className="text-purple-600 hover:text-purple-700 font-medium">
+                              </Link>
+                              {' '}and{' '}
+                              <Link to="/privacy-policy" className="text-purple-600 hover:text-purple-700 font-medium" target="_blank">
                                 Privacy Policy
-                              </a>
+                              </Link>
                             </p>
                           </div>
                         </div>

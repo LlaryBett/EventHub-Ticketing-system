@@ -22,12 +22,16 @@ const checkoutRoutes = require('./src/routes/checkout');
 const notificationRoutes = require('./src/routes/notification');
 const contactRoutes = require('./src/routes/contact');
 const discoverRouter = require('./src/routes/discover');
+const mpesaRoutes = require('./src/routes/mpesaRoutes');
 
 // Import database connection
 const connectDB = require('./src/config/database');
 
 // Import error handler
 const errorHandler = require('./src/middleware/errorHandler');
+
+// Import cleanup job
+const releaseExpiredReservations = require('./src/jobs/releaseExpiredReservations');
 
 // Connect to database
 connectDB();
@@ -151,6 +155,7 @@ app.use('/api/v1/checkout', checkoutRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/contact', contactRoutes);
 app.use('/api/v1/discover', discoverRouter);
+app.use('/api/mpesa', mpesaRoutes);
 
 // Health check endpoint
 app.get('/api/v1/health', (req, res) => {
@@ -189,9 +194,15 @@ process.on('uncaughtException', (err) => {
 
 const PORT = process.env.PORT || 5000;
 
+// Start server
 const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on http://0.0.0.0:${PORT}`);
 });
+
+// Schedule cleanup job to run every 5 minutes
+setInterval(() => {
+  releaseExpiredReservations();
+}, 5 * 60 * 1000); // 5 minutes
 
 
 // Graceful shutdown

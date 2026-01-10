@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import Button from '../components/common/Button';
 import { formatPrice } from '../utils/formatDate';
-import { getOrderById } from '../services/checkoutService';
+import { getOrderById, pollPaymentStatus, checkPaymentStatus } from '../services/checkoutService';
 
 // Modal Component
 const AccountSuggestionModal = ({ isOpen, onClose, orderData, onCreateAccount, onLogin }) => {
@@ -145,16 +145,17 @@ const PaymentConfirmation = () => {
   const { user } = useAuth();
   const { showError } = useUI();
 
-  // Get orderId from params or location state
   const orderId = paramOrderId || location.state?.orderId;
+  const checkoutRequestID = location.state?.checkoutRequestID;
   
   const [orderData, setOrderData] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [countdown, setCountdown] = useState(8);
   const [error, setError] = useState(null);
 
-  const fetchOrder = useCallback(async () => {
+  const fetchOrderAndPaymentStatus = useCallback(async () => {
     if (!orderId) {
       setError('No order ID provided');
       setLoading(false);
@@ -162,6 +163,34 @@ const PaymentConfirmation = () => {
     }
 
     try {
+      // If M-Pesa payment, poll for status first
+      if (checkoutRequestID) {
+        console.log('🔄 Starting payment status polling...');
+        const paymentResult = await pollPaymentStatus(checkoutRequestID, 3000, 40);
+        console.log('✅ Payment polling complete. Result:', paymentResult);
+        setPaymentStatus(paymentResult);
+
+        if (paymentResult.status === 'failed') {
+          setError(`Payment failed: ${paymentResult.resultDesc}`);
+          setLoading(false);
+          return;
+        }
+
+        if (paymentResult.status === 'cancelled') {
+          console.log('⚠️ Payment was cancelled');
+          setLoading(false);
+          return; // Don't fetch order, just show cancellation page
+        }
+
+        if (paymentResult.status === 'timeout') {
+          console.log('⏱️ Payment polling timed out');
+          setLoading(false);
+          return; // Show timeout page
+        }
+      }
+
+      // Only fetch order if payment was successful or no M-Pesa payment
+      console.log('📦 Fetching order details...');
       const response = await getOrderById(orderId);
       
       if (response.success) {
@@ -177,11 +206,11 @@ const PaymentConfirmation = () => {
     } finally {
       setLoading(false);
     }
-  }, [orderId]);
+  }, [orderId, checkoutRequestID]);
 
   useEffect(() => {
-    fetchOrder();
-  }, [fetchOrder]);
+    fetchOrderAndPaymentStatus();
+  }, [fetchOrderAndPaymentStatus]);
 
   // Show error notification only once when error state changes
   useEffect(() => {
@@ -245,7 +274,165 @@ const PaymentConfirmation = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading confirmation...</p>
+          <p className="text-gray-600">
+            {checkoutRequestID ? 'Waiting for payment confirmation...' : 'Loading confirmation...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Payment Issue</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <div className="flex gap-4 justify-center">
+            <Button
+              onClick={() => navigate('/events')}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700"
+            >
+              Browse Events
+            </Button>
+            <Button
+              onClick={() => window.location.reload()}
+              variant="outline"
+              className="border-blue-600 text-blue-600 px-6 py-3 rounded-lg font-semibold"
+            >
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show cancellation message
+  if (paymentStatus?.status === 'cancelled') {
+    console.log('🎭 Rendering cancellation page');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
+          <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Payment Cancelled</h2>
+          <p className="text-gray-600 mb-6">
+            You cancelled the M-Pesa payment prompt. Your ticket reservation is still valid.
+          </p>
+          
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-yellow-800">
+              ⏱️ Your reservation expires in <strong>30 minutes</strong>
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={() => window.location.reload()}
+              className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700"
+            >
+              Try Payment Again
+            </Button>
+            <Button
+              onClick={() => navigate('/events')}
+              variant="outline"
+              className="border-gray-300 text-gray-700"
+            >
+              Browse Other Events
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show failure message
+  if (paymentStatus?.status === 'failed') {
+    console.log('🎭 Rendering failure page');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Payment Failed</h2>
+          <p className="text-gray-600 mb-6">
+            {paymentStatus?.resultDesc || 'Your M-Pesa payment could not be processed.'}
+          </p>
+          
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-red-800">
+              ⏱️ Your reservation expires in <strong>30 minutes</strong>
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={() => window.location.reload()}
+              className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700"
+            >
+              Try Payment Again
+            </Button>
+            <Button
+              onClick={() => navigate('/events')}
+              variant="outline"
+              className="border-gray-300 text-gray-700"
+            >
+              Browse Other Events
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show timeout message
+  if (paymentStatus?.status === 'timeout') {
+    console.log('🎭 Rendering timeout page');
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
+          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Payment Processing</h2>
+          <p className="text-gray-600 mb-6">
+            Your payment is still being processed. This may take a few moments.
+          </p>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-blue-800">
+              ✅ M-Pesa prompt was sent to your phone<br/>
+              If you entered your PIN, payment will complete shortly.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700"
+            >
+              Check Status Again
+            </Button>
+            <Button
+              onClick={() => navigate('/events')}
+              variant="outline"
+              className="border-gray-300 text-gray-700"
+            >
+              Continue Shopping
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -254,20 +441,17 @@ const PaymentConfirmation = () => {
   if (!orderData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-  <div className="text-center">
-    <h2 className="text-2xl font-bold text-gray-900 mb-4">Order Not Found</h2>
-    <p className="text-gray-600 mb-6">
-      {error || 'Please check your email for order confirmation.'}
-    </p>
-    <Button
-      onClick={() => navigate('/events')}
-      className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md"
-    >
-      Browse More Events
-    </Button>
-  </div>
-</div>
-
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Order Not Found</h2>
+          <p className="text-gray-600 mb-6">Please check your email for order confirmation.</p>
+          <Button
+            onClick={() => navigate('/events')}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700"
+          >
+            Browse More Events
+          </Button>
+        </div>
+      </div>
     );
   }
 

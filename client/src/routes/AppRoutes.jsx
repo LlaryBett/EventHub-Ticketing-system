@@ -22,6 +22,8 @@ import NotFound from '../pages/NotFound';
 import HowItWorks from '../pages/HowItWorks';
 import PaymentConfirmation from '../pages/PaymentConfirmation';
 import TicketsPage from '../pages/TicketsPage';
+import TermsAndConditions from '../pages/TermsAndConditions';
+import PrivacyPolicy from '../pages/PrivacyPolicy';
 
 // Admin Pages
 import AdminDashboard from '../pages/Admin/AdminDashboard';
@@ -46,6 +48,8 @@ const AppRoutes = () => {
       <Route path="/contact" element={<Layout><Contact /></Layout>} />
       <Route path="/how-it-works" element={<Layout><HowItWorks /></Layout>} />
       <Route path="/tickets" element={<Layout><TicketsPage /></Layout>} />
+      <Route path="/terms-and-conditions" element={<Layout><TermsAndConditions /></Layout>} />
+      <Route path="/privacy-policy" element={<Layout><PrivacyPolicy /></Layout>} />
 
       {/* Auth Routes with Layout */}
       <Route path="/login" element={<Layout><Login /></Layout>} />

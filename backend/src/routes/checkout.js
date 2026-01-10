@@ -53,7 +53,10 @@ router.post(
   checkoutController.applyDiscount
 );
 
-+ router.get('/order/:orderId', checkoutController.getOrderById);
+router.get('/order/:orderId', checkoutController.getOrderById);
+
+// Check M-Pesa payment status
+router.get('/payment-status/:checkoutRequestID', checkoutController.checkPaymentStatus);
 
 
 // ✅ Guests OR authenticated can pre-validate

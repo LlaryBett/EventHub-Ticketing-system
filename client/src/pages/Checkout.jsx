@@ -176,10 +176,13 @@ const Checkout = () => {
     showSuccess('M-Pesa payment request sent! Please check your phone and enter your PIN to complete the payment.');
     // Log the order ID being passed to payment-confirmation page
     console.log('Navigating to /payment-confirmation with orderId:', order.order.id);
-    // Navigate to payment confirmation page - only pass order ID now
+    console.log('CheckoutRequestID:', order.order.checkoutRequestID);
+    
+    // ✅ PASS checkoutRequestID to PaymentConfirmation
     navigate('/payment-confirmation', { 
       state: { 
-        orderId: order.order.id // Only pass the order ID, not the full data
+        orderId: order.order.id,
+        checkoutRequestID: order.order.checkoutRequestID  // ✅ ADD THIS
       } 
     });
   } catch (error) {
