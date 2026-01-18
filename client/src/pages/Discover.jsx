@@ -765,84 +765,84 @@ const Discover = () => {
           </section>
         )}
 
-        {/* CTA Section */}
-       <div className="my-16 px-4 sm:px-6">
-  <div className="
-    relative 
-    rounded-2xl shadow-2xl overflow-hidden 
-    flex flex-col md:flex-row w-full text-white
-    bg-gradient-to-r from-blue-600 to-purple-600
-  ">
-
-    {/* LEFT SIDE */}
-    <div className="
-      relative 
-      flex-1 
-      py-12 px-6 sm:px-10 md:px-12 
-      flex flex-col justify-center text-left
-    ">
-      {/* Soft Circles */}
-      <div className="absolute inset-0 opacity-10 pointer-events-none">
-        <div className="absolute -top-4 -left-4 w-16 h-16 bg-white rounded-full"></div>
-        <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-white rounded-full"></div>
-        <div className="absolute top-1/2 left-1/4 w-12 h-12 bg-white rounded-full"></div>
-      </div>
-
-      <div className="relative z-10">
-        <h2 className="text-2xl sm:text-3xl font-bold mb-4 leading-tight">
-          Can't Find What You're Looking For?
-        </h2>
-
-        <p className="text-base sm:text-lg text-blue-100 mb-6 max-w-xl">
-          Create your own event and bring your community together.
-        </p>
-
-        {/* BUTTONS */}
-        <div className="flex flex-row gap-3 sm:gap-4">
-          <Link to="/organizer">
-            <button className="
-              px-5 py-3 bg-white text-blue-600 
-              font-semibold rounded-lg hover:bg-gray-50 
-              transition duration-200 text-sm sm:text-base
-            ">
-              Create Your Event
-            </button>
-          </Link>
-
-          <button className="
-            px-5 py-3 border-2 border-white 
-            text-white font-semibold rounded-lg 
-            hover:bg-white/10 transition duration-200
-            text-sm sm:text-base
+        {/* CTA Section - REDUCED HEIGHT to match Features component */}
+        <div className="my-16">
+          <div className="
+            relative 
+            rounded-2xl shadow-2xl overflow-hidden 
+            flex flex-col md:flex-row w-full text-white
+            bg-gradient-to-r from-blue-600 to-purple-600
           ">
-            Learn More
-          </button>
+
+            {/* LEFT SIDE - REDUCED PADDING */}
+            <div className="
+              relative 
+              flex-1 
+              py-8 px-6 sm:px-10 md:px-12  {/* Changed from py-12 to py-8 */}
+              flex flex-col justify-center text-left
+            ">
+              {/* Soft Circles - Adjusted for reduced height */}
+              <div className="absolute inset-0 opacity-10 pointer-events-none">
+                <div className="absolute -top-3 -left-3 w-12 h-12 bg-white rounded-full"></div>
+                <div className="absolute -bottom-5 -right-6 w-16 h-16 bg-white rounded-full"></div>
+                <div className="absolute top-1/2 left-1/4 w-8 h-8 bg-white rounded-full"></div>
+              </div>
+
+              <div className="relative z-10">
+                <h2 className="text-xl sm:text-2xl font-bold mb-2 leading-tight"> {/* Reduced font size */}
+                  Can't Find What You're Looking For?
+                </h2>
+
+                <p className="text-sm sm:text-base text-blue-100 mb-4 max-w-xl"> {/* Reduced font size and margin */}
+                  Create your own event and bring your community together.
+                </p>
+
+                {/* BUTTONS - Reduced size */}
+                <div className="flex flex-row gap-3 sm:gap-4">
+                  <Link to="/organizer">
+                    <button className="
+                      px-4 py-2 bg-white text-blue-600  {/* Reduced padding */}
+                      font-semibold rounded-lg hover:bg-gray-50 
+                      transition duration-200 text-xs sm:text-sm  {/* Reduced font size */}
+                    ">
+                      Create Your Event
+                    </button>
+                  </Link>
+
+                  <button className="
+                    px-4 py-2 border-2 border-white  {/* Reduced padding */}
+                    text-white font-semibold rounded-lg 
+                    hover:bg-white/10 transition duration-200
+                    text-xs sm:text-sm  {/* Reduced font size */}
+                  ">
+                    Learn More
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT SIDE IMAGE */}
+            <div
+              className="
+                hidden md:block flex-1 relative
+                [clip-path:polygon(20%_0,100%_0,100%_100%,5%_100%,0_50%)]
+              "
+            >
+              {/* IMAGE */}
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                  backgroundImage:
+                    "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80')",
+                }}
+              ></div>
+
+              {/* OVERLAY TO HIDE SEAM — does NOT change shape */}
+              <div className="absolute inset-0 bg-gradient-to-l from-transparent to-purple-600/70"></div>
+            </div>
+
+          </div>
         </div>
-      </div>
-    </div>
-
-    {/* RIGHT SIDE IMAGE */}
-    <div
-      className="
-        hidden md:block flex-1 relative
-        [clip-path:polygon(20%_0,100%_0,100%_100%,5%_100%,0_50%)]
-      "
-    >
-      {/* IMAGE */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage:
-            "url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80')",
-        }}
-      ></div>
-
-      {/* OVERLAY TO HIDE SEAM — does NOT change shape */}
-      <div className="absolute inset-0 bg-gradient-to-l from-transparent to-purple-600/70"></div>
-    </div>
-
-  </div>
-</div>
 
       </div>
     </div>

@@ -53,30 +53,42 @@ class MpesaService {
   }
 
   formatPhoneNumber(phoneNumber) {
-    let formattedPhone = phoneNumber.trim();
+    // Remove all non-digit characters
+    let digits = phoneNumber.replace(/\D/g, '');
     
-    // Remove any spaces or dashes
-    formattedPhone = formattedPhone.replace(/\s+/g, '').replace(/-/g, '');
+    // Check if it's a valid Kenyan mobile number
+    const kenyanMobileRegex = /^(?:0|254|\+254)?(7[0-9]|1[0-9])\d{7,8}$/;
     
-    // Format to 2547XXXXXXXX
-    if (formattedPhone.startsWith('0')) {
-      formattedPhone = `254${formattedPhone.substring(1)}`;
-    } else if (formattedPhone.startsWith('+254')) {
-      formattedPhone = formattedPhone.substring(1);
-    } else if (formattedPhone.startsWith('254')) {
-      // Already formatted
-    } else if (formattedPhone.startsWith('7') && formattedPhone.length === 9) {
-      formattedPhone = `254${formattedPhone}`;
-    } else {
-      throw new Error('Invalid phone number format. Use: 07XXXXXXXX, 2547XXXXXXXX, or +2547XXXXXXXX');
+    if (!kenyanMobileRegex.test(digits)) {
+      throw new Error(`Invalid Kenyan mobile number: ${phoneNumber}. Use format: 07XXXXXXXX, 011XXXXXXXX, 2547XXXXXXXX, or +2547XXXXXXXX`);
     }
     
-    // Validate length
-    if (formattedPhone.length !== 12) {
-      throw new Error('Phone number must be 12 digits after formatting');
+    // Convert to 254 format
+    if (digits.startsWith('0')) {
+      // Remove leading 0 and add 254
+      digits = '254' + digits.substring(1);
+    } else if (digits.startsWith('254')) {
+      // Already in correct format
+    } else if (digits.startsWith('7') || digits.startsWith('1')) {
+      digits = '254' + digits;
     }
     
-    return formattedPhone;
+    // Remove +254 if present
+    if (digits.startsWith('+254')) {
+      digits = digits.substring(1);
+    }
+    
+    // Validate final format
+    const validFormats = [
+      /^2547\d{8}$/,      // Safaricom/Airtel/Telkom mobile (e.g., 254712345678)
+      /^2541\d{9}$/       // Fixed lines converted (e.g., 2541123456789 for 011 numbers)
+    ];
+    
+    if (!validFormats.some(regex => regex.test(digits))) {
+      throw new Error(`Invalid formatted Kenyan number: ${digits}. Expected: 2547XXXXXXXX or 2541XXXXXXXXX`);
+    }
+    
+    return digits;
   }
 
   async stkPush(phoneNumber, amount, accountReference, transactionDesc) {

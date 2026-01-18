@@ -37,7 +37,7 @@ const Features = () => {
 
   return (
     <section className="py-16 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="text-2xl md:text-4xl font-bold text-gray-900 mb-4">
@@ -49,7 +49,7 @@ const Features = () => {
         </div>
 
         {/* Clean Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {features.map((feature, index) => (
             <div
               key={index}
@@ -72,45 +72,45 @@ const Features = () => {
           ))}
         </div>
 
-        <div className="my-16 px-4 sm:px-6">
+        {/* CTA Section - FURTHER REDUCED HEIGHT */}
+        <div className="my-16">
           <div className="
             relative 
             rounded-2xl shadow-2xl overflow-hidden 
-            flex flex-col md:flex-row w-full
+            flex flex-col md:flex-row w-full text-white
             bg-gradient-to-r from-blue-600 to-purple-600
-            text-white
           ">
 
-            {/* LEFT SIDE — MATCHED EXACTLY TO PREVIOUS CTA */}
+            {/* LEFT SIDE - FURTHER REDUCED PADDING */}
             <div className="
               relative 
               flex-1 
-              py-12 px-6 sm:px-10 md:px-12 
+              py-8 px-6 sm:px-10 md:px-12  {/* Changed to py-8 */}
               flex flex-col justify-center text-left
             ">
-              {/* Soft Circles */}
+              {/* Soft Circles - Further adjusted */}
               <div className="absolute inset-0 opacity-10 pointer-events-none">
-                <div className="absolute -top-4 -left-4 w-16 h-16 bg-white rounded-full"></div>
-                <div className="absolute -bottom-8 -right-8 w-24 h-24 bg-white rounded-full"></div>
-                <div className="absolute top-1/2 left-1/4 w-12 h-12 bg-white rounded-full"></div>
+                <div className="absolute -top-3 -left-3 w-12 h-12 bg-white rounded-full"></div>
+                <div className="absolute -bottom-5 -right-6 w-16 h-16 bg-white rounded-full"></div>
+                <div className="absolute top-1/2 left-1/4 w-8 h-8 bg-white rounded-full"></div>
               </div>
 
               <div className="relative z-10">
-                <h3 className="text-2xl sm:text-3xl font-bold mb-4 leading-tight">
+                <h3 className="text-xl sm:text-2xl font-bold mb-2 leading-tight">
                   Ready to Get Started?
                 </h3>
 
-                <p className="text-base sm:text-lg text-blue-100 mb-6 max-w-xl leading-relaxed">
+                <p className="text-sm sm:text-base text-blue-100 mb-4 max-w-xl leading-relaxed">
                   Join EventHub today and discover a world of amazing events waiting for you.
                 </p>
 
-                {/* BUTTONS (never vertical) */}
+                {/* BUTTONS */}
                 <div className="flex flex-row gap-3 sm:gap-4">
                   <Link to="/register">
                     <button className="
-                      px-5 py-3 bg-white text-blue-600 
+                      px-4 py-2 bg-white text-blue-600  {/* Reduced further */}
                       font-semibold rounded-lg hover:bg-gray-50 
-                      transition duration-200 text-sm sm:text-base
+                      transition duration-200 text-xs sm:text-sm
                     ">
                       Sign Up For Free
                     </button>
@@ -118,10 +118,10 @@ const Features = () => {
 
                   <Link to="/about">
                     <button className="
-                      px-5 py-3 border-2 border-white 
+                      px-4 py-2 border-2 border-white  {/* Reduced further */}
                       text-white font-semibold rounded-lg 
                       hover:bg-white/10 transition duration-200
-                      text-sm sm:text-base
+                      text-xs sm:text-sm
                     ">
                       Learn More
                     </button>
@@ -130,11 +130,10 @@ const Features = () => {
               </div>
             </div>
 
-            {/* RIGHT SIDE IMAGE — SAME CLIP PATH AS BEFORE */}
+            {/* RIGHT SIDE IMAGE */}
             <div className="
-              hidden md:block flex-1 
-              relative 
-              [clip-path:polygon(18%_0,100%_0,100%_100%,5%_100%)]
+              hidden md:block flex-1 relative
+              [clip-path:polygon(20%_0,100%_0,100%_100%,5%_100%,0_50%)]
             ">
               <div
                 className="absolute inset-0 bg-cover bg-center"
@@ -144,13 +143,12 @@ const Features = () => {
                 }}
               ></div>
 
-              {/* Soft overlay to hide seam */}
-              <div className="absolute inset-0 bg-gradient-to-l from-transparent to-purple-600/60"></div>
+              {/* OVERLAY TO HIDE SEAM — does NOT change shape */}
+              <div className="absolute inset-0 bg-gradient-to-l from-transparent to-purple-600/70"></div>
             </div>
 
           </div>
         </div>
-
       </div>
     </section>
   );

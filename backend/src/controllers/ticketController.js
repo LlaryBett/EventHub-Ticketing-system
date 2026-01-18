@@ -1,14 +1,16 @@
+// src/controllers/ticketController.js
 const Ticket = require('../models/Ticket');
 const Event = require('../models/Event');
 const IssuedTicket = require('../models/IssuedTicket');
-const Organization = require('../models/Organizer'); // Add this line
+const Organization = require('../models/Organizer');
 const { validationResult } = require('express-validator');
 
 // Get single ticket
 exports.getTicket = async (req, res, next) => {
   try {
-    const ticket = await Ticket.findById(req.params.id)
-      .populate('event', 'title dates venue image'); // Added image field
+    const { id } = req.params;
+    const ticket = await Ticket.findById(id)
+      .populate('event', 'title date venue image organizer');
     
     if (!ticket) {
       return res.status(404).json({
@@ -19,10 +21,36 @@ exports.getTicket = async (req, res, next) => {
     
     res.status(200).json({
       success: true,
-      data: ticket
+      data: {
+        id: ticket._id,
+        type: ticket.type,
+        price: ticket.price,
+        quantity: ticket.quantity,
+        available: ticket.available,
+        description: ticket.description,
+        benefits: ticket.benefits || [],
+        minOrder: ticket.minOrder,
+        maxOrder: ticket.maxOrder,
+        salesStart: ticket.salesStart,
+        salesEnd: ticket.salesEnd,
+        isActive: ticket.isActive,
+        event: {
+          id: ticket.event._id,
+          title: ticket.event.title,
+          date: ticket.event.date,
+          venue: ticket.event.venue,
+          image: ticket.event.image,
+          organizer: ticket.event.organizer
+        }
+      }
     });
   } catch (error) {
-    next(error);
+    console.error('❌ getTicket error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
   }
 };
 
@@ -32,7 +60,8 @@ exports.getEventTickets = async (req, res, next) => {
     const { eventId } = req.params;
     
     const event = await Event.findById(eventId)
-      .select('title dates venue image organizer'); // Added image field
+      .populate('organizer', 'organizationName businessType logo')
+      .select('title date venue image organizer');
     
     if (!event) {
       return res.status(404).json({
@@ -41,22 +70,45 @@ exports.getEventTickets = async (req, res, next) => {
       });
     }
     
-    const tickets = await Ticket.getAvailableTickets(eventId);
+    const tickets = await Ticket.find({ event: eventId });
     
     res.status(200).json({
       success: true,
       count: tickets.length,
       data: {
-        tickets,
-        event // Include full event data including image
+        tickets: tickets.map(ticket => ({
+          id: ticket._id,
+          type: ticket.type,
+          price: ticket.price,
+          quantity: ticket.quantity,
+          available: ticket.available,
+          description: ticket.description,
+          benefits: ticket.benefits || [],
+          minOrder: ticket.minOrder,
+          maxOrder: ticket.maxOrder,
+          salesStart: ticket.salesStart,
+          salesEnd: ticket.salesEnd,
+          isActive: ticket.isActive
+        })),
+        event: {
+          id: event._id,
+          title: event.title,
+          date: event.date,
+          venue: event.venue,
+          image: event.image,
+          organizer: event.organizer
+        }
       }
     });
   } catch (error) {
-    next(error);
+    console.error('❌ getEventTickets error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
   }
 };
-
-
 
 // Create new ticket (organizer only)
 exports.createTicket = async (req, res, next) => {
@@ -71,10 +123,9 @@ exports.createTicket = async (req, res, next) => {
     }
     
     const { eventId } = req.params;
-    console.log("📌 Incoming ticket payload (raw body):", req.body);
+    console.log("📌 Incoming ticket payload:", req.body);
     console.log("📌 Event ID param:", eventId);
     
-    // Verify event exists
     const event = await Event.findById(eventId);
     if (!event) {
       console.log("⚠️ Event not found:", eventId);
@@ -84,14 +135,10 @@ exports.createTicket = async (req, res, next) => {
       });
     }
     
-    // Check if user owns the organization that created the event
     const organization = await Organization.findOne({
       _id: event.organizer,
       userId: req.user.id
     });
-    console.log("👤 Authenticated user:", req.user.id);
-    console.log("🏢 Event organizer:", event.organizer);
-    console.log("🏢 Matching organization for user:", organization?._id || "Not found");
     
     if (!organization) {
       return res.status(403).json({
@@ -103,22 +150,31 @@ exports.createTicket = async (req, res, next) => {
     const ticketData = {
       ...req.body,
       event: eventId,
-      available: req.body.quantity
+      available: req.body.quantity || req.body.available || 0
     };
-    console.log("📦 Ticket data being saved:", ticketData);
     
     const ticket = await Ticket.create(ticketData);
-    console.log("✅ Ticket created:", ticket);
     
-    // Add ticket to event's tickets array
     event.tickets.push(ticket._id);
     await event.save();
-    console.log("📌 Ticket ID added to event:", ticket._id);
     
     res.status(201).json({
       success: true,
       message: 'Ticket created successfully',
-      data: ticket
+      data: {
+        id: ticket._id,
+        type: ticket.type,
+        price: ticket.price,
+        quantity: ticket.quantity,
+        available: ticket.available,
+        description: ticket.description,
+        benefits: ticket.benefits || [],
+        minOrder: ticket.minOrder,
+        maxOrder: ticket.maxOrder,
+        salesStart: ticket.salesStart,
+        salesEnd: ticket.salesEnd,
+        isActive: ticket.isActive
+      }
     });
   } catch (error) {
     console.error("❌ Ticket creation error:", error);
@@ -128,10 +184,13 @@ exports.createTicket = async (req, res, next) => {
         message: 'Ticket type already exists for this event'
       });
     }
-    next(error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
   }
 };
-
 
 // Update ticket (organizer only)
 exports.updateTicket = async (req, res, next) => {
@@ -144,7 +203,9 @@ exports.updateTicket = async (req, res, next) => {
       });
     }
     
-    let ticket = await Ticket.findById(req.params.id)
+    const { id } = req.params;
+    
+    let ticket = await Ticket.findById(id)
       .populate('event', 'organizer');
     
     if (!ticket) {
@@ -154,8 +215,101 @@ exports.updateTicket = async (req, res, next) => {
       });
     }
     
+    const organization = await Organization.findOne({
+      _id: ticket.event.organizer,
+      userId: req.user.id
+    });
+    
+    if (!organization) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this ticket'
+      });
+    }
+    
+    const updateData = { ...req.body };
+    if (updateData.quantity !== undefined) {
+      const quantityChange = updateData.quantity - ticket.quantity;
+      updateData.available = Math.max(0, ticket.available + quantityChange);
+    }
+    
+    ticket = await Ticket.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+    
+    res.status(200).json({
+      success: true,
+      message: 'Ticket updated successfully',
+      data: {
+        id: ticket._id,
+        type: ticket.type,
+        price: ticket.price,
+        quantity: ticket.quantity,
+        available: ticket.available,
+        description: ticket.description,
+        benefits: ticket.benefits || [],
+        minOrder: ticket.minOrder,
+        maxOrder: ticket.maxOrder,
+        salesStart: ticket.salesStart,
+        salesEnd: ticket.salesEnd,
+        isActive: ticket.isActive
+      }
+    });
+  } catch (error) {
+    console.error("❌ Ticket update error:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ticket type already exists for this event'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
+// ============================================
+// NEW: Event-specific controller functions
+// ============================================
+
+// Update ticket for specific event (organizer only)
+exports.updateTicketForEvent = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+    
+    const { eventId, ticketId } = req.params;
+    
+    // Find ticket and verify it belongs to the event
+    let ticket = await Ticket.findOne({
+      _id: ticketId,
+      event: eventId
+    }).populate('event', 'organizer');
+    
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Ticket not found or does not belong to this event'
+      });
+    }
+    
     // Check if user is the event organizer
-    if (ticket.event.organizer.toString() !== req.user.id) {
+    const organization = await Organization.findOne({
+      _id: ticket.event.organizer,
+      userId: req.user.id
+    });
+    
+    if (!organization) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to update this ticket'
@@ -163,33 +317,110 @@ exports.updateTicket = async (req, res, next) => {
     }
     
     // Calculate new available quantity if total quantity is being updated
-    if (req.body.quantity !== undefined) {
-      const quantityChange = req.body.quantity - ticket.quantity;
-      req.body.available = Math.max(0, ticket.available + quantityChange);
+    const updateData = { ...req.body };
+    if (updateData.quantity !== undefined) {
+      const quantityChange = updateData.quantity - ticket.quantity;
+      updateData.available = Math.max(0, ticket.available + quantityChange);
     }
     
     ticket = await Ticket.findByIdAndUpdate(
-      req.params.id,
-      req.body,
+      ticketId,
+      updateData,
       { new: true, runValidators: true }
     );
     
     res.status(200).json({
       success: true,
       message: 'Ticket updated successfully',
-      data: ticket
+      data: {
+        id: ticket._id,
+        type: ticket.type,
+        price: ticket.price,
+        quantity: ticket.quantity,
+        available: ticket.available,
+        description: ticket.description,
+        benefits: ticket.benefits || [],
+        minOrder: ticket.minOrder,
+        maxOrder: ticket.maxOrder,
+        salesStart: ticket.salesStart,
+        salesEnd: ticket.salesEnd,
+        isActive: ticket.isActive,
+        eventId: eventId
+      }
     });
   } catch (error) {
+    console.error("❌ updateTicketForEvent error:", error);
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
         message: 'Ticket type already exists for this event'
       });
     }
-    next(error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
   }
 };
 
+// Delete ticket for specific event (organizer only)
+exports.deleteTicketForEvent = async (req, res, next) => {
+  try {
+    const { eventId, ticketId } = req.params;
+    
+    // Find ticket and verify it belongs to the event
+    const ticket = await Ticket.findOne({
+      _id: ticketId,
+      event: eventId
+    }).populate('event', 'organizer');
+    
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Ticket not found or does not belong to this event'
+      });
+    }
+    
+    // Check if user is the event organizer
+    const organization = await Organization.findOne({
+      _id: ticket.event.organizer,
+      userId: req.user.id
+    });
+    
+    if (!organization) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this ticket'
+      });
+    }
+    
+    await ticket.deleteOne();
+    
+    // Remove ticket from event's tickets array
+    await Event.findByIdAndUpdate(
+      ticket.event._id,
+      { $pull: { tickets: ticketId } }
+    );
+    
+    res.status(200).json({
+      success: true,
+      message: 'Ticket deleted successfully',
+      data: {}
+    });
+  } catch (error) {
+    console.error("❌ deleteTicketForEvent error:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
+// ============================================
+// Existing functions (unchanged)
+// ============================================
 
 // Get tickets for authenticated user
 exports.getMyTickets = async (req, res, next) => {
@@ -199,19 +430,46 @@ exports.getMyTickets = async (req, res, next) => {
         { userId: req.user.id },
         { attendeeEmail: req.user.email }
       ],
-      isUsed: false // Only show active tickets
+      isUsed: false
     })
-    .populate('eventId', 'title date venue image organizer') // Changed 'dates' to 'date'
+    .populate('eventId', 'title date venue image organizer')
     .populate('ticketId', 'type price')
     .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       count: tickets.length,
-      data: tickets
+      data: tickets.map(ticket => ({
+        id: ticket._id,
+        ticketCode: ticket.ticketCode,
+        qrCode: ticket.qrCode,
+        isUsed: ticket.isUsed,
+        attendeeName: ticket.attendeeName,
+        attendeeEmail: ticket.attendeeEmail,
+        price: ticket.price,
+        ticketType: ticket.ticketType,
+        event: {
+          id: ticket.eventId._id,
+          title: ticket.eventId.title,
+          date: ticket.eventId.date,
+          venue: ticket.eventId.venue,
+          image: ticket.eventId.image,
+          organizer: ticket.eventId.organizer
+        },
+        ticketDetails: {
+          id: ticket.ticketId._id,
+          type: ticket.ticketId.type,
+          price: ticket.ticketId.price
+        }
+      }))
     });
   } catch (error) {
-    next(error);
+    console.error('❌ getMyTickets error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
   }
 };
 
@@ -229,25 +487,55 @@ exports.lookupTicketsByEmail = async (req, res, next) => {
 
     const tickets = await IssuedTicket.find({ 
       attendeeEmail: email.toLowerCase(),
-      isUsed: false // Only show active tickets
+      isUsed: false
     })
-    .populate('eventId', 'title date venue image organizer') // Changed 'dates' to 'date'
+    .populate('eventId', 'title date venue image organizer')
     .populate('ticketId', 'type price')
     .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       count: tickets.length,
-      data: tickets
+      data: tickets.map(ticket => ({
+        id: ticket._id,
+        ticketCode: ticket.ticketCode,
+        qrCode: ticket.qrCode,
+        isUsed: ticket.isUsed,
+        attendeeName: ticket.attendeeName,
+        attendeeEmail: ticket.attendeeEmail,
+        price: ticket.price,
+        ticketType: ticket.ticketType,
+        event: {
+          id: ticket.eventId._id,
+          title: ticket.eventId.title,
+          date: ticket.eventId.date,
+          venue: ticket.eventId.venue,
+          image: ticket.eventId.image,
+          organizer: ticket.eventId.organizer
+        },
+        ticketDetails: {
+          id: ticket.ticketId._id,
+          type: ticket.ticketId.type,
+          price: ticket.ticketId.price
+        }
+      }))
     });
   } catch (error) {
-    next(error);
+    console.error('❌ lookupTicketsByEmail error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
   }
 };
-// Delete ticket (organizer only)
+
+// Delete ticket (organizer only) - original version
 exports.deleteTicket = async (req, res, next) => {
   try {
-    const ticket = await Ticket.findById(req.params.id)
+    const { id } = req.params;
+    
+    const ticket = await Ticket.findById(id)
       .populate('event', 'organizer');
     
     if (!ticket) {
@@ -257,8 +545,12 @@ exports.deleteTicket = async (req, res, next) => {
       });
     }
     
-    // Check if user is the event organizer
-    if (ticket.event.organizer.toString() !== req.user.id) {
+    const organization = await Organization.findOne({
+      _id: ticket.event.organizer,
+      userId: req.user.id
+    });
+    
+    if (!organization) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to delete this ticket'
@@ -267,10 +559,9 @@ exports.deleteTicket = async (req, res, next) => {
     
     await ticket.deleteOne();
     
-    // Remove ticket from event's tickets array
     await Event.findByIdAndUpdate(
       ticket.event._id,
-      { $pull: { tickets: ticket._id } }
+      { $pull: { tickets: id } }
     );
     
     res.status(200).json({
@@ -279,15 +570,27 @@ exports.deleteTicket = async (req, res, next) => {
       data: {}
     });
   } catch (error) {
-    next(error);
+    console.error("❌ Ticket deletion error:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
   }
 };
 
-// Reserve tickets for purchase
+// Reserve tickets for purchase (during checkout)
 exports.reserveTickets = async (req, res, next) => {
   try {
     const { ticketId } = req.params;
     const { quantity } = req.body;
+    
+    if (!quantity || quantity < 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid quantity is required'
+      });
+    }
     
     const ticket = await Ticket.findById(ticketId);
     
@@ -298,24 +601,186 @@ exports.reserveTickets = async (req, res, next) => {
       });
     }
     
-    if (!ticket.canPurchase(quantity)) {
+    if (ticket.available < quantity) {
       return res.status(400).json({
         success: false,
-        message: `Cannot reserve ${quantity} tickets. Available: ${ticket.available}`
+        message: `Only ${ticket.available} tickets available`
       });
     }
     
-    await ticket.reserveTickets(quantity);
+    if (!ticket.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: 'This ticket type is not available for purchase'
+      });
+    }
+    
+    const now = new Date();
+    if (ticket.salesStart && now < ticket.salesStart) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ticket sales have not started yet'
+      });
+    }
+    
+    if (ticket.salesEnd && now > ticket.salesEnd) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ticket sales have ended'
+      });
+    }
+    
+    ticket.available -= quantity;
+    await ticket.save();
     
     res.status(200).json({
       success: true,
       message: 'Tickets reserved successfully',
       data: {
         reserved: quantity,
-        available: ticket.available
+        available: ticket.available,
+        ticketId: ticket._id,
+        type: ticket.type,
+        price: ticket.price
       }
     });
   } catch (error) {
-    next(error);
+    console.error('❌ reserveTickets error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
+// Get ticket by event ID and ticket ID
+exports.getTicketByEvent = async (req, res) => {
+  try {
+    const { eventId, ticketId } = req.params;
+    
+    const ticket = await Ticket.findOne({
+      _id: ticketId,
+      event: eventId
+    })
+    .populate('event', 'title date venue image organizer');
+    
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: 'Ticket not found or does not belong to this event'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        id: ticket._id,
+        type: ticket.type,
+        price: ticket.price,
+        quantity: ticket.quantity,
+        available: ticket.available,
+        description: ticket.description,
+        benefits: ticket.benefits || [],
+        minOrder: ticket.minOrder,
+        maxOrder: ticket.maxOrder,
+        salesStart: ticket.salesStart,
+        salesEnd: ticket.salesEnd,
+        isActive: ticket.isActive,
+        event: {
+          id: ticket.event._id,
+          title: ticket.event.title,
+          date: ticket.event.date,
+          venue: ticket.event.venue,
+          image: ticket.event.image,
+          organizer: ticket.event.organizer
+        }
+      }
+    });
+  } catch (error) {
+    console.error('❌ getTicketByEvent error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
+// Create ticket for specific event (alternative route)
+exports.createTicketForEvent = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+    
+    const { eventId } = req.params;
+    
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+    
+    const organization = await Organization.findOne({
+      _id: event.organizer,
+      userId: req.user.id
+    });
+    
+    if (!organization) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to create tickets for this event'
+      });
+    }
+    
+    const ticketData = {
+      ...req.body,
+      event: eventId,
+      available: req.body.quantity || req.body.available || 0
+    };
+    
+    const ticket = await Ticket.create(ticketData);
+    
+    event.tickets.push(ticket._id);
+    await event.save();
+    
+    res.status(201).json({
+      success: true,
+      message: 'Ticket created successfully',
+      data: {
+        id: ticket._id,
+        type: ticket.type,
+        price: ticket.price,
+        quantity: ticket.quantity,
+        available: ticket.available,
+        description: ticket.description,
+        benefits: ticket.benefits || [],
+        minOrder: ticket.minOrder,
+        maxOrder: ticket.maxOrder,
+        salesStart: ticket.salesStart,
+        salesEnd: ticket.salesEnd,
+        isActive: ticket.isActive
+      }
+    });
+  } catch (error) {
+    console.error("❌ createTicketForEvent error:", error);
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ticket type already exists for this event'
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
   }
 };

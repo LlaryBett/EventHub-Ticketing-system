@@ -95,7 +95,7 @@ const Events = () => {
             <EventFilterSkeleton />
           ) : (
             <EventFilter 
-              onFilterChange={handleFilterChange} 
+              onFilterChanged={handleFilterChange} 
               currentFilters={filters}
             />
           )}

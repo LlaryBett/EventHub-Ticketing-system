@@ -149,7 +149,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/cart', cartRoutes);
-app.use('/api/v1/ticket', ticketRoutes);
+app.use('/api/v1/tickets', ticketRoutes); // Changed from '/api/v1/ticket'
 app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/checkout', checkoutRoutes);
 app.use('/api/v1/notifications', notificationRoutes);

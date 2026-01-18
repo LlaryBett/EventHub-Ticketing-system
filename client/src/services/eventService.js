@@ -1,4 +1,4 @@
-// client/src/services/eventService.js
+// client/src/services/eventService.js - FULLY FIXED
 import { api } from './api';
 
 class EventService {
@@ -94,6 +94,101 @@ class EventService {
   }
 
   // PROTECTED ENDPOINTS (require authentication)
+
+  // TICKET MANAGEMENT ENDPOINTS - UPDATED to match simplified backend routes
+  // Create a new ticket for an event - PROTECTED ENDPOINT
+  async createTicket(eventId, ticketData) {
+    try {
+      // FIXED: Use simplified route
+      const response = await api.post(`/tickets/event/${eventId}/create`, ticketData);
+      return response.data;
+    } catch (error) {
+      this.handleProtectedError(error);
+    }
+  }
+
+  // Update a ticket - PROTECTED ENDPOINT
+  async updateTicket(eventId, ticketId, ticketData) {
+    try {
+      // FIXED: Use simplified route (no extra "/tickets" segment)
+      const response = await api.put(`/tickets/event/${eventId}/${ticketId}`, ticketData);
+      return response.data;
+    } catch (error) {
+      this.handleProtectedError(error);
+    }
+  }
+
+  // Delete a ticket - PROTECTED ENDPOINT
+  async deleteTicket(eventId, ticketId) {
+    try {
+      // FIXED: Use simplified route (no extra "/tickets" segment)
+      const response = await api.delete(`/tickets/event/${eventId}/${ticketId}`);
+      return response.data;
+    } catch (error) {
+      this.handleProtectedError(error);
+    }
+  }
+
+  // Get tickets for an event - PROTECTED ENDPOINT
+  async getEventTickets(eventId) {
+    try {
+      // FIXED: This route is correct
+      const response = await api.get(`/tickets/event/${eventId}`);
+      return response.data;
+    } catch (error) {
+      this.handleProtectedError(error);
+    }
+  }
+
+  // Get a specific ticket by ID - PROTECTED ENDPOINT
+  async getTicketById(ticketId) {
+    try {
+      const response = await api.get(`/tickets/${ticketId}`);
+      return response.data;
+    } catch (error) {
+      this.handleProtectedError(error);
+    }
+  }
+
+  // Get ticket by event ID and ticket ID - PROTECTED ENDPOINT
+  async getTicketByEvent(eventId, ticketId) {
+    try {
+      const response = await api.get(`/tickets/event/${eventId}/ticket/${ticketId}`);
+      return response.data;
+    } catch (error) {
+      this.handleProtectedError(error);
+    }
+  }
+
+  // Get current user's tickets - PROTECTED ENDPOINT
+  async getMyTickets() {
+    try {
+      const response = await api.get('/tickets/user/mytickets');
+      return response.data;
+    } catch (error) {
+      this.handleProtectedError(error);
+    }
+  }
+
+  // Lookup tickets by email - PROTECTED ENDPOINT
+  async lookupTicketsByEmail(email) {
+    try {
+      const response = await api.get(`/tickets/lookup/email?email=${encodeURIComponent(email)}`);
+      return response.data;
+    } catch (error) {
+      this.handleProtectedError(error);
+    }
+  }
+
+  // Reserve tickets for purchase - PROTECTED ENDPOINT
+  async reserveTickets(ticketId, quantity) {
+    try {
+      const response = await api.post(`/tickets/${ticketId}/reserve`, { quantity });
+      return response.data;
+    } catch (error) {
+      this.handleProtectedError(error);
+    }
+  }
 
   // Register for an event - PROTECTED ENDPOINT
   async registerForEvent(eventId) {

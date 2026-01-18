@@ -89,6 +89,12 @@ const OrganizerDashboard = () => {
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [scanResult, setScanResult] = useState(null);
 
+  // Ticket Management State
+  const [editingTicket, setEditingTicket] = useState(null);
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [currentEventForTicket, setCurrentEventForTicket] = useState(null);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+
   // Add some sample categories for demonstration
   const eventCategories = [
     { value: 'all', label: 'All Categories' },
@@ -98,57 +104,117 @@ const OrganizerDashboard = () => {
     { value: 'other', label: 'Other' }
   ];
 
+  // Fetch organizer's events with tickets
+  const fetchMyEvents = async () => {
+    setLoadingEvents(true);
+    try {
+      // Get organizer ID from user data
+      const organizerId = user?.data?.organizerProfile?._id;
+      if (!organizerId) {
+        console.log('No organizer profile found');
+        setLoadingEvents(false);
+        return;
+      }
+
+      console.log('Fetching events for organizer:', organizerId);
+      
+      // Use the existing getAllEvents service with organizer filter
+      const response = await eventService.getAllEvents({ organizer: organizerId });
+      
+      console.log('Organizer events response:', response);
+      
+      if (response.success) {
+        const events = response.data || [];
+        console.log('Fetched events:', events.length);
+        console.log('Sample event with tickets:', events[0]?.tickets);
+        
+        setOrganizerEvents(events);
+        setFilteredEvents(events);
+        
+        // Update recent events from the full data
+        setRecentEvents(events.slice(0, 3).map(event => ({
+          eventId: event.id || event._id,
+          title: event.title,
+          date: event.date,
+          attendees: event.registered || event.attendees || 0,
+          revenue: event.tickets?.reduce((sum, ticket) => 
+            sum + (ticket.price * (ticket.quantity - ticket.available)), 0) || 0
+        })));
+      } else {
+        console.error('Failed to fetch events:', response.message);
+        showError('Failed to load your events');
+      }
+    } catch (error) {
+      console.error('Error fetching organizer events:', error);
+      showError(error.message || 'Failed to load your events');
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
+
+  // Load initial data
+  const fetchUserAndData = async () => {
+    try {
+      const userData = await getMe();
+      setUser(userData);
+
+      // Set analytics from backend response
+      const analyticsData = userData.data.analytics || {};
+      setAnalytics({
+        totalEvents: analyticsData.totalEvents || 0,
+        totalRevenue: analyticsData.totalRevenue || 0,
+        totalAttendees: analyticsData.totalAttendees || 0,
+        upcomingEvents: analyticsData.upcomingEvents || 0,
+        revenueGrowth: analyticsData.revenueGrowth || 0,
+        attendeeGrowth: analyticsData.attendeeGrowth || 0,
+        currentPeriodRevenue: analyticsData.currentPeriodRevenue || 0,
+        previousPeriodRevenue: analyticsData.previousPeriodRevenue || 0,
+        currentPeriodAttendees: analyticsData.currentPeriodAttendees || 0,
+        previousPeriodAttendees: analyticsData.previousPeriodAttendees || 0
+      });
+
+      setChartData(
+        (analyticsData.revenueTrend || []).map(item => ({
+          month: new Date(item.date).toLocaleString('default', { month: 'short', year: 'numeric' }),
+          revenue: item.revenue,
+          attendees: item.tickets
+        }))
+      );
+
+      // Set organizer settings
+      setOrganizerSettings({
+        ...organizerSettings,
+        name: userData.data.organizerProfile?.organizationName || userData.data.name,
+        email: userData.data.email,
+        description: userData.data.organizerProfile?.businessAddress || '',
+        logo: userData.data.organizerProfile?.logo || ''
+      });
+
+      // Fetch full events after user is loaded
+      setTimeout(() => {
+        fetchMyEvents();
+      }, 100);
+
+    } catch (error) {
+      console.error('Failed to fetch organizer data:', error);
+      showError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load initial data
   useEffect(() => {
-    const fetchUserAndData = async () => {
-      try {
-        const userData = await getMe();
-        setUser(userData);
-
-        // Set analytics from backend response
-        const analyticsData = userData.data.analytics || {};
-        setAnalytics({
-          totalEvents: analyticsData.totalEvents || 0,
-          totalRevenue: analyticsData.totalRevenue || 0,
-          totalAttendees: analyticsData.totalAttendees || 0,
-          upcomingEvents: analyticsData.upcomingEvents || 0,
-          revenueGrowth: analyticsData.revenueGrowth || 0,
-          attendeeGrowth: analyticsData.attendeeGrowth || 0,
-          currentPeriodRevenue: analyticsData.currentPeriodRevenue || 0,
-          previousPeriodRevenue: analyticsData.previousPeriodRevenue || 0,
-          currentPeriodAttendees: analyticsData.currentPeriodAttendees || 0,
-          previousPeriodAttendees: analyticsData.previousPeriodAttendees || 0
-        });
-
-        setChartData(
-          (analyticsData.revenueTrend || []).map(item => ({
-            month: new Date(item.date).toLocaleString('default', { month: 'short', year: 'numeric' }),
-            revenue: item.revenue,
-            attendees: item.tickets
-          }))
-        );
-
-        setOrganizerEvents(analyticsData.eventPerformance || []);
-        setFilteredEvents(analyticsData.eventPerformance || []);
-        setRecentEvents(analyticsData.recentEvents || []);
-
-        setOrganizerSettings({
-          ...organizerSettings,
-          name: userData.data.organizerProfile?.organizationName || userData.data.name,
-          email: userData.data.email,
-          description: userData.data.organizerProfile?.businessAddress || '',
-          logo: userData.data.organizerProfile?.logo || ''
-        });
-
-      } catch (error) {
-        console.error('Failed to fetch organizer data:', error);
-        showError('Failed to load dashboard data');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchUserAndData();
   }, [showError]);
+
+  // Fetch full events when tab changes to 'events'
+  useEffect(() => {
+    if (activeTab === 'events' && user?.data?.organizerProfile?._id && organizerEvents.length === 0) {
+      console.log('Fetching full events data for events tab...');
+      fetchMyEvents();
+    }
+  }, [activeTab, user]);
 
   // Load stories when stories tab is active
   useEffect(() => {
@@ -164,7 +230,7 @@ const OrganizerDashboard = () => {
     if (searchTerm) {
       filtered = filtered.filter(event => 
         event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.location.toLowerCase().includes(searchTerm.toLowerCase())
+        (event.location && event.location.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
     
@@ -187,6 +253,332 @@ const OrganizerDashboard = () => {
     setFilteredEvents(filtered);
     setCurrentPage(1);
   }, [searchTerm, statusFilter, categoryFilter, organizerEvents]);
+
+  // Ticket CRUD Operations
+  const createTicket = async (eventId, ticketData) => {
+    try {
+      // This endpoint would need to exist in your backend
+      const response = await eventService.createTicket(eventId, ticketData);
+      
+      if (response.success) {
+        showSuccess('Ticket created successfully!');
+        
+        // Refresh the events to get updated data
+        fetchMyEvents();
+        
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Error creating ticket:', error);
+      showError(error.message || 'Failed to create ticket');
+    }
+  };
+
+  const updateTicket = async (eventId, ticketId, ticketData) => {
+    try {
+      const response = await eventService.updateTicket(eventId, ticketId, ticketData);
+      
+      if (response.success) {
+        showSuccess('Ticket updated successfully!');
+        
+        // Refresh the events to get updated data
+        fetchMyEvents();
+        
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Error updating ticket:', error);
+      showError(error.message || 'Failed to update ticket');
+    }
+  };
+
+  const deleteTicket = async (eventId, ticketId) => {
+    if (window.confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) {
+      try {
+        const response = await eventService.deleteTicket(eventId, ticketId);
+        
+        if (response.success) {
+          showSuccess('Ticket deleted successfully!');
+          
+          // Refresh the events to get updated data
+          fetchMyEvents();
+        }
+      } catch (error) {
+        console.error('Error deleting ticket:', error);
+        showError(error.message || 'Failed to delete ticket');
+      }
+    }
+  };
+
+  const duplicateTicket = async (eventId, ticketId) => {
+    try {
+      // First get the ticket details
+      const event = organizerEvents.find(e => e.id === eventId);
+      const ticket = event?.tickets?.find(t => t.id === ticketId);
+      
+      if (!ticket) {
+        showError('Ticket not found');
+        return;
+      }
+      
+      // Create a copy with "Copy" appended to the name
+      const ticketCopy = {
+        ...ticket,
+        type: `${ticket.type} (Copy)`,
+        id: undefined // Let backend generate new ID
+      };
+      
+      delete ticketCopy.id;
+      
+      const response = await createTicket(eventId, ticketCopy);
+      
+      if (response.success) {
+        showSuccess('Ticket duplicated successfully!');
+      }
+    } catch (error) {
+      console.error('Error duplicating ticket:', error);
+      showError(error.message || 'Failed to duplicate ticket');
+    }
+  };
+
+  // Ticket Modal Component
+  const TicketModal = () => {
+    const [formData, setFormData] = useState({
+      type: '',
+      description: '',
+      price: 0,
+      quantity: 100,
+      available: 100,
+      minOrder: 1,
+      maxOrder: 10,
+      salesStart: new Date().toISOString(),
+      salesEnd: '',
+      isActive: true,
+      benefits: []
+    });
+
+    // Initialize form when editing
+    useEffect(() => {
+      if (editingTicket) {
+        setFormData({
+          type: editingTicket.type || '',
+          description: editingTicket.description || '',
+          price: editingTicket.price || 0,
+          quantity: editingTicket.quantity || 100,
+          available: editingTicket.available || 100,
+          minOrder: editingTicket.minOrder || 1,
+          maxOrder: editingTicket.maxOrder || 10,
+          salesStart: editingTicket.salesStart ? new Date(editingTicket.salesStart).toISOString() : new Date().toISOString(),
+          salesEnd: editingTicket.salesEnd ? new Date(editingTicket.salesEnd).toISOString() : '',
+          isActive: editingTicket.isActive !== undefined ? editingTicket.isActive : true,
+          benefits: editingTicket.benefits || []
+        });
+      } else {
+        // Reset form for new ticket
+        setFormData({
+          type: '',
+          description: '',
+          price: 0,
+          quantity: 100,
+          available: 100,
+          minOrder: 1,
+          maxOrder: 10,
+          salesStart: new Date().toISOString(),
+          salesEnd: '',
+          isActive: true,
+          benefits: []
+        });
+      }
+    }, [editingTicket]);
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      
+      try {
+        if (editingTicket) {
+          // Update existing ticket
+          await updateTicket(currentEventForTicket.id, editingTicket.id, formData);
+        } else {
+          // Create new ticket
+          await createTicket(currentEventForTicket.id, formData);
+        }
+        
+        setIsTicketModalOpen(false);
+        setEditingTicket(null);
+        setCurrentEventForTicket(null);
+      } catch (error) {
+        console.error('Error saving ticket:', error);
+      }
+    };
+
+    if (!isTicketModalOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className={`rounded-lg p-6 w-full max-w-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">
+              {editingTicket ? 'Edit Ticket' : 'Create New Ticket'}
+            </h2>
+            <button
+              onClick={() => {
+                setIsTicketModalOpen(false);
+                setEditingTicket(null);
+                setCurrentEventForTicket(null);
+              }}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Ticket Type *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.type}
+                  onChange={(e) => setFormData({...formData, type: e.target.value})}
+                  className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                  placeholder="VIP, General Admission, etc."
+                />
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Description
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                  placeholder="Ticket benefits and details"
+                  rows="3"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Price ($)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.price}
+                    onChange={(e) => setFormData({...formData, price: parseFloat(e.target.value)})}
+                    className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Total Quantity
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData({...formData, quantity: parseInt(e.target.value), available: parseInt(e.target.value)})}
+                    className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                    min="1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Min Order
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.minOrder}
+                    onChange={(e) => setFormData({...formData, minOrder: parseInt(e.target.value)})}
+                    className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                    min="1"
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Max Order
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.maxOrder}
+                    onChange={(e) => setFormData({...formData, maxOrder: parseInt(e.target.value)})}
+                    className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                    min="1"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Sales Start
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.salesStart ? new Date(formData.salesStart).toISOString().slice(0, 16) : ''}
+                    onChange={(e) => setFormData({...formData, salesStart: new Date(e.target.value).toISOString()})}
+                    className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Sales End
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.salesEnd ? new Date(formData.salesEnd).toISOString().slice(0, 16) : ''}
+                    onChange={(e) => setFormData({...formData, salesEnd: new Date(e.target.value).toISOString()})}
+                    className={`w-full p-2 border rounded ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={formData.isActive}
+                  onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                  className="mr-2"
+                />
+                <label htmlFor="isActive" className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Ticket is active and available for purchase
+                </label>
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsTicketModalOpen(false);
+                    setEditingTicket(null);
+                    setCurrentEventForTicket(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {editingTicket ? 'Update Ticket' : 'Create Ticket'}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  };
 
   // Stories Functions
   const fetchStories = async () => {
@@ -294,7 +686,7 @@ const OrganizerDashboard = () => {
     try {
       // Prefer provided eventData, otherwise use selectedEvent from state
       const payload = eventData && Object.keys(eventData).length ? eventData : selectedEvent;
-      const eventId = payload?.id || payload?.eventId;
+      const eventId = payload?.id;
       if (!eventId) {
         throw new Error('No event id provided for update');
       }
@@ -307,13 +699,11 @@ const OrganizerDashboard = () => {
 
       // Replace updated event in organizerEvents and filteredEvents
       setOrganizerEvents(prev => prev.map(ev => {
-        const idKey = ev.id || ev.eventId;
-        if (idKey === eventId) return { ...ev, ...updated };
+        if (ev.id === eventId) return { ...ev, ...updated };
         return ev;
       }));
       setFilteredEvents(prev => prev.map(ev => {
-        const idKey = ev.id || ev.eventId;
-        if (idKey === eventId) return { ...ev, ...updated };
+        if (ev.id === eventId) return { ...ev, ...updated };
         return ev;
       }));
 
@@ -379,8 +769,9 @@ const OrganizerDashboard = () => {
         showSuccess('Check-in completed.');
       }
 
-      if (selectedEvent?.eventId) {
-        const response = await getEventAttendees(selectedEvent.eventId);
+      if (selectedEvent?.eventId || selectedEvent?.id || selectedEvent?._id) {
+        const eventId = selectedEvent.eventId || selectedEvent.id || selectedEvent._id;
+        const response = await getEventAttendees(eventId);
         setAttendees(response?.data?.attendees || []);
         setAttendeeStats(response?.data?.stats || {});
       }
@@ -424,13 +815,14 @@ const OrganizerDashboard = () => {
   // When opening the Attendees Modal, fetch attendees for the selected event
   useEffect(() => {
     const fetchAttendees = async () => {
-      if (showAttendeesModal && selectedEvent?.eventId) {
+      if (showAttendeesModal && (selectedEvent?.eventId || selectedEvent?.id || selectedEvent?._id)) {
+        const eventId = selectedEvent.eventId || selectedEvent.id || selectedEvent._id;
         setAttendeesLoading(true);
         setAttendees([]);
         setAttendeeStats({});
         setModalEventInfo(null);
         try {
-          const response = await getEventAttendees(selectedEvent.eventId);
+          const response = await getEventAttendees(eventId);
           setAttendees(response?.data?.attendees || []);
           setAttendeeStats(response?.data?.stats || {});
           setModalEventInfo(response?.data?.event || null);
@@ -583,88 +975,87 @@ const OrganizerDashboard = () => {
             {activeTab === 'overview' && (
               <div className="space-y-8">
                 {/* Stats Cards */}
-<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-  
-  {/* Card */}
-  <div className={`rounded-xl shadow-sm p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-    <div className="flex gap-4">
-      <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-        <Calendar className="w-5 h-5 text-blue-600" />
-      </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+                  
+                  {/* Card */}
+                  <div className={`rounded-xl shadow-sm p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Calendar className="w-5 h-5 text-blue-600" />
+                      </div>
 
-      <div className="min-w-0">
-        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          Total Events
-        </p>
-        <p className={`text-2xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-          {analytics.totalEvents}
-        </p>
-      </div>
-    </div>
-  </div>
+                      <div className="min-w-0">
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          Total Events
+                        </p>
+                        <p className={`text-2xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {analytics.totalEvents}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-  {/* Revenue */}
-  <div className={`rounded-xl shadow-sm p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-    <div className="flex gap-4">
-      <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-        <DollarSign className="w-5 h-5 text-green-600" />
-      </div>
+                  {/* Revenue */}
+                  <div className={`rounded-xl shadow-sm p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                        <DollarSign className="w-5 h-5 text-green-600" />
+                      </div>
 
-      <div className="min-w-0">
-        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          Total Revenue
-        </p>
-        <p className={`text-2xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-          {formatPrice(analytics.totalRevenue)}
-        </p>
-        <p className="text-sm text-green-600 mt-1">
-          ↑ {analytics.revenueGrowth}%
-        </p>
-      </div>
-    </div>
-  </div>
+                      <div className="min-w-0">
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          Total Revenue
+                        </p>
+                        <p className={`text-2xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {formatPrice(analytics.totalRevenue)}
+                        </p>
+                        <p className="text-sm text-green-600 mt-1">
+                          ↑ {analytics.revenueGrowth}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-  {/* Attendees */}
-  <div className={`rounded-xl shadow-sm p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-    <div className="flex gap-4">
-      <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-        <Users className="w-5 h-5 text-purple-600" />
-      </div>
+                  {/* Attendees */}
+                  <div className={`rounded-xl shadow-sm p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <Users className="w-5 h-5 text-purple-600" />
+                      </div>
 
-      <div className="min-w-0">
-        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          Total Attendees
-        </p>
-        <p className={`text-2xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-          {analytics.totalAttendees}
-        </p>
-        <p className="text-sm text-green-600 mt-1">
-          ↑ {analytics.attendeeGrowth}%
-        </p>
-      </div>
-    </div>
-  </div>
+                      <div className="min-w-0">
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          Total Attendees
+                        </p>
+                        <p className={`text-2xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {analytics.totalAttendees}
+                        </p>
+                        <p className="text-sm text-green-600 mt-1">
+                          ↑ {analytics.attendeeGrowth}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-  {/* Upcoming */}
-  <div className={`rounded-xl shadow-sm p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-    <div className="flex gap-4">
-      <div className="flex-shrink-0 w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-        <TrendingUp className="w-5 h-5 text-orange-600" />
-      </div>
+                  {/* Upcoming */}
+                  <div className={`rounded-xl shadow-sm p-5 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <TrendingUp className="w-5 h-5 text-orange-600" />
+                      </div>
 
-      <div className="min-w-0">
-        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          Upcoming Events
-        </p>
-        <p className={`text-2xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-          {analytics.upcomingEvents}
-        </p>
-      </div>
-    </div>
-  </div>
+                      <div className="min-w-0">
+                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                          Upcoming Events
+                        </p>
+                        <p className={`text-2xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          {analytics.upcomingEvents}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-</div>
-
+                </div>
 
                 {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -796,7 +1187,14 @@ const OrganizerDashboard = () => {
                 </div>
                 
                 <div className="overflow-x-auto">
-                  {filteredEvents.length === 0 ? (
+                  {loadingEvents ? (
+                    <div className="p-6 text-center">
+                      <LoadingSpinner />
+                      <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                        Loading events...
+                      </p>
+                    </div>
+                  ) : filteredEvents.length === 0 ? (
                     <div className="p-6 text-center">
                       <Calendar className={`w-16 h-16 mx-auto mb-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
                       <p className={`mb-4 ${darkMode ? 'text-gray-300' : 'text-gray'}`}>
@@ -808,8 +1206,8 @@ const OrganizerDashboard = () => {
                     </div>
                   ) : (
                     <div className="divide-y">
-                      {filteredEvents.slice(indexOfFirstEvent, indexOfLastEvent).map((event) => (
-                        <div key={event.eventId} className={`p-4 sm:p-6 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      {currentEvents.map((event) => (
+                        <div key={event._id || event.id} className={`p-4 sm:p-6 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
                               <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -819,28 +1217,29 @@ const OrganizerDashboard = () => {
                                 <p>{formatDate(event.date)}</p>
                                 <p className="flex items-center">
                                   <Users className="w-4 h-4 mr-2" />
-                                  {event.attendees}/{event.capacity} registered
+                                  {event.registered || event.attendees || 0}/{event.capacity || 0} registered
                                 </p>
                                 <p className="flex items-center">
                                   <DollarSign className="w-4 h-4 mr-2" />
-                                  {formatPrice(event.revenue)} revenue
+                                  {formatPrice(event.tickets?.reduce((sum, ticket) => 
+                                    sum + (ticket.price * (ticket.quantity - ticket.available)), 0) || 0)} revenue
                                 </p>
                               </div>
                               <div className="mt-2">
                                 <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                                  event.isUpcoming
+                                  new Date(event.date) > new Date()
                                     ? 'bg-green-100 text-green-800'
                                     : 'bg-gray-100 text-gray-800'
                                 }`}>
-                                  {event.isUpcoming ? 'Upcoming' : 'Past'}
+                                  {new Date(event.date) > new Date() ? 'Upcoming' : 'Past'}
                                 </span>
                               </div>
                             </div>
                             <div>
-                              <div className="grid grid-cols-3 gap-2 text-center">
+                              <div className="grid grid-cols-3 gap-2 text-center mb-4">
                                 <div className={`p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                                   <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                    {event.attendees}
+                                    {event.registered || event.attendees || 0}
                                   </p>
                                   <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                     Attendees
@@ -848,7 +1247,8 @@ const OrganizerDashboard = () => {
                                 </div>
                                 <div className={`p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                                   <p className="text-sm font-bold text-green-600">
-                                    {formatPrice(event.revenue)}
+                                    {formatPrice(event.tickets?.reduce((sum, ticket) => 
+                                      sum + (ticket.price * (ticket.quantity - ticket.available)), 0) || 0)}
                                   </p>
                                   <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                     Revenue
@@ -856,12 +1256,100 @@ const OrganizerDashboard = () => {
                                 </div>
                                 <div className={`p-2 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                                   <p className="text-sm font-bold text-blue-600">
-                                    {event.capacityUtilization}%
+                                    {event.capacity ? Math.round(((event.registered || event.attendees || 0) / event.capacity) * 100) : 0}%
                                   </p>
                                   <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                     Capacity
                                   </p>
                                 </div>
+                              </div>
+
+                              {/* Tickets Section */}
+                              <div className={`mt-3 p-3 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                                <div className="flex justify-between items-center mb-2">
+                                  <h4 className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                    Tickets ({event.tickets?.length || 0} types)
+                                  </h4>
+                                  <Button 
+                                    size="small" 
+                                    variant="outline"
+                                    onClick={() => {
+                                      setCurrentEventForTicket(event);
+                                      setEditingTicket(null);
+                                      setIsTicketModalOpen(true);
+                                    }}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    Add Ticket
+                                  </Button>
+                                </div>
+                                
+                                {event.tickets && event.tickets.length > 0 ? (
+                                  <div className="space-y-2">
+                                    {event.tickets.slice(0, 3).map(ticket => (
+                                      <div key={ticket.id} className={`text-xs p-2 rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                                        <div className="flex justify-between items-start">
+                                          <div>
+                                            <span className="font-medium">{ticket.type}</span>
+                                            {ticket.isActive === false && (
+                                              <span className="ml-2 px-1 py-0.5 text-xs bg-red-100 text-red-800 rounded">Inactive</span>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center space-x-1">
+                                            <Button 
+                                              size="small" 
+                                              variant="ghost"
+                                              onClick={() => {
+                                                setEditingTicket(ticket);
+                                                setCurrentEventForTicket(event);
+                                                setIsTicketModalOpen(true);
+                                              }}
+                                              className="p-1"
+                                            >
+                                              <Edit className="w-3 h-3" />
+                                            </Button>
+                                            <Button 
+                                              size="small" 
+                                              variant="ghost"
+                                              onClick={() => duplicateTicket(event.id, ticket.id)}
+                                              className="p-1"
+                                            >
+                                              <Copy className="w-3 h-3" />
+                                            </Button>
+                                            <Button 
+                                              size="small" 
+                                              variant="ghost"
+                                              onClick={() => deleteTicket(event.id, ticket.id)}
+                                              className="p-1 text-red-500 hover:text-red-700"
+                                            >
+                                              <Trash2 className="w-3 h-3" />
+                                            </Button>
+                                          </div>
+                                        </div>
+                                        <div className="flex justify-between text-gray-500 mt-1">
+                                          <span>Price: {formatPrice(ticket.price)}</span>
+                                          <span>Available: {ticket.available}/{ticket.quantity}</span>
+                                          <span>Sold: {ticket.quantity - ticket.available}</span>
+                                        </div>
+                                        {ticket.benefits && ticket.benefits.length > 0 && (
+                                          <div className="mt-1 text-gray-500">
+                                            <span className="text-xs">Benefits: {ticket.benefits.join(', ')}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                    {event.tickets.length > 3 && (
+                                      <p className="text-xs text-gray-500 text-center">
+                                        + {event.tickets.length - 3} more ticket types
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className={`text-sm text-center py-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    No tickets created yet
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -962,6 +1450,9 @@ const OrganizerDashboard = () => {
                 )}
               </div>
             )}
+
+            {/* Ticket Modal */}
+            <TicketModal />
 
             {activeTab === 'stories' && (
               <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
@@ -1110,7 +1601,7 @@ const OrganizerDashboard = () => {
                 <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     {organizerEvents.map((event) => (
-                      <div key={event.id} className={`border rounded-lg p-4 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                      <div key={event.id || event._id} className={`border rounded-lg p-4 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                         <div className="mb-2">
                           <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{event.title}</span>
                           <span className="ml-2 text-primary-600">
@@ -1138,7 +1629,7 @@ const OrganizerDashboard = () => {
                             <Button 
                               size="small" 
                               variant="outline"
-                              onClick={() => exportAttendees(event.id, 'csv')}
+                              onClick={() => exportAttendees(event.id || event._id, 'csv')}
                               className="inline-flex items-center gap-1"
                             >
                               <Download className="w-4 h-4" />
@@ -1147,7 +1638,7 @@ const OrganizerDashboard = () => {
                             <Button 
                               size="small" 
                               variant="outline"
-                              onClick={() => exportAttendees(event.id, 'excel')}
+                              onClick={() => exportAttendees(event.id || event._id, 'excel')}
                               className="inline-flex items-center gap-1"
                             >
                               <Download className="w-4 h-4" />
@@ -1242,10 +1733,11 @@ const OrganizerDashboard = () => {
                         </thead>
                         <tbody>
                           {organizerEvents.map((event) => {
-                            const registrationRate = event.capacity ? (event.attendees / event.capacity) * 100 : 0;
-                            const revenue = event.revenue;
+                            const registrationRate = event.capacity ? ((event.registered || event.attendees || 0) / event.capacity) * 100 : 0;
+                            const revenue = event.tickets?.reduce((sum, ticket) => 
+                              sum + (ticket.price * (ticket.quantity - ticket.available)), 0) || 0;
                             return (
-                              <tr key={event.eventId} className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+                              <tr key={event.eventId || event.id || event._id} className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
                                 <td className={`py-3 px-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                   <div>
                                     <div className="font-medium">{event.title}</div>
@@ -1914,14 +2406,14 @@ const OrganizerDashboard = () => {
             <div className="flex space-x-4 mb-2">
               <Button 
                 size="small"
-                onClick={() => exportEventAttendees(selectedEvent?.eventId, 'csv')}
+                onClick={() => exportEventAttendees(selectedEvent?.eventId || selectedEvent?.id || selectedEvent?._id, 'csv')}
               >
                 <Download className="w-4 h-4 mr-1" />
                 Export CSV
               </Button>
               <Button 
                 size="small"
-                onClick={() => exportEventAttendees(selectedEvent?.eventId, 'excel')}
+                onClick={() => exportEventAttendees(selectedEvent?.eventId || selectedEvent?.id || selectedEvent?._id, 'excel')}
               >
                 <Download className="w-4 h-4 mr-1" />
                 Export Excel
@@ -1997,7 +2489,7 @@ const OrganizerDashboard = () => {
                             await checkInAttendee(attendee.ticketId);
                             showSuccess('Attendee checked in successfully!');
                             // Refresh the list
-                            const response = await getEventAttendees(selectedEvent.eventId);
+                            const response = await getEventAttendees(selectedEvent.eventId || selectedEvent.id || selectedEvent._id);
                             setAttendees(response?.data?.attendees || []);
                           } catch (error) {
                             showError('Failed to check in attendee');
