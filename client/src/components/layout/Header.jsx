@@ -124,15 +124,26 @@ const Header = () => {
 
           {/* Enhanced Right Side */}
           <div className="flex items-center space-x-3">
-            {/* Find My Tickets Button */}
+            {/* Find My Tickets Button - Always visible on Desktop */}
             <button
               onClick={() => navigate('/tickets')}
-              className="relative flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
+              className="hidden md:flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
               aria-label="Find my tickets"
             >
               <RiTicketLine className="w-5 h-5" />
-              <span className="hidden sm:inline font-medium">Find my tickets</span>
+              <span className="font-medium">Find my tickets</span>
             </button>
+
+            {/* Find My Tickets Icon - Mobile only when not logged in */}
+            {!user && (
+              <button
+                onClick={() => navigate('/tickets')}
+                className="md:hidden flex items-center gap-2 px-2 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                aria-label="Find my tickets"
+              >
+                <RiTicketLine className="w-5 h-5" />
+              </button>
+            )}
 
             {/* Enhanced User Menu */}
             { !authReady ? (
@@ -177,6 +188,17 @@ const Header = () => {
                         </div>
                       </div>
                     </div>
+                    
+                    <button
+                      onClick={() => {
+                        navigate('/tickets');
+                        setUserMenuOpen(false);
+                      }}
+                      className="flex items-center w-full px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-200"
+                    >
+                      <RiTicketLine className="w-4 h-4 mr-3 text-blue-500" />
+                      My Tickets
+                    </button>
                     
                     <Link
                       to="/account"

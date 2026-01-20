@@ -154,6 +154,7 @@ const PaymentConfirmation = () => {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [countdown, setCountdown] = useState(8);
   const [error, setError] = useState(null);
+  const [paymentPayload, setPaymentPayload] = useState(null);
 
   // Use a ref to store showError to avoid including it in dependencies
   const showErrorRef = useRef(showError);
@@ -171,11 +172,16 @@ const PaymentConfirmation = () => {
     }
 
     try {
+      // Store the payment payload from location state
+      if (location.state?.paymentPayload) {
+        setPaymentPayload(location.state.paymentPayload);
+      }
+
       // If M-Pesa payment, poll for status first
       if (checkoutRequestID) {
-        console.log('🔄 Starting payment status polling...');
+        console.log('Starting payment status polling...');
         const paymentResult = await pollPaymentStatus(checkoutRequestID, 3000, 40);
-        console.log('✅ Payment polling complete. Result:', paymentResult);
+        console.log('Payment polling complete. Result:', paymentResult);
         setPaymentStatus(paymentResult);
 
         if (paymentResult.status === 'failed') {
@@ -187,20 +193,20 @@ const PaymentConfirmation = () => {
         }
 
         if (paymentResult.status === 'cancelled') {
-          console.log('⚠️ Payment was cancelled');
+          console.log('Payment was cancelled');
           setLoading(false);
-          return; // Don't fetch order, just show cancellation page
+          return;
         }
 
         if (paymentResult.status === 'timeout') {
-          console.log('⏱️ Payment polling timed out');
+          console.log('Payment polling timed out');
           setLoading(false);
-          return; // Show timeout page
+          return;
         }
       }
 
       // Only fetch order if payment was successful or no M-Pesa payment
-      console.log('📦 Fetching order details...');
+      console.log('Fetching order details...');
       const response = await getOrderById(orderId);
       
       if (response.success) {
@@ -219,7 +225,7 @@ const PaymentConfirmation = () => {
     } finally {
       setLoading(false);
     }
-  }, [orderId, checkoutRequestID]);
+  }, [orderId, checkoutRequestID, location.state?.paymentPayload]);
 
   useEffect(() => {
     fetchOrderAndPaymentStatus();
@@ -282,6 +288,26 @@ const PaymentConfirmation = () => {
     localStorage.setItem('hideAccountSuggestion', 'true');
   };
 
+  const handleRetryPayment = async () => {
+    if (!paymentPayload) {
+      showError('Unable to retry payment. Payment details not found.');
+      return;
+    }
+
+    // Simply navigate back to checkout with the original payment payload
+    // This allows the user to review and retry the payment from checkout
+    navigate('/checkout', {
+      state: {
+        item: paymentPayload.items[0], // Pass the ticket item back
+        retryPayment: true,
+        paymentPayload: paymentPayload
+      },
+      replace: true
+    });
+
+    showError('Returning to checkout. Please review and try payment again.');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -309,9 +335,9 @@ const PaymentConfirmation = () => {
               Browse Events
             </Button>
             <Button
-              onClick={() => window.location.reload()}
+              onClick={handleRetryPayment}
               variant="outline"
-              className="border-blue-600 text-blue-600 px-6 py-3 rounded-lg font-semibold"
+              className="border-blue-600 text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50"
             >
               Try Again
             </Button>
@@ -323,30 +349,33 @@ const PaymentConfirmation = () => {
 
   // Show cancellation message
   if (paymentStatus?.status === 'cancelled') {
-    console.log('🎭 Rendering cancellation page');
+    console.log('Rendering cancellation page');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
-          <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="text-center bg-white p-4 sm:p-8 rounded-lg shadow-lg max-w-md">
+          <div className="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-6">
             <svg className="w-10 h-10 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
           </div>
 
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Payment Cancelled</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 sm:mb-4">Payment Cancelled</h2>
+          <p className="text-gray-600 mb-3 sm:mb-6">
             You cancelled the M-Pesa payment prompt. Your ticket reservation is still valid.
           </p>
           
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-3 sm:mb-6">
             <p className="text-sm text-yellow-800">
-              ⏱️ Your reservation expires in <strong>30 minutes</strong>
+              <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.5a1 1 0 002 0V7z" clipRule="evenodd" />
+              </svg>
+              Your reservation expires in <strong>30 minutes</strong>
             </p>
           </div>
 
           <div className="flex flex-col gap-3">
             <Button
-              onClick={() => window.location.reload()}
+              onClick={handleRetryPayment}
               className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700"
             >
               Try Payment Again
@@ -366,30 +395,33 @@ const PaymentConfirmation = () => {
 
   // Show failure message
   if (paymentStatus?.status === 'failed') {
-    console.log('🎭 Rendering failure page');
+    console.log('Rendering failure page');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="text-center bg-white p-4 sm:p-8 rounded-lg shadow-lg max-w-md">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-6">
             <svg className="w-10 h-10 text-red-600" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
             </svg>
           </div>
 
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Payment Failed</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 sm:mb-4">Payment Failed</h2>
+          <p className="text-gray-600 mb-3 sm:mb-6">
             {paymentStatus?.resultDesc || 'Your M-Pesa payment could not be processed.'}
           </p>
           
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-3 sm:mb-6">
             <p className="text-sm text-red-800">
-              ⏱️ Your reservation expires in <strong>30 minutes</strong>
+              <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.5a1 1 0 002 0V7z" clipRule="evenodd" />
+              </svg>
+              Your reservation expires in <strong>30 minutes</strong>
             </p>
           </div>
 
           <div className="flex flex-col gap-3">
             <Button
-              onClick={() => window.location.reload()}
+              onClick={handleRetryPayment}
               className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700"
             >
               Try Payment Again
@@ -409,24 +441,27 @@ const PaymentConfirmation = () => {
 
   // Show timeout message
   if (paymentStatus?.status === 'timeout') {
-    console.log('🎭 Rendering timeout page');
+    console.log('Rendering timeout page');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-lg shadow-lg max-w-md">
-          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div className="text-center bg-white p-4 sm:p-8 rounded-lg shadow-lg max-w-md">
+          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-6">
             <svg className="w-10 h-10 text-blue-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
 
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Payment Processing</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2 sm:mb-4">Payment Processing</h2>
+          <p className="text-gray-600 mb-3 sm:mb-6">
             Your payment is still being processed. This may take a few moments.
           </p>
           
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-3 sm:mb-6">
             <p className="text-sm text-blue-800">
-              ✅ M-Pesa prompt was sent to your phone<br/>
+              <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              M-Pesa prompt was sent to your phone<br/>
               If you entered your PIN, payment will complete shortly.
             </p>
           </div>
@@ -592,6 +627,9 @@ const PaymentConfirmation = () => {
                 {orderData.isGuestOrder && !user && !orderData?.hasAccount && !showAccountModal && countdown > 0 && (
                   <div className="text-center mt-6 p-3 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-700">
+                      <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.5a1 1 0 002 0V7z" clipRule="evenodd" />
+                      </svg>
                       Create an account in <span className="font-bold">{countdown}</span> seconds to unlock exclusive benefits!
                     </p>
                   </div>

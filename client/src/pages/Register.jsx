@@ -651,7 +651,7 @@ const Register = () => {
               <p className="text-sm text-gray-600">
                 {isAttendee ? 'Already have an account?' : 'Already have an organizer account?'}{' '}
                 <Link
-                  to={isAttendee ? "/login" : "/organizer/login"}
+                  to={isAttendee ? "/login" : "/login"}
                   className={`font-medium ${isAttendee ? 'text-blue-600 hover:text-blue-700' : 'text-purple-600 hover:text-purple-700'}`}
                 >
                   Sign in here

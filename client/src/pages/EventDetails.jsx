@@ -5,6 +5,7 @@ import { useUI } from '../context/UIContext';
 import { formatDate, formatPrice, getDaysUntilEvent } from '../utils/formatDate';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Button from '../components/common/Button';
+import TicketModal from '../components/common/TicketModal';
 // Add react-icons imports
 import { FiCalendar, FiMapPin, FiClock, FiUsers, FiFileText, FiChevronDown, FiChevronUp, FiCopy, FiShare2, FiMenu } from 'react-icons/fi';
 import { FaFacebook, FaCheck, FaWhatsapp, FaLinkedin, FaTicketAlt } from 'react-icons/fa';
@@ -29,6 +30,7 @@ const EventDetails = () => {
     minutes: 0,
     seconds: 0
   });
+  
   const { showSuccess, showError } = useUI();
   const navigate = useNavigate();
 
@@ -158,24 +160,6 @@ const EventDetails = () => {
     }
   };
 
-  // Handle paid ticket purchase - direct to checkout
-  const handleBuyTickets = () => {
-    const ticket = tickets[selectedTicketIndex] || {};
-    navigate('/checkout', {
-      state: {
-        item: {
-          eventId: event._id || event.id,
-          title: event.title,
-          price: ticket.price || 0,
-          quantity: selectedQuantity,
-          image: event.image,
-          type: ticket.type,
-          _id: ticket.id
-        }
-      }
-    });
-  };
-
   // Success Modal Component
   const SuccessModal = () => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -296,152 +280,6 @@ const EventDetails = () => {
     </div>
   );
 
-  // Mobile Ticket Modal - use showTicketsMobile to control
-  const MobileTicketModal = () => (
-    <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 lg:hidden">
-      <div className="bg-white rounded-t-3xl w-full max-h-[90vh] overflow-y-auto overscroll-contain">
-        {/* Modal Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-10">
-          <h2 className="text-lg font-bold text-gray-900">Get Tickets</h2>
-          <button 
-            onClick={() => {
-              setShowTicketsMobile(false);
-              setShowMobileTicketModal(false);
-            }}
-            className="p-2 rounded-full hover:bg-gray-100"
-          >
-            <IoClose className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        {/* Modal Content */}
-        <div className="p-4 pb-24">
-          {/* Price Display */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-3xl font-bold text-gray-900">
-                {isFreeEvent ? 'Free' : formatPrice(ticketPrice)}
-              </span>
-              {isFreeEvent ? (
-                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                  No Payment Required
-                </span>
-              ) : (
-                <span className="bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-sm font-medium">
-                  Secure Payment
-                </span>
-              )}
-            </div>
-            <p className="text-gray-500 text-sm">per person • {available} available</p>
-          </div>
-
-          {/* Ticket Selection */}
-          {tickets.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                {isFreeEvent ? 'Reservation Type' : 'Ticket Type'}
-              </h3>
-              <div className="space-y-3">
-                {tickets.map((ticket, index) => (
-                  <TicketCard
-                    key={ticket.id || ticket._id || index}
-                    ticket={ticket}
-                    index={index}
-                    isSelected={selectedTicketIndex === index}
-                    onSelect={(idx) => {
-                      setSelectedTicketIndex(idx);
-                      setSelectedQuantity(tickets[idx]?.minOrder || 1);
-                    }}
-                    compact={true}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Quantity & Total */}
-          {isUpcoming && available > 0 && (
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Number of {isFreeEvent ? 'spots' : 'tickets'}
-                </label>
-                <div className="flex items-center space-x-4">
-                  <select
-                    value={selectedQuantity}
-                    onChange={e => setSelectedQuantity(parseInt(e.target.value))}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
-                  >
-                    {[...Array(Math.min(maxOrder, available)).keys()].map(i => (
-                      <option key={i + minOrder} value={i + minOrder}>
-                        {i + minOrder}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500">Total</p>
-                    <p className="text-xl font-bold text-primary-600">
-                      {isFreeEvent ? 'Free' : formatPrice(ticketPrice * selectedQuantity)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              {isFreeEvent ? (
-                <Button 
-                  fullWidth 
-                  size="large" 
-                  onClick={() => {
-                    handleReserveSpot();
-                    setShowTicketsMobile(false);
-                  }}
-                  loading={reservationLoading}
-                  className="text-lg py-4"
-                >
-                  {reservationLoading ? 'Reserving...' : 'Reserve Your Spot'}
-                </Button>
-              ) : (
-                <Button 
-                  fullWidth 
-                  size="large" 
-                  onClick={() => {
-                    handleBuyTickets();
-                    setShowTicketsMobile(false);
-                  }}
-                  className="text-lg py-4"
-                >
-                  Buy Tickets Now
-                </Button>
-              )}
-
-              {/* Urgency Messages */}
-              {available <= 10 && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-red-700 text-sm font-medium">
-                    🔥 Only {available} spots left!
-                  </p>
-                </div>
-              )}
-
-              {/* Event Info Summary */}
-              <div className="space-y-3 pt-4 border-t border-gray-200">
-                <div className="flex items-center text-sm text-gray-600">
-                  <FiCalendar className="w-4 h-4 mr-3 text-primary-600" />
-                  <span>{formatDate(event.date)} at {event.time}</span>
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <FiMapPin className="w-4 h-4 mr-3 text-primary-600" />
-                  <span className="truncate">{event.venue}</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
   const TicketCard = ({ ticket, index, isSelected, onSelect, compact = false }) => {
     const isAvailable = ticket.available > 0;
     const isPopular = ticket.type?.toLowerCase().includes('vip') || ticket.type?.toLowerCase().includes('premium');
@@ -534,27 +372,27 @@ const EventDetails = () => {
 
   // Mobile Floating Action Button
   const MobileFloatingButton = () => (
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent p-4 z-40 lg:hidden pointer-events-none">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 pointer-events-auto">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-sm text-gray-500">Starting from</p>
-                <p className="text-xl font-bold text-primary-600">
-                  {isFreeEvent ? 'Free' : formatPrice(lowestTicketPrice)}
-                </p>
-              </div>
-
-              <Button 
-                onClick={() => setShowTicketsMobile(true)}
-                size="large"
-                className="flex-1 ml-4 py-3"
-              >
-                Get Tickets
-              </Button>
-            </div>
-          </div>
+  <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent p-4 z-40 lg:hidden">
+    <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="text-sm text-gray-500">Starting from</p>
+          <p className="text-xl font-bold text-primary-600">
+            {isFreeEvent ? 'Free' : formatPrice(lowestTicketPrice)}
+          </p>
         </div>
-  );
+
+        <Button 
+          onClick={() => setShowMobileTicketModal(true)}
+          size="large"
+          className="flex-1 ml-4 py-3"
+        >
+          Get Tickets
+        </Button>
+      </div>
+    </div>
+  </div>
+);
 
 
   // Mobile Header Summary
@@ -604,19 +442,6 @@ const EventDetails = () => {
     </div>
   );
 
-  useEffect(() => {
-    // Prevent body scroll when mobile modal is open
-    if (showMobileTicketModal || showTicketsMobile) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [showMobileTicketModal, showTicketsMobile]);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -658,7 +483,22 @@ const EventDetails = () => {
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
       {showSuccessModal && <SuccessModal />}
       {showShareOptions && <ShareModal />}
-      {(showMobileTicketModal || showTicketsMobile) && <MobileTicketModal />}
+      
+      {/* Add TicketModal Component */}
+      <TicketModal
+        isOpen={showMobileTicketModal}
+        onClose={() => setShowMobileTicketModal(false)}
+        event={event}
+        tickets={tickets}
+        selectedTicketIndex={selectedTicketIndex}
+        setSelectedTicketIndex={setSelectedTicketIndex}
+        selectedQuantity={selectedQuantity}
+        setSelectedQuantity={setSelectedQuantity}
+        isFreeEvent={isFreeEvent}
+        isUpcoming={isUpcoming}
+        reservationLoading={reservationLoading}
+        onReserveSpot={handleReserveSpot}
+      />
       
       {/* Mobile Header */}
       <MobileHeaderSummary />
@@ -1016,7 +856,22 @@ const EventDetails = () => {
                     <Button 
                       fullWidth 
                       size="large" 
-                      onClick={handleBuyTickets}
+                      onClick={() => {
+                        const ticket = tickets[selectedTicketIndex] || {};
+                        navigate('/checkout', {
+                          state: {
+                            item: {
+                              eventId: event._id || event.id,
+                              title: event.title,
+                              price: ticket.price || 0,
+                              quantity: selectedQuantity,
+                              image: event.image,
+                              type: ticket.type,
+                              _id: ticket.id
+                            }
+                          }
+                        });
+                      }}
                       className="text-lg py-4"
                     >
                       Buy Tickets Now
@@ -1096,28 +951,7 @@ const EventDetails = () => {
       </div>
 
       {/* Mobile Floating Action Button */}
-      {isUpcoming && available > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent p-4 z-40 lg:hidden pointer-events-none">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 pointer-events-auto">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <p className="text-sm text-gray-500">Starting from</p>
-                <p className="text-xl font-bold text-primary-600">
-                  {isFreeEvent ? 'Free' : formatPrice(lowestTicketPrice)}
-                </p>
-              </div>
-
-              <Button 
-                onClick={() => setShowTicketsMobile(true)}
-                size="large"
-                className="flex-1 ml-4 py-3"
-              >
-                Get Tickets
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {isUpcoming && available > 0 && <MobileFloatingButton />}
     </div>
   );
 };

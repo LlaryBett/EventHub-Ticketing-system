@@ -533,7 +533,7 @@ const Organizer = () => {
             </div>
             
             <div
-              className="flex-1 bg-cover bg-center min-h-[150px] md:min-h-[180px]"
+              className="hidden md:block flex-1 bg-cover bg-center min-h-[150px] md:min-h-[180px]"
               style={{
                 backgroundImage: "url('https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&h=600&fit=crop')",
                 clipPath: "polygon(30% 0, 100% 0, 100% 100%, 0 100%, 0 50%)"

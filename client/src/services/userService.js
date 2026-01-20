@@ -287,28 +287,28 @@ export const downloadAttendeesCSV = async (eventId, eventTitle) => {
   }
 };
 
-// ===== PLACEHOLDER FUNCTIONS =====
+// // ===== PLACEHOLDER FUNCTIONS =====
 
-// Placeholder: Get event recommendations for a user
-export const getEventRecommendations = async (userId) => {
-  // TODO: Implement actual logic or API call
-  return [];
-};
+// // Placeholder: Get event recommendations for a user
+// export const getEventRecommendations = async (userId) => {
+//   // TODO: Implement actual logic or API call
+//   return [];
+// };
 
-// Placeholder: Get attendee networking list for a user
-export const getAttendeeNetworkingList = async (userId) => {
-  // TODO: Implement actual logic or API call
-  return [];
-};
+// // Placeholder: Get attendee networking list for a user
+// export const getAttendeeNetworkingList = async (userId) => {
+//   // TODO: Implement actual logic or API call
+//   return [];
+// };
 
-// Placeholder: Get event photos for a user
-export const getEventPhotos = async (userId) => {
-  // TODO: Implement actual logic or API call
-  return [];
-};
+// // Placeholder: Get event photos for a user
+// export const getEventPhotos = async (userId) => {
+//   // TODO: Implement actual logic or API call
+//   return [];
+// };
 
-// Placeholder: Get spending analytics for a user
-export const getSpendingAnalytics = async (userId) => {
-  // TODO: Implement actual logic or API call
-  return {};
-};
+// // Placeholder: Get spending analytics for a user
+// export const getSpendingAnalytics = async (userId) => {
+//   // TODO: Implement actual logic or API call
+//   return {};
+// };

@@ -478,6 +478,8 @@ exports.lookupTicketsByEmail = async (req, res, next) => {
   try {
     const { email } = req.query;
     
+    console.log(`🔍 Looking up tickets for email: ${email}`);
+    
     if (!email) {
       return res.status(400).json({
         success: false,
@@ -493,43 +495,104 @@ exports.lookupTicketsByEmail = async (req, res, next) => {
     .populate('ticketId', 'type price')
     .sort({ createdAt: -1 });
 
+    console.log(`✅ Found ${tickets.length} tickets for email: ${email}`);
+    
+    // Debug: Check each ticket's populated fields
+    tickets.forEach((ticket, index) => {
+      console.log(`\n📋 Ticket ${index + 1}:`);
+      console.log(`   Ticket ID: ${ticket._id}`);
+      console.log(`   Ticket Code: ${ticket.ticketCode}`);
+      console.log(`   Event ID reference: ${ticket.eventId}`);
+      console.log(`   Ticket Type ID reference: ${ticket.ticketId}`);
+      
+      // Check if populated fields exist
+      if (!ticket.eventId) {
+        console.log(`   ⚠️  WARNING: eventId is NULL for ticket ${ticket._id}`);
+      } else {
+        console.log(`   ✅ Event populated: ${ticket.eventId._id} - ${ticket.eventId.title}`);
+      }
+      
+      if (!ticket.ticketId) {
+        console.log(`   ⚠️  WARNING: ticketId is NULL for ticket ${ticket._id}`);
+      } else {
+        console.log(`   ✅ Ticket type populated: ${ticket.ticketId._id} - ${ticket.ticketId.type}`);
+      }
+    });
+
+    // Map tickets with error handling for null references
+    const mappedTickets = tickets.map(ticket => {
+      try {
+        console.log(`\n🔄 Processing ticket: ${ticket._id}`);
+        
+        if (!ticket.eventId) {
+          console.log(`   🚨 eventId is null for ticket ${ticket._id}`);
+          throw new Error(`Event not found for ticket ${ticket._id}`);
+        }
+        
+        if (!ticket.ticketId) {
+          console.log(`   🚨 ticketId is null for ticket ${ticket._id}`);
+          throw new Error(`Ticket type not found for ticket ${ticket._id}`);
+        }
+        
+        console.log(`   ✅ Both references populated successfully`);
+        
+        return {
+          id: ticket._id,
+          ticketCode: ticket.ticketCode,
+          qrCode: ticket.qrCode,
+          isUsed: ticket.isUsed,
+          attendeeName: ticket.attendeeName,
+          attendeeEmail: ticket.attendeeEmail,
+          price: ticket.price,
+          ticketType: ticket.ticketType,
+          event: {
+            id: ticket.eventId._id,
+            title: ticket.eventId.title,
+            date: ticket.eventId.date,
+            venue: ticket.eventId.venue,
+            image: ticket.eventId.image,
+            organizer: ticket.eventId.organizer
+          },
+          ticketDetails: {
+            id: ticket.ticketId._id,
+            type: ticket.ticketId.type,
+            price: ticket.ticketId.price
+          }
+        };
+      } catch (mapError) {
+        console.error(`   ❌ Error mapping ticket ${ticket._id}:`, mapError.message);
+        console.log(`   💾 Ticket raw data:`, JSON.stringify(ticket, null, 2));
+        return null; // Return null for failed mappings
+      }
+    });
+
+    // Filter out null values from failed mappings
+    const validTickets = mappedTickets.filter(ticket => ticket !== null);
+    
+    console.log(`\n📊 Final result:`);
+    console.log(`   Total tickets found: ${tickets.length}`);
+    console.log(`   Valid tickets mapped: ${validTickets.length}`);
+    console.log(`   Failed mappings: ${tickets.length - validTickets.length}`);
+
     res.status(200).json({
       success: true,
-      count: tickets.length,
-      data: tickets.map(ticket => ({
-        id: ticket._id,
-        ticketCode: ticket.ticketCode,
-        qrCode: ticket.qrCode,
-        isUsed: ticket.isUsed,
-        attendeeName: ticket.attendeeName,
-        attendeeEmail: ticket.attendeeEmail,
-        price: ticket.price,
-        ticketType: ticket.ticketType,
-        event: {
-          id: ticket.eventId._id,
-          title: ticket.eventId.title,
-          date: ticket.eventId.date,
-          venue: ticket.eventId.venue,
-          image: ticket.eventId.image,
-          organizer: ticket.eventId.organizer
-        },
-        ticketDetails: {
-          id: ticket.ticketId._id,
-          type: ticket.ticketId.type,
-          price: ticket.ticketId.price
-        }
-      }))
+      count: validTickets.length,
+      invalidCount: tickets.length - validTickets.length,
+      data: validTickets
     });
+    
   } catch (error) {
     console.error('❌ lookupTicketsByEmail error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Request query:', req.query);
+    
     res.status(500).json({
       success: false,
       message: 'Server Error',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };
-
 // Delete ticket (organizer only) - original version
 exports.deleteTicket = async (req, res, next) => {
   try {

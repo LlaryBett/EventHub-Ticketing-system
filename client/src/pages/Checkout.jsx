@@ -111,92 +111,101 @@ const Checkout = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  // Removed login requirement
-  // if (!user) {
-  //   showError('Please log in to complete your purchase');
-  //   navigate('/login');
-  //   return;
-  // }
+    e.preventDefault();
 
-  if (!ticketItem) {
-    showError('No ticket selected for purchase');
-    navigate('/events');
-    return;
-  }
-
-  // Validate full name
-  if (!paymentInfo.fullName.trim()) {
-    showError('Please enter your full name');
-    return;
-  }
-
-  // Validate M-Pesa phone number
-  if (!validateMpesaPhone(paymentInfo.phoneNumber)) {
-    showError('Please enter a valid M-Pesa phone number (e.g., 0712345678)');
-    return;
-  }
-
-  // Validate email
-  if (!paymentInfo.email.trim()) {
-    showError('Please enter your email address');
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    const totals = calculateTotal();
-    const formattedPhone = formatMpesaPhone(paymentInfo.phoneNumber);
-    
-    const checkoutData = {
-      items: [{
-        eventId: ticketItem.eventId,
-        ticket: ticketItem._id || ticketItem.id, // Ensure ticket id is always passed
-        quantity: ticketItem.quantity,
-        price: ticketItem.price,
-        title: ticketItem.title
-      }],
-      customerInfo: {
-        fullName: paymentInfo.fullName,
-        email: paymentInfo.email,
-        phone: formattedPhone,
-        userId: user?.id || null, // Handle null user
-        name: paymentInfo.fullName // Use the full name from the form
-      },
-      paymentMethod: 'mpesa',
-      mpesaPhone: formattedPhone,
-      discountCode: discount ? discount.code : undefined,
-      totals
-    };
-    console.log('Ticket ID being passed to backend:', checkoutData.items[0].ticket);
-
-    const order = await processCheckout(checkoutData);
-    // Show success message with M-Pesa prompt info
-    showSuccess('M-Pesa payment request sent! Please check your phone and enter your PIN to complete the payment.');
-    // Log the order ID being passed to payment-confirmation page
-    console.log('Navigating to /payment-confirmation with orderId:', order.order.id);
-    console.log('CheckoutRequestID:', order.order.checkoutRequestID);
-    
-    // ✅ PASS checkoutRequestID to PaymentConfirmation
-    navigate('/payment-confirmation', { 
-      state: { 
-        orderId: order.order.id,
-        checkoutRequestID: order.order.checkoutRequestID  // ✅ ADD THIS
-      } 
-    });
-  } catch (error) {
-    if (error.isAuthError) {
-      showError('Your session has expired. Please log in again.');
-      navigate('/login');
+    if (!ticketItem) {
+      showError('No ticket selected for purchase');
+      navigate('/events');
       return;
     }
-    showError(error.message || 'Failed to initiate M-Pesa payment. Please try again.');
-    console.error('M-Pesa checkout error:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+
+    // Validate full name
+    if (!paymentInfo.fullName.trim()) {
+      showError('Please enter your full name');
+      return;
+    }
+
+    // Validate M-Pesa phone number
+    if (!validateMpesaPhone(paymentInfo.phoneNumber)) {
+      showError('Please enter a valid M-Pesa phone number (e.g., 0712345678)');
+      return;
+    }
+
+    // Validate email
+    if (!paymentInfo.email.trim()) {
+      showError('Please enter your email address');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const totals = calculateTotal();
+      const formattedPhone = formatMpesaPhone(paymentInfo.phoneNumber);
+      
+      const checkoutData = {
+        items: [{
+          eventId: ticketItem.eventId,
+          ticket: ticketItem._id || ticketItem.id,
+          quantity: ticketItem.quantity,
+          price: ticketItem.price,
+          title: ticketItem.title
+        }],
+        customerInfo: {
+          fullName: paymentInfo.fullName,
+          email: paymentInfo.email,
+          phone: formattedPhone,
+          userId: user?.id || null,
+          name: paymentInfo.fullName
+        },
+        paymentMethod: 'mpesa',
+        mpesaPhone: formattedPhone,
+        discountCode: discount ? discount.code : undefined,
+        totals
+      };
+      
+      console.log('Ticket ID being passed to backend:', checkoutData.items[0].ticket);
+
+      const order = await processCheckout(checkoutData);
+      
+      // Show success message with M-Pesa prompt info
+      showSuccess('M-Pesa payment request sent! Please check your phone and enter your PIN to complete the payment.');
+      
+      console.log('Navigating to /payment-confirmation with orderId:', order.order.id);
+      console.log('CheckoutRequestID:', order.order.checkoutRequestID);
+      
+      // Store payment payload for retry functionality
+      const paymentPayload = {
+        orderId: order.order.id,
+        items: checkoutData.items,
+        customerInfo: checkoutData.customerInfo,
+        paymentMethod: 'mpesa',
+        mpesaPhone: formattedPhone,
+        discountCode: checkoutData.discountCode,
+        totals: totals,
+        amount: totals.total
+      };
+
+      // Navigate to payment confirmation with all necessary data including retry payload
+      navigate('/payment-confirmation', { 
+        state: { 
+          orderId: order.order.id,
+          checkoutRequestID: order.order.checkoutRequestID,
+          paymentPayload: paymentPayload
+        } 
+      });
+    } catch (error) {
+      if (error.isAuthError) {
+        showError('Your session has expired. Please log in again.');
+        navigate('/login');
+        return;
+      }
+      showError(error.message || 'Failed to initiate M-Pesa payment. Please try again.');
+      console.error('M-Pesa checkout error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!ticketItem) {
     return (

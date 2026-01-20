@@ -12,7 +12,7 @@ const ticketService = {
    */
   getEventTickets: async (eventId) => {
     try {
-      const response = await api.get(`/ticket/event/${eventId}`); // Changed to singular
+      const response = await api.get(`/tickets/event/${eventId}`); // Changed to singular
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -26,7 +26,7 @@ const ticketService = {
    */
   getTicket: async (ticketId) => {
     try {
-      const response = await api.get(`/ticket/${ticketId}`); // Changed to singular
+      const response = await api.get(`/tickets/${ticketId}`); // Changed to singular
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -40,7 +40,7 @@ const ticketService = {
    */
   lookupTicketsByEmail: async (email) => {
     try {
-      const response = await api.get(`/ticket/lookup/email?email=${encodeURIComponent(email)}`); // Changed to singular
+      const response = await api.get(`/tickets/lookup/email?email=${encodeURIComponent(email)}`); // Changed to singular
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -53,7 +53,7 @@ const ticketService = {
    */
   getMyTickets: async () => {
     try {
-      const response = await api.get('/ticket/user/mytickets'); // Changed to singular
+      const response = await api.get('/tickets/user/mytickets'); // Changed to singular
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -76,7 +76,7 @@ const ticketService = {
    */
   createTicket: async (eventId, ticketData) => {
     try {
-      const response = await api.post(`/ticket/event/${eventId}`, ticketData); // Changed to singular
+      const response = await api.post(`/tickets/event/${eventId}`, ticketData); // Changed to singular
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -91,7 +91,7 @@ const ticketService = {
    */
   updateTicket: async (ticketId, ticketData) => {
     try {
-      const response = await api.put(`/ticket/${ticketId}`, ticketData); // Changed to singular
+      const response = await api.put(`/tickets/${ticketId}`, ticketData); // Changed to singular
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -105,7 +105,7 @@ const ticketService = {
    */
   deleteTicket: async (ticketId) => {
     try {
-      const response = await api.delete(`/ticket/${ticketId}`); // Changed to singular
+      const response = await api.delete(`/tickets/${ticketId}`); // Changed to singular
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -120,7 +120,7 @@ const ticketService = {
    */
   reserveTickets: async (ticketId, quantity) => {
     try {
-      const response = await api.post(`/ticket/${ticketId}/reserve`, { quantity }); // Changed to singular
+      const response = await api.post(`/tickets/${ticketId}/reserve`, { quantity }); // Changed to singular
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

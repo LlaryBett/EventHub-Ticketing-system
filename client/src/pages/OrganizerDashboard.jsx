@@ -890,10 +890,10 @@ const OrganizerDashboard = () => {
         {/* Header */}
         <div className="mb-8">
           <div className="mb-4">
-            <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h1 className={`text-4xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
               Organizer Dashboard
             </h1>
-            <p className={`mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            <p className={`mt-2 text-lg ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
               Manage your events and track your success
             </p>
           </div>
@@ -985,10 +985,10 @@ const OrganizerDashboard = () => {
                       </div>
 
                       <div className="min-w-0">
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <p className={`text-xs font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           Total Events
                         </p>
-                        <p className={`text-2xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <p className={`text-3xl font-bold mt-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                           {analytics.totalEvents}
                         </p>
                       </div>
@@ -1003,13 +1003,13 @@ const OrganizerDashboard = () => {
                       </div>
 
                       <div className="min-w-0">
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <p className={`text-xs font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           Total Revenue
                         </p>
-                        <p className={`text-2xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <p className={`text-3xl font-bold mt-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                           {formatPrice(analytics.totalRevenue)}
                         </p>
-                        <p className="text-sm text-green-600 mt-1">
+                        <p className="text-sm text-green-600 mt-2 font-medium">
                           ↑ {analytics.revenueGrowth}%
                         </p>
                       </div>
@@ -1024,13 +1024,13 @@ const OrganizerDashboard = () => {
                       </div>
 
                       <div className="min-w-0">
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <p className={`text-xs font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           Total Attendees
                         </p>
-                        <p className={`text-2xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <p className={`text-3xl font-bold mt-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                           {analytics.totalAttendees}
                         </p>
-                        <p className="text-sm text-green-600 mt-1">
+                        <p className="text-sm text-green-600 mt-2 font-medium">
                           ↑ {analytics.attendeeGrowth}%
                         </p>
                       </div>
@@ -1045,10 +1045,10 @@ const OrganizerDashboard = () => {
                       </div>
 
                       <div className="min-w-0">
-                        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <p className={`text-xs font-medium uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                           Upcoming Events
                         </p>
-                        <p className={`text-2xl font-semibold truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        <p className={`text-3xl font-bold mt-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                           {analytics.upcomingEvents}
                         </p>
                       </div>
@@ -1060,7 +1060,7 @@ const OrganizerDashboard = () => {
                 {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className={`rounded-lg shadow-md p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                    <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <h3 className={`text-lg font-semibold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                       Revenue Trend
                     </h3>
                     <ResponsiveContainer width="100%" height={300}>
@@ -1075,7 +1075,7 @@ const OrganizerDashboard = () => {
                   </div>
 
                   <div className={`rounded-lg shadow-md p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                    <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <h3 className={`text-lg font-semibold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                       Event Performance
                     </h3>
                     <ResponsiveContainer width="100%" height={300}>
@@ -1093,7 +1093,7 @@ const OrganizerDashboard = () => {
                 {/* Recent Events */}
                 <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                   <div className="p-6 border-b">
-                    <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                       Recent Events
                     </h2>
                   </div>
@@ -1105,7 +1105,7 @@ const OrganizerDashboard = () => {
                             <Calendar className="w-6 h-6 text-blue-600" />
                           </div>
                           <div>
-                            <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            <h3 className={`font-semibold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                               {event.title}
                             </h3>
                             <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
@@ -1114,7 +1114,7 @@ const OrganizerDashboard = () => {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                             {event.attendees} registered
                           </p>
                           <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
@@ -1132,7 +1132,7 @@ const OrganizerDashboard = () => {
               <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                 <div className="p-6 border-b">
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                       My Events
                     </h2>
                     
@@ -1210,10 +1210,10 @@ const OrganizerDashboard = () => {
                         <div key={event._id || event.id} className={`p-4 sm:p-6 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
-                              <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                              <h3 className={`text-xl font-bold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                                 {event.title}
                               </h3>
-                              <div className={`space-y-1 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                              <div className={`space-y-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                                 <p>{formatDate(event.date)}</p>
                                 <p className="flex items-center">
                                   <Users className="w-4 h-4 mr-2" />
@@ -1459,10 +1459,10 @@ const OrganizerDashboard = () => {
                 <div className="p-6 border-b">
                   <div className="flex justify-between items-center">
                     <div>
-                      <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                         Event Stories
                       </h2>
-                      <p className={`mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <p className={`mt-2 text-base ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                         Create engaging stories to promote your events
                       </p>
                     </div>
@@ -1590,11 +1590,10 @@ const OrganizerDashboard = () => {
               </div>
             )}
 
-            {/* Other tabs (attendees, analytics, settings) remain the same */}
             {activeTab === 'attendees' && (
               <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
                 <div className="p-6 border-b">
-                  <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                     Attendee Management
                   </h2>
                 </div>
@@ -1602,14 +1601,13 @@ const OrganizerDashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     {organizerEvents.map((event) => (
                       <div key={event.id || event._id} className={`border rounded-lg p-4 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                        <div className="mb-2">
-                          <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{event.title}</span>
-                          <span className="ml-2 text-primary-600">
-                            {event.registered !== undefined ? event.registered : event.attendees || 0} registered attendees
+                        <div className="mb-4">
+                          <span className={`font-semibold text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                            {event.registered !== undefined ? event.registered : event.attendees || 0} registered
                           </span>
                         </div>
                         <div className="flex items-center justify-between mb-4">
-                          <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          <h3 className={`font-semibold text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                             {event.title}
                           </h3>
                           <Button
@@ -1630,18 +1628,18 @@ const OrganizerDashboard = () => {
                               size="small" 
                               variant="outline"
                               onClick={() => exportAttendees(event.id || event._id, 'csv')}
-                              className="inline-flex items-center gap-1"
+                              className="inline-flex items-center gap-1 text-xs"
                             >
-                              <Download className="w-4 h-4" />
+                              <Download className="w-3 h-3" />
                               <span>CSV</span>
                             </Button>
                             <Button 
                               size="small" 
                               variant="outline"
                               onClick={() => exportAttendees(event.id || event._id, 'excel')}
-                              className="inline-flex items-center gap-1"
+                              className="inline-flex items-center gap-1 text-xs"
                             >
-                              <Download className="w-4 h-4" />
+                              <Download className="w-3 h-3" />
                               <span>Excel</span>
                             </Button>
                           </div>
@@ -1653,933 +1651,594 @@ const OrganizerDashboard = () => {
               </div>
             )}
 
-            {activeTab === 'analytics' && (
-              <div className="space-y-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className={`rounded-lg shadow-md p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                    <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Revenue vs Attendees
-                    </h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis yAxisId="left" />
-                        <YAxis yAxisId="right" orientation="right" />
-                        <Tooltip />
-                        <Line yAxisId="left" type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={2} />
-                        <Line yAxisId="right" type="monotone" dataKey="attendees" stroke="#10B981" strokeWidth={2} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className={`rounded-lg shadow-md p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                    <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Event Categories
-                    </h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={[
-                            { name: 'Technology', value: 40, color: '#3B82F6' },
-                            { name: 'Business', value: 30, color: '#10B981' },
-                            { name: 'Arts', value: 20, color: '#F59E0B' },
-                            { name: 'Other', value: 10, color: '#EF4444' }
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          dataKey="value"
-                        >
-                          {[
-                            { name: 'Technology', value: 40, color: '#3B82F6' },
-                            { name: 'Business', value: 30, color: '#10B981' },
-                            { name: 'Arts', value: 20, color: '#F59E0B' },
-                            { name: 'Other', value: 10, color: '#EF4444' }
-                          ].map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
+            {/* Create Story Modal */}
+            <Modal
+              isOpen={showCreateStoryModal}
+              onClose={() => setShowCreateStoryModal(false)}
+              title="Create Story"
+              size="large"
+            >
+              <div className="space-y-6">
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Select Event
+                  </label>
+                  <select
+                    value={newStory.eventId}
+                    onChange={(e) => {
+                      const selectedEventId = e.target.value;
+                      setNewStory({...newStory, eventId: selectedEventId});
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                      darkMode 
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300'
+                    }`}
+                  >
+                    <option value="">Choose an event</option>
+                    {organizerEvents.map(event => {
+                      const val = event.id || event.eventId || '';
+                      return <option key={val || event.title} value={val}>{event.title}</option>;
+                    })}
+                  </select>
                 </div>
 
-                <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                  <div className="p-6 border-b">
-                    <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Event Performance Analysis
-                    </h2>
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className={`font-semibold text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Story Slides
+                    </h3>
+                    <Button size="small" onClick={addSlide}>
+                      <Plus className="w-4 h-4" />
+                      Add Slide
+                    </Button>
                   </div>
-                  <div className="p-6">
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                            <th className={`text-left py-3 px-4 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                              Event
-                            </th>
-                            <th className={`text-left py-3 px-4 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                              Registration Rate
-                            </th>
-                            <th className={`text-left py-3 px-4 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                              Revenue
-                            </th>
-                            <th className={`text-left py-3 px-4 font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                              ROI
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {organizerEvents.map((event) => {
-                            const registrationRate = event.capacity ? ((event.registered || event.attendees || 0) / event.capacity) * 100 : 0;
-                            const revenue = event.tickets?.reduce((sum, ticket) => 
-                              sum + (ticket.price * (ticket.quantity - ticket.available)), 0) || 0;
-                            return (
-                              <tr key={event.eventId || event.id || event._id} className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
-                                <td className={`py-3 px-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                  <div>
-                                    <div className="font-medium">{event.title}</div>
-                                    <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                                      {formatDate(event.date)}
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className={`py-3 px-4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                  <div className="flex items-center">
-                                    <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
-                                      <div 
-                                        className="bg-primary-600 h-2 rounded-full" 
-                                        style={{ width: `${registrationRate}%` }}
-                                      ></div>
-                                    </div>
-                                    <span className="text-sm">{registrationRate.toFixed(1)}%</span>
-                                  </div>
-                                </td>
-                                <td className={`py-3 px-4 font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                                  {formatPrice(revenue)}
-                                </td>
-                                <td className="py-3 px-4">
-                                  <span className="text-green-600 font-medium">
-                                    +{((revenue / 1000) * 100).toFixed(1)}%
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {activeTab === 'settings' && (
-              <div className="space-y-8">
-                <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                  <div className="p-6 border-b">
-                    <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Organizer Profile
-                    </h2>
-                  </div>
-                  <div className="p-6">
-                    <form className="space-y-6">
-                      <div className="flex items-center space-x-6">
-                        <div className="relative">
-                          <img
-                            src={logoPreview || organizerSettings.logo || '/api/placeholder/100/100'}
-                            alt="Organization Logo"
-                            className="w-24 h-24 rounded-full object-cover"
-                          />
-                          {/* hidden file input */}
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={handleLogoSelect}
-                            className="hidden"
-                          />
-                          <Button
-                            size="small"
-                            className="absolute -bottom-2 -right-2 rounded-full p-2 flex items-center justify-center"
-                            onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                          >
-                            {uploadingLogo ? (
-                              // simple spinner (tailwind classes used in project)
-                              <svg className="w-4 h-4 animate-spin text-white" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                              </svg>
-                            ) : (
-                              <Upload className="w-4 h-4" />
-                            )}
-                          </Button>
+                  <div className="space-y-4">
+                    {newStory.slides.map((slide, index) => (
+                      <div key={index} className={`border rounded-lg p-4 ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+                        <div className="flex justify-between items-center mb-3">
+                          <h4 className={`font-semibold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            Slide {index + 1}
+                          </h4>
+                          {newStory.slides.length > 1 && (
+                            <Button
+                              size="small"
+                              variant="danger"
+                              onClick={() => removeSlide(index)}
+                            >
+                              Remove
+                            </Button>
+                          )}
                         </div>
-                        <div>
-                          <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            Organization Logo
-                          </h3>
-                          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            Upload a logo for your organization
-                          </p>
-                        </div>
-                      </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                          <div>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Media Type
+                            </label>
+                            <select
+                              value={slide.type}
+                              onChange={(e) => updateSlide(index, 'type', e.target.value)}
+                              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                                darkMode 
+                                  ? 'bg-gray-700 border-gray-600 text-white' 
+                                  : 'bg-white border-gray-300'
+                              }`}
+                            >
+                              <option value="image">Image</option>
+                              <option value="video">Video</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Media URL
+                            </label>
+                            <input
+                              type="url"
+                              value={slide.media}
+                              onChange={(e) => updateSlide(index, 'media', e.target.value)}
+                              placeholder="https://example.com/image.jpg"
+                              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                                darkMode 
+                                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                                  : 'bg-white border-gray-300'
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                          <div>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Title
+                            </label>
+                            <input
+                              type="text"
+                              value={slide.title}
+                              onChange={(e) => updateSlide(index, 'title', e.target.value)}
+                              placeholder="Slide title..."
+                              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                                darkMode 
+                                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                                  : 'bg-white border-gray-300'
+                              }`}
+                            />
+                          </div>
+
+                          <div>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              Subtitle
+                            </label>
+                            <input
+                              type="text"
+                              value={slide.subtitle}
+                              onChange={(e) => updateSlide(index, 'subtitle', e.target.value)}
+                              placeholder="Slide subtitle..."
+                              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                                darkMode 
+                                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                                  : 'bg-white border-gray-300'
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mb-3">
                           <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            Organization Name
+                            Description
                           </label>
-                          <input
-                            type="text"
-                            value={organizerSettings.name}
-                            onChange={(e) => setOrganizerSettings({...organizerSettings, name: e.target.value})}
-                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                          <textarea
+                            rows={2}
+                            value={slide.description}
+                            onChange={(e) => updateSlide(index, 'description', e.target.value)}
+                            placeholder="Slide description..."
+                            className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                               darkMode 
-                                ? 'bg-gray-700 border-gray-600 text-white' 
+                                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
                                 : 'bg-white border-gray-300'
                             }`}
                           />
                         </div>
-                        <div>
-                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                            Contact Email
-                          </label>
-                          <input
-                            type="email"
-                            value={organizerSettings.email}
-                            onChange={(e) => setOrganizerSettings({...organizerSettings, email: e.target.value})}
-                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                              darkMode 
-                                ? 'bg-gray-700 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300'
-                            }`}
-                          />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              CTA Button Text
+                            </label>
+                            <input
+                              type="text"
+                              value={slide.cta}
+                              onChange={(e) => updateSlide(index, 'cta', e.target.value)}
+                              placeholder="Get Tickets Now"
+                              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                                darkMode 
+                                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                                  : 'bg-white border-gray-300'
+                              }`}
+                            />
+                          </div>
+
+                          <div>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              CTA Link
+                            </label>
+                            <input
+                              type="url"
+                              value={slide.link}
+                              onChange={(e) => updateSlide(index, 'link', e.target.value)}
+                              placeholder="https://example.com/tickets"
+                              className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                                darkMode 
+                                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                                  : 'bg-white border-gray-300'
+                              }`}
+                            />
+                          </div>
                         </div>
                       </div>
-
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Organization Description
-                        </label>
-                        <textarea
-                          rows={4}
-                          value={organizerSettings.description}
-                          onChange={(e) => setOrganizerSettings({...organizerSettings, description: e.target.value})}
-                          placeholder="Tell people about your organization..."
-                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                            darkMode 
-                              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                              : 'bg-white border-gray-300'
-                          }`}
-                        />
-                      </div>
-                    </form>
-                  </div>
-                </div>
-
-                <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                  <div className="p-6 border-b">
-                    <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Payout Settings
-                    </h2>
-                  </div>
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Bank Name
-                        </label>
-                        <input
-                          type="text"
-                          value={organizerSettings.payoutDetails.bankName}
-                          onChange={(e) => setOrganizerSettings({
-                            ...organizerSettings,
-                            payoutDetails: {...organizerSettings.payoutDetails, bankName: e.target.value}
-                          })}
-                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                            darkMode 
-                              ? 'bg-gray-700 border-gray-600 text-white' 
-                              : 'bg-white border-gray-300'
-                          }`}
-                        />
-                      </div>
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Account Number
-                        </label>
-                        <input
-                          type="text"
-                          value={organizerSettings.payoutDetails.accountNumber}
-                          onChange={(e) => setOrganizerSettings({
-                            ...organizerSettings,
-                            payoutDetails: {...organizerSettings.payoutDetails, accountNumber: e.target.value}
-                          })}
-                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                            darkMode 
-                              ? 'bg-gray-700 border-gray-600 text-white' 
-                              : 'bg-white border-gray-300'
-                          }`}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                  <div className="p-6 border-b">
-                    <h2 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Notification Preferences
-                    </h2>
-                  </div>
-                  <div className="p-6">
-                    <div className="space-y-4">
-                      <label className="flex items-center">
-                        <input 
-                          type="checkbox" 
-                          checked={organizerSettings.notifications.newRegistrations}
-                          onChange={(e) => setOrganizerSettings({
-                            ...organizerSettings,
-                            notifications: {...organizerSettings.notifications, newRegistrations: e.target.checked}
-                          })}
-                          className="mr-3 w-4 h-4 text-primary-600" 
-                        />
-                        <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Email notifications for new registrations
-                        </span>
-                      </label>
-                      <label className="flex items-center">
-                        <input 
-                          type="checkbox" 
-                          checked={organizerSettings.notifications.weeklyReports}
-                          onChange={(e) => setOrganizerSettings({
-                            ...organizerSettings,
-                            notifications: {...organizerSettings.notifications, weeklyReports: e.target.checked}
-                          })}
-                          className="mr-3 w-4 h-4 text-primary-600" 
-                        />
-                        <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Weekly analytics reports
-                        </span>
-                      </label>
-                      <label className="flex items-center">
-                        <input 
-                          type="checkbox" 
-                          checked={organizerSettings.notifications.smsUpdates}
-                          onChange={(e) => setOrganizerSettings({
-                            ...organizerSettings,
-                            notifications: {...organizerSettings.notifications, smsUpdates: e.target.checked}
-                          })}
-                          className="mr-3 w-4 h-4 text-primary-600" 
-                        />
-                        <span className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          SMS notifications for urgent updates
-                        </span>
-                      </label>
-                    </div>
+                    ))}
                   </div>
                 </div>
 
                 <div className="flex justify-end space-x-4">
-                  <Button variant="outline">Cancel</Button>
-                  <Button onClick={handleUpdateSettings}>Save Changes</Button>
+                  <Button variant="outline" onClick={() => setShowCreateStoryModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleCreateStory} 
+                    disabled={!newStory.eventId || newStory.slides.some(slide => !slide.media || !slide.title)}
+                  >
+                    Create Story
+                  </Button>
                 </div>
               </div>
-            )}
+            </Modal>
+
+            {/* Delete Event Modal */}
+            <Modal
+              isOpen={showDeleteModal}
+              onClose={() => setShowDeleteModal(false)}
+              title="Delete Event"
+            >
+              <div className="space-y-4">
+                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Are you sure you want to delete "{selectedEvent?.title}"? This action cannot be undone.
+                </p>
+                <div className="flex justify-end space-x-4">
+                  <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button variant="danger" onClick={handleDeleteEvent}>
+                    Delete Event
+                  </Button>
+                </div>
+              </div>
+            </Modal>
+
+            {/* Duplicate Event Modal */}
+            <Modal
+              isOpen={showDuplicateModal}
+              onClose={() => setShowDuplicateModal(false)}
+              title="Duplicate Event"
+            >
+              <div className="space-y-4">
+                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Create a copy of "{selectedEvent?.title}"
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      New Event Title
+                    </label>
+                    <input
+                      type="text"
+                      defaultValue={selectedEvent ? `${selectedEvent.title} (Copy)` : ''}
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-gray-300'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      New Event Date
+                    </label>
+                    <input
+                      type="date"
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-gray-300'
+                      }`}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-4">
+                  <Button variant="outline" onClick={() => setShowDuplicateModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={() => handleDuplicateEvent({})}>
+                    Duplicate Event
+                  </Button>
+                </div>
+              </div>
+            </Modal>
+
+            {/* Send Notification Modal */}
+            <Modal
+              isOpen={showNotificationModal}
+              onClose={() => setShowNotificationModal(false)}
+              title="Send Notification"
+            >
+              <div className="space-y-4">
+                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Send update to attendees of "{selectedEvent?.title}"
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Subject
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Event update subject..."
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Message
+                    </label>
+                    <textarea
+                      rows={4}
+                      placeholder="Your message to attendees..."
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300'
+                      }`}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <label className="flex items-center">
+                      <input type="checkbox" className="mr-2" defaultChecked />
+                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Email</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input type="checkbox" className="mr-2" />
+                      <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>SMS</span>
+                    </label>
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-4">
+                  <Button variant="outline" onClick={() => setShowNotificationModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={() => handleSendNotification({})}>
+                    Send Notification
+                  </Button>
+                </div>
+              </div>
+            </Modal>
+
+            {/* Attendees Modal */}
+            <Modal
+              isOpen={showAttendeesModal}
+              onClose={() => {
+                setShowAttendeesModal(false);
+                setShowQRScanner(false);
+              }}
+              title={`Attendees - ${modalEventInfo?.title || selectedEvent?.title}`}
+              size="large"
+            >
+              <div className="space-y-4">
+                {/* Event Info and Stats */}
+                {modalEventInfo && (
+                  <div className="flex items-center space-x-4 mb-2">
+                    <img
+                      src={modalEventInfo.image}
+                      alt={modalEventInfo.title}
+                      className="w-16 h-16 rounded-lg object-cover"
+                    />
+                    <div>
+                      <h3 className={`font-semibold text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        {modalEventInfo.title}
+                      </h3>
+                      <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                        {formatDate(modalEventInfo.date)} &bull; {modalEventInfo.venue}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {/* Stats */}
+                <div className="flex flex-wrap gap-6 mb-2">
+                  <div>
+                    <span className="font-semibold text-sm">
+                      {attendeeStats.totalAttendees || 0}
+                    </span>
+                    <span className="ml-2 text-xs text-gray-500">Total Attendees</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-sm text-green-600">
+                      {attendeeStats.checkedIn || 0}
+                    </span>
+                    <span className="ml-2 text-xs text-gray-500">Checked In</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-sm text-red-600">
+                      {attendeeStats.notCheckedIn || 0}
+                    </span>
+                    <span className="ml-2 text-xs text-gray-500">Not Checked In</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-sm">
+                      {formatPrice(attendeeStats.totalRevenue || 0)}
+                    </span>
+                    <span className="ml-2 text-xs text-gray-500">Revenue</span>
+                  </div>
+                </div>
+                {/* Ticket Type Breakdown */}
+                {attendeeStats.ticketTypes && (
+                  <div className="mb-2">
+                    <h4 className={`font-semibold text-sm mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Ticket Types
+                    </h4>
+                    <div className="flex flex-wrap gap-4">
+                      {Object.entries(attendeeStats.ticketTypes).map(([type, info]) => (
+                        <div key={type} className={`px-3 py-2 rounded text-xs ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                          <span className="font-semibold">{type}</span>
+                          <span className="ml-2">Count: {info.count}</span>
+                          <span className="ml-2">Revenue: {formatPrice(info.revenue)}</span>
+                          <span className="ml-2 text-green-600">Checked In: {info.checkedIn}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Export and Scanner Buttons */}
+                <div className="flex space-x-4 mb-2">
+                  <Button 
+                    size="small"
+                    onClick={() => exportEventAttendees(selectedEvent?.eventId || selectedEvent?.id || selectedEvent?._id, 'csv')}
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Export CSV
+                  </Button>
+                  <Button 
+                    size="small"
+                    onClick={() => exportEventAttendees(selectedEvent?.eventId || selectedEvent?.id || selectedEvent?._id, 'excel')}
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Export Excel
+                  </Button>
+                  <Button 
+                    size="small"
+                    variant={showQRScanner ? "primary" : "outline"}
+                    onClick={() => setShowQRScanner(!showQRScanner)}
+                  >
+                    <QrCode className="w-4 h-4 mr-1" />
+                    {showQRScanner ? 'Hide Scanner' : 'Scan Ticket'}
+                  </Button>
+                </div>
+                {/* QR Scanner Section */}
+                {showQRScanner && (
+                  <div className="mb-4 p-4 border rounded-lg">
+                    <h4 className={`font-semibold text-sm mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Scan Ticket QR Code
+                    </h4>
+                    <QRScanner 
+                      onScanSuccess={handleScanSuccess}
+                      onScanError={handleScanError}
+                    />
+                    {scanResult && (
+                      <p className={`text-xs mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        Last scan: {scanResult.substring(0, 50)}...
+                      </p>
+                    )}
+                  </div>
+                )}
+                {/* Attendee List */}
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {attendeesLoading ? (
+                    <div className={`text-center py-8 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                      Loading attendees...
+                    </div>
+                  ) : attendees.length === 0 ? (
+                    <div className={`text-center py-8 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                      No attendees found for this event.
+                    </div>
+                  ) : (
+                    attendees.map((attendee, i) => (
+                      <div key={attendee.ticketId || i} className={`flex items-center justify-between p-3 border rounded text-sm ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                        <div className="flex items-center">
+                          <img
+                            src={attendee.user?.profileImage || '/api/placeholder/40/40'}
+                            alt={attendee.attendeeName}
+                            className="w-8 h-8 rounded-full object-cover mr-3"
+                          />
+                          <div>
+                            <p className={`font-medium text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                              {attendee.attendeeName || 'Unknown'}
+                            </p>
+                            <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                              {attendee.attendeeEmail || ''}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              Ticket: {attendee.ticketType} &bull; {formatPrice(attendee.price)}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              Purchased: {formatDate(attendee.purchaseDate)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <img src={attendee.qrCode} alt="QR Code" className="w-8 h-8" />
+                          <Button 
+                            size="small" 
+                            variant={attendee.isUsed ? "success" : "outline"} 
+                            onClick={async () => {
+                              try {
+                                await checkInAttendee(attendee.ticketId);
+                                showSuccess('Attendee checked in successfully!');
+                                const response = await getEventAttendees(selectedEvent.eventId || selectedEvent.id || selectedEvent._id);
+                                setAttendees(response?.data?.attendees || []);
+                              } catch (error) {
+                                showError('Failed to check in attendee');
+                                console.error(error);
+                              }
+                            }}
+                          >
+                            <QrCode className="w-4 h-4" />
+                            {attendee.isUsed ? "Checked In" : "Check In"}
+                          </Button>
+                          <Button size="small" variant="outline">
+                            <Mail className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </Modal>
+
+            {/* Edit Event Modal */}
+            <Modal
+              isOpen={showEditModal}
+              onClose={() => setShowEditModal(false)}
+              title="Edit Event"
+            >
+              <div className="space-y-4">
+                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Edit details for "{selectedEvent?.title}"
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Event Title
+                    </label>
+                    <input
+                      type="text"
+                      defaultValue={selectedEvent?.title}
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-gray-300'
+                      }`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Event Date
+                    </label>
+                    <input
+                      type="date"
+                      defaultValue={selectedEvent ? selectedEvent.date?.slice(0,10) : ''}
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-gray-300'
+                      }`}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-4">
+                  <Button variant="outline" onClick={() => setShowEditModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={() => handleUpdateEvent({})}>
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            </Modal>
+
+            {/* Settings Modal */}
+            <Modal
+              isOpen={showSettingsModal}
+              onClose={() => setShowSettingsModal(false)}
+              title="Advanced Settings"
+            >
+              <div className="space-y-4">
+                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Advanced organizer settings go here.
+                </p>
+                <div className="flex justify-end space-x-4">
+                  <Button variant="outline" onClick={() => setShowSettingsModal(false)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </Modal>
           </div>
         </div>
-
-        {/* Create Story Modal */}
-        <Modal
-          isOpen={showCreateStoryModal}
-          onClose={() => setShowCreateStoryModal(false)}
-          title="Create Story"
-          size="large"
-        >
-          <div className="space-y-6">
-            <div>
-              <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                Select Event
-              </label>
-              <select
-                value={newStory.eventId}
-                onChange={(e) => {
-                  const selectedEventId = e.target.value;
-                  // match either possible id field
-                  const selectedEventData = organizerEvents.find(event => 
-                    (event.id && event.id === selectedEventId) || 
-                    (event.eventId && event.eventId === selectedEventId)
-                  );
-                  console.log('Available events keys:', organizerEvents.map(ev => ({ id: ev.id, eventId: ev.eventId, title: ev.title })));
-                  console.log('Selected event ID:', selectedEventId);
-                  console.log('Selected event data:', selectedEventData);
-                  setNewStory({...newStory, eventId: selectedEventId});
-                }}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                  darkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white' 
-                    : 'bg-white border-gray-300'
-                }`}
-              >
-                <option value="">Choose an event</option>
-                {organizerEvents.map(event => {
-                  const val = event.id || event.eventId || '';
-                  return <option key={val || event.title} value={val}>{event.title}</option>;
-                })}
-              </select>
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Story Slides
-                </h3>
-                <Button size="small" onClick={addSlide}>
-                  <Plus className="w-4 h-4" />
-                  Add Slide
-                </Button>
-              </div>
-
-              <div className="space-y-4">
-                {newStory.slides.map((slide, index) => (
-                  <div key={index} className={`border rounded-lg p-4 ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-                    <div className="flex justify-between items-center mb-3">
-                      <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        Slide {index + 1}
-                      </h4>
-                      {newStory.slides.length > 1 && (
-                        <Button
-                          size="small"
-                          variant="danger"
-                          onClick={() => removeSlide(index)}
-                        >
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Media Type
-                        </label>
-                        <select
-                          value={slide.type}
-                          onChange={(e) => updateSlide(index, 'type', e.target.value)}
-                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                            darkMode 
-                              ? 'bg-gray-700 border-gray-600 text-white' 
-                              : 'bg-white border-gray-300'
-                          }`}
-                        >
-                          <option value="image">Image</option>
-                          <option value="video">Video</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Media URL
-                        </label>
-                        <input
-                          type="url"
-                          value={slide.media}
-                          onChange={(e) => updateSlide(index, 'media', e.target.value)}
-                          placeholder="https://example.com/image.jpg"
-                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                            darkMode 
-                              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                              : 'bg-white border-gray-300'
-                          }`}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Title
-                        </label>
-                        <input
-                          type="text"
-                          value={slide.title}
-                          onChange={(e) => updateSlide(index, 'title', e.target.value)}
-                          placeholder="Slide title..."
-                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                            darkMode 
-                              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                              : 'bg-white border-gray-300'
-                          }`}
-                        />
-                      </div>
-
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          Subtitle
-                        </label>
-                        <input
-                          type="text"
-                          value={slide.subtitle}
-                          onChange={(e) => updateSlide(index, 'subtitle', e.target.value)}
-                          placeholder="Slide subtitle..."
-                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                            darkMode 
-                              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                              : 'bg-white border-gray-300'
-                          }`}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mb-3">
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Description
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={slide.description}
-                        onChange={(e) => updateSlide(index, 'description', e.target.value)}
-                        placeholder="Slide description..."
-                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                          darkMode 
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                            : 'bg-white border-gray-300'
-                        }`}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          CTA Button Text
-                        </label>
-                        <input
-                          type="text"
-                          value={slide.cta}
-                          onChange={(e) => updateSlide(index, 'cta', e.target.value)}
-                          placeholder="Get Tickets Now"
-                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                            darkMode 
-                              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                              : 'bg-white border-gray-300'
-                          }`}
-                        />
-                      </div>
-
-                      <div>
-                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                          CTA Link
-                        </label>
-                        <input
-                          type="url"
-                          value={slide.link}
-                          onChange={(e) => updateSlide(index, 'link', e.target.value)}
-                          placeholder="https://example.com/tickets"
-                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                            darkMode 
-                              ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                              : 'bg-white border-gray-300'
-                          }`}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-4">
-              <Button variant="outline" onClick={() => setShowCreateStoryModal(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleCreateStory} 
-                disabled={!newStory.eventId || newStory.slides.some(slide => !slide.media || !slide.title)}
-              >
-                Create Story
-              </Button>
-            </div>
-          </div>
-        </Modal>
-
-        {/* Modals */}
-        
-        {/* Delete Event Modal */}
-        <Modal
-          isOpen={showDeleteModal}
-          onClose={() => setShowDeleteModal(false)}
-          title="Delete Event"
-        >
-          <div className="space-y-4">
-            <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Are you sure you want to delete "{selectedEvent?.title}"? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-4">
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
-                Cancel
-              </Button>
-              <Button variant="danger" onClick={handleDeleteEvent}>
-                Delete Event
-              </Button>
-            </div>
-          </div>
-        </Modal>
-
-        {/* Duplicate Event Modal */}
-        <Modal
-          isOpen={showDuplicateModal}
-          onClose={() => setShowDuplicateModal(false)}
-          title="Duplicate Event"
-        >
-          <div className="space-y-4">
-            <p className={`${darkMode ? 'text-gray-300' : 'text-gray'}`}>
-              Create a copy of "{selectedEvent?.title}"
-            </p>
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  New Event Title
-                </label>
-                <input
-                  type="text"
-                  defaultValue={selectedEvent ? `${selectedEvent.title} (Copy)` : ''}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white' 
-                      : 'bg-white border-gray-300'
-                  }`}
-                />
-              </div>
-              <div>
-                               <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  New Event Date
-                </label>
-                <input
-                  type="date"
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white' 
-                      : 'bg-white border-gray-300'
-                                   }`}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end space-x-4">
-              <Button variant="outline" onClick={() => setShowDuplicateModal(false)}>
-                Cancel
-              </Button>
-              <Button onClick={() => handleDuplicateEvent({})}>
-                Duplicate Event
-              </Button>
-            </div>
-          </div>
-        </Modal>
-
-        {/* Send Notification Modal */}
-        <Modal
-          isOpen={showNotificationModal}
-          onClose={() => setShowNotificationModal(false)}
-          title="Send Notification"
-        >
-          <div className="space-y-4">
-            <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Send update to attendees of "{selectedEvent?.title}"
-            </p>
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Subject
-                </label>
-                <input
-                  type="text"
-                  placeholder="Event update subject..."
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                      : 'bg-white border-gray-300'
-                  }`}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Message
-                </label>
-                <textarea
-                  rows={4}
-                  placeholder="Your message to attendees..."
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                      : 'bg-white border-gray-300'
-                  }`}
-                />
-              </div>
-              <div className="flex items-center space-x-4">
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" defaultChecked />
-                  <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Email</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="mr-2" />
-                  <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>SMS</span>
-                </label>
-              </div>
-            </div>
-            <div className="flex justify-end space-x-4">
-              <Button variant="outline" onClick={() => setShowNotificationModal(false)}>
-                Cancel
-              </Button>
-              <Button onClick={() => handleSendNotification({})}>
-                Send Notification
-              </Button>
-            </div>
-          </div>
-        </Modal>
-
-        {/* Attendees Modal */}
-        <Modal
-          isOpen={showAttendeesModal}
-          onClose={() => {
-            setShowAttendeesModal(false);
-            setShowQRScanner(false); // Close scanner when modal closes
-          }}
-          title={`Attendees - ${modalEventInfo?.title || selectedEvent?.title}`}
-          size="large"
-        >
-          <div className="space-y-4">
-            {/* Event Info and Stats */}
-            {modalEventInfo && (
-              <div className="flex items-center space-x-4 mb-2">
-                <img
-                  src={modalEventInfo.image}
-                  alt={modalEventInfo.title}
-                  className="w-16 h-16 rounded-lg object-cover"
-                />
-                <div>
-                  <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {modalEventInfo.title}
-                  </h3>
-                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                    {formatDate(modalEventInfo.date)} &bull; {modalEventInfo.venue}
-                  </p>
-                </div>
-              </div>
-            )}
-            {/* Stats */}
-            <div className="flex flex-wrap gap-6 mb-2">
-              <div>
-                <span className="font-bold">{attendeeStats.totalAttendees || 0}</span>
-                <span className="ml-1 text-sm">Total Attendees</span>
-              </div>
-              <div>
-                <span className="font-bold text-green-600">{attendeeStats.checkedIn || 0}</span>
-                <span className="ml-1 text-sm">Checked In</span>
-              </div>
-              <div>
-                <span className="font-bold text-red-600">{attendeeStats.notCheckedIn || 0}</span>
-                <span className="ml-1 text-sm">Not Checked In</span>
-              </div>
-              <div>
-                <span className="font-bold">{formatPrice(attendeeStats.totalRevenue || 0)}</span>
-                <span className="ml-1 text-sm">Revenue</span>
-              </div>
-            </div>
-            {/* Ticket Type Breakdown */}
-            {attendeeStats.ticketTypes && (
-              <div className="mb-2">
-                <h4 className={`font-semibold mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Ticket Types</h4>
-                <div className="flex flex-wrap gap-4">
-                  {Object.entries(attendeeStats.ticketTypes).map(([type, info]) => (
-                    <div key={type} className="px-3 py-2 rounded bg-gray-100 dark:bg-gray-800">
-                      <span className="font-bold">{type}</span>
-                      <span className="ml-2 text-sm">Count: {info.count}</span>
-                      <span className="ml-2 text-sm">Revenue: {formatPrice(info.revenue)}</span>
-                      <span className="ml-2 text-sm text-green-600">Checked In: {info.checkedIn}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {/* Export and Scanner Buttons */}
-            <div className="flex space-x-4 mb-2">
-              <Button 
-                size="small"
-                onClick={() => exportEventAttendees(selectedEvent?.eventId || selectedEvent?.id || selectedEvent?._id, 'csv')}
-              >
-                <Download className="w-4 h-4 mr-1" />
-                Export CSV
-              </Button>
-              <Button 
-                size="small"
-                onClick={() => exportEventAttendees(selectedEvent?.eventId || selectedEvent?.id || selectedEvent?._id, 'excel')}
-              >
-                <Download className="w-4 h-4 mr-1" />
-                Export Excel
-              </Button>
-              {/* Add QR Scanner Button */}
-              <Button 
-                size="small"
-                variant={showQRScanner ? "primary" : "outline"}
-                onClick={() => setShowQRScanner(!showQRScanner)}
-              >
-                <QrCode className="w-4 h-4 mr-1" />
-                {showQRScanner ? 'Hide Scanner' : 'Scan Ticket'}
-              </Button>
-            </div>
-            {/* QR Scanner Section */}
-            {showQRScanner && (
-              <div className="mb-4 p-4 border rounded-lg">
-                <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Scan Ticket QR Code
-                </h4>
-                <QRScanner 
-                  onScanSuccess={handleScanSuccess}
-                  onScanError={handleScanError}
-                />
-                {scanResult && (
-                  <p className={`text-sm mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    Last scan: {scanResult.substring(0, 50)}...
-                  </p>
-                )}
-              </div>
-            )}
-            {/* Attendee List */}
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {attendeesLoading ? (
-                <div className={`text-center py-8 ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                  Loading attendees...
-                </div>
-              ) : attendees.length === 0 ? (
-                <div className={`text-center py-8 ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                  No attendees found for this event.
-                </div>
-              ) : (
-                attendees.map((attendee, i) => (
-                  <div key={attendee.ticketId || i} className={`flex items-center justify-between p-3 border rounded ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <div className="flex items-center">
-                      <img
-                        src={attendee.user?.profileImage || '/api/placeholder/40/40'}
-                        alt={attendee.attendeeName}
-                        className="w-8 h-8 rounded-full object-cover mr-3"
-                      />
-                      <div>
-                        <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {attendee.attendeeName || 'Unknown'}
-                        </p>
-                        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                          {attendee.attendeeEmail || ''}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          Ticket: {attendee.ticketType} &bull; {formatPrice(attendee.price)}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          Purchased: {formatDate(attendee.purchaseDate)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <img src={attendee.qrCode} alt="QR Code" className="w-8 h-8" />
-                      <Button 
-                        size="small" 
-                        variant={attendee.isUsed ? "success" : "outline"} 
-                        onClick={async () => {
-                          try {
-                            await checkInAttendee(attendee.ticketId);
-                            showSuccess('Attendee checked in successfully!');
-                            // Refresh the list
-                            const response = await getEventAttendees(selectedEvent.eventId || selectedEvent.id || selectedEvent._id);
-                            setAttendees(response?.data?.attendees || []);
-                          } catch (error) {
-                            showError('Failed to check in attendee');
-                            // Use error for logging
-                            console.error(error);
-                          }
-                        }}
-                      >
-                        <QrCode className="w-4 h-4" />
-                        {attendee.isUsed ? "Checked In" : "Check In"}
-                      </Button>
-                      <Button size="small" variant="outline">
-                        <Mail className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </Modal>
-
-        {/* Edit Event Modal */}
-        <Modal
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          title="Edit Event"
-        >
-          <div className="space-y-4">
-            <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Edit details for "{selectedEvent?.title}"
-            </p>
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Event Title
-                </label>
-                <input
-                  type="text"
-                  defaultValue={selectedEvent?.title}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white' 
-                      : 'bg-white border-gray-300'
-                  }`}
-                />
-              </div>
-              <div>
-                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Event Date
-                </label>
-                <input
-                  type="date"
-                  defaultValue={selectedEvent ? selectedEvent.date?.slice(0,10) : ''}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-white' 
-                      : 'bg-white border-gray-300'
-                  }`}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end space-x-4">
-              <Button variant="outline" onClick={() => setShowEditModal(false)}>
-                Cancel
-              </Button>
-              <Button onClick={() => handleUpdateEvent({})}>
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </Modal>
-
-        {/* Settings Modal */}
-        <Modal
-          isOpen={showSettingsModal}
-          onClose={() => setShowSettingsModal(false)}
-          title="Advanced Settings"
-        >
-          <div className="space-y-4">
-            <p className={`${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Advanced organizer settings go here.
-            </p>
-            <div className="flex justify-end space-x-4">
-              <Button variant="outline" onClick={() => setShowSettingsModal(false)}>
-                Close
-              </Button>
-            </div>
-          </div>
-        </Modal>
       </div>
     </div>
   );

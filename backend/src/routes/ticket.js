@@ -6,7 +6,7 @@ const { protect, authorize } = require('../middleware/auth');
 const { validateTicket, validateReservation } = require('../middleware/validation');
 
 // -------------------
-// Public routes - MOST SPECIFIC FIRST
+// Public routes - MUST BE BEFORE protect middleware
 // -------------------
 // Get ticket by event ID and ticket ID (MOST specific)
 router.get('/event/:eventId/ticket/:ticketId', ticketController.getTicketByEvent);
@@ -21,11 +21,11 @@ router.get('/event/:eventId', ticketController.getEventTickets);
 router.get('/:id', ticketController.getTicket);
 
 // -------------------
-// Protected routes (require authentication)
+// Apply protection middleware - ALL ROUTES AFTER THIS REQUIRE AUTH
 // -------------------
 router.use(protect);
 
-// Get current user's tickets
+// Protected routes
 router.get('/user/mytickets', ticketController.getMyTickets);
 
 // Reserve tickets during checkout
@@ -36,7 +36,7 @@ router.post(
 );
 
 // -------------------
-// Organizer and Admin routes - MOST SPECIFIC FIRST
+// Organizer and Admin routes
 // -------------------
 // CREATE: Event-specific ticket creation (specific route)
 router.post(
