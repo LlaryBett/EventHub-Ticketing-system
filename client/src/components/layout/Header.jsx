@@ -88,10 +88,10 @@ const Header = () => {
                 alt="EventHub Logo" 
                 className="w-10 h-10 object-contain group-hover:scale-105 transition-all duration-300"
               />
-              <div className="absolute -inset-1 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur"></div>
+              <div className="absolute -inset-1 bg-blue-600/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur"></div>
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+              <span className="text-xl font-bold text-gray-900">
                 EventHub
               </span>
               <span className="text-xs text-gray-500 -mt-1 hidden sm:block">Create Amazing Events</span>
@@ -160,7 +160,7 @@ const Header = () => {
                    onClick={() => setUserMenuOpen(!userMenuOpen)}
                    className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 group"
                  >
-                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow duration-200">
+                   <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow duration-200">
                      <span className="text-white font-semibold text-sm">
                        {user.data?.name?.charAt(0).toUpperCase()}
                      </span>
@@ -254,10 +254,10 @@ const Header = () => {
                 </Link>
                 <Link
                   to="/register?type=organizer"
-                  className="relative inline-flex items-center px-5 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 overflow-hidden group whitespace-nowrap"
+                  className="relative inline-flex items-center px-5 py-2 bg-blue-600 text-white font-medium rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 overflow-hidden group whitespace-nowrap"
                 >
                   <span className="relative z-10">Create Events</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-purple-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="absolute inset-0 bg-blue-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </Link>
               </div>
             )}

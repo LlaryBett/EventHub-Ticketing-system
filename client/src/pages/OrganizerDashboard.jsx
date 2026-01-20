@@ -1057,74 +1057,130 @@ const OrganizerDashboard = () => {
 
                 </div>
 
-                {/* Charts */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <div className={`rounded-lg shadow-md p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                    <h3 className={`text-lg font-semibold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Revenue Trend
+                {/* Charts and Recent Events - Show only if there are events */}
+                {organizerEvents.length === 0 ? (
+                  <div className={`rounded-lg shadow-md p-8 text-center ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
+                      <Calendar className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      No Events Yet
                     </h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <AreaChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <Tooltip />
-                        <Area type="monotone" dataKey="revenue" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      You haven't created any events yet. Start by creating your first event to see analytics and performance data here.
+                    </p>
+                    <Link to="/organizer">
+                      <Button className="inline-flex items-center space-x-2">
+                        <Plus className="w-4 h-4" />
+                        <span>Create Your First Event</span>
+                      </Button>
+                    </Link>
                   </div>
-
-                  <div className={`rounded-lg shadow-md p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                    <h3 className={`text-lg font-semibold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Event Performance
-                    </h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="attendees" fill="#10B981" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Recent Events */}
-                <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                  <div className="p-6 border-b">
-                    <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Recent Events
-                    </h2>
-                  </div>
-                  <div className="p-6">
-                    {recentEvents.slice(0, 3).map((event) => (
-                      <div key={event.eventId} className={`flex items-center justify-between py-4 border-b last:border-b-0 ${darkMode ? 'border-gray-700' : ''}`}>
-                        <div className="flex items-center">
-                          <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center mr-4">
-                            <Calendar className="w-6 h-6 text-blue-600" />
+                ) : (
+                  <>
+                    {/* Charts */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      <div className={`rounded-lg shadow-md p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                        <h3 className={`text-lg font-semibold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          Revenue Trend
+                        </h3>
+                        {chartData.length === 0 ? (
+                          <div className="h-80 flex items-center justify-center">
+                            <div className="text-center">
+                              <DollarSign className={`w-12 h-12 mx-auto mb-2 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+                              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                No revenue data available yet
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className={`font-semibold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                              {event.title}
-                            </h3>
-                            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                              {formatDate(event.date)}
+                        ) : (
+                          <ResponsiveContainer width="100%" height={300}>
+                            <AreaChart data={chartData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="month" />
+                              <YAxis />
+                              <Tooltip />
+                              <Area type="monotone" dataKey="revenue" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
+
+                      <div className={`rounded-lg shadow-md p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                        <h3 className={`text-lg font-semibold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          Event Performance
+                        </h3>
+                        {chartData.length === 0 ? (
+                          <div className="h-80 flex items-center justify-center">
+                            <div className="text-center">
+                              <Users className={`w-12 h-12 mx-auto mb-2 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+                              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                No attendee data available yet
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={chartData}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="month" />
+                              <YAxis />
+                              <Tooltip />
+                              <Bar dataKey="attendees" fill="#10B981" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Recent Events */}
+                    <div className={`rounded-lg shadow-md ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                      <div className="p-6 border-b">
+                        <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          Recent Events
+                        </h2>
+                      </div>
+                      <div className="p-6">
+                        {recentEvents.length === 0 ? (
+                          <div className="text-center py-8">
+                            <Calendar className={`w-12 h-12 mx-auto mb-3 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+                            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                              No recent events to display
                             </p>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                            {event.attendees} registered
-                          </p>
-                          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                            {formatPrice(event.revenue)} revenue
-                          </p>
-                        </div>
+                        ) : (
+                          <>
+                            {recentEvents.slice(0, 3).map((event) => (
+                              <div key={event.eventId} className={`flex items-center justify-between py-4 border-b last:border-b-0 ${darkMode ? 'border-gray-700' : ''}`}>
+                                <div className="flex items-center">
+                                  <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center mr-4">
+                                    <Calendar className="w-6 h-6 text-blue-600" />
+                                  </div>
+                                  <div>
+                                    <h3 className={`font-semibold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                      {event.title}
+                                    </h3>
+                                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                      {formatDate(event.date)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    {event.attendees} registered
+                                  </p>
+                                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                                    {formatPrice(event.revenue)} revenue
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
