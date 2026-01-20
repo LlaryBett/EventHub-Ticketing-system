@@ -248,6 +248,22 @@ const TicketModal = ({
                   <span className="truncate">{event.venue}</span>
                 </div>
               </div>
+
+              {/* Additional Event Info */}
+              <div className="space-y-3 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-gray-600 text-sm">Duration</span>
+                  <span className="font-medium text-sm text-gray-900">{event.duration || '2-3 hours'}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-gray-600 text-sm">Age Restriction</span>
+                  <span className="font-medium text-sm text-gray-900">{event.ageRestriction || 'All ages welcome'}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-gray-600 text-sm">Ticket Delivery</span>
+                  <span className="font-medium text-sm text-gray-900">{event.ticketDelivery || 'E-tickets provided'}</span>
+                </div>
+              </div>
             </div>
           )}
         </div>

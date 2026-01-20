@@ -149,32 +149,7 @@ const UserAccount = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pb-20 lg:pb-0">
-      {/* Mobile Header */}
-      <div className="lg:hidden bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-        <div className="px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center text-white font-bold text-lg mr-3">
-                {userData.name?.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h1 className="font-bold text-gray-900 text-lg">{userData.name}</h1>
-                <p className="text-sm text-gray-500 truncate max-w-[200px]">
-                  {userData.email}
-                </p>
-                <div className="flex items-center mt-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-                  <span className="text-xs text-gray-500">
-                    {userTickets.length > 0 ? `${userTickets.length} upcoming event${userTickets.length !== 1 ? 's' : ''}` : 'No upcoming events'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="min-h-screen bg-slate-50 pb-20 lg:pb-0">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 lg:py-8">
         {/* Desktop Header */}
         <div className="hidden lg:block mb-8 text-center lg:text-left">
@@ -182,7 +157,7 @@ const UserAccount = () => {
             <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
             <span className="text-sm font-medium text-gray-600">Active Account</span>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-blue-900 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold text-gray-900">
             My Account
           </h1>
           <p className="text-xl text-gray-600 mt-3 max-w-2xl">
@@ -195,7 +170,7 @@ const UserAccount = () => {
 
         {/* Order Confirmation */}
         {location.state?.orderConfirmation && (
-          <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-4 lg:p-6 mb-6 lg:mb-8 shadow-xl border border-green-200">
+          <div className="bg-green-500 rounded-2xl p-4 lg:p-6 mb-6 lg:mb-8 shadow-xl border border-green-200">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-10 h-10 lg:w-14 lg:h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
@@ -218,7 +193,7 @@ const UserAccount = () => {
           <div className="hidden lg:block lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 sticky top-8">
               <div className="text-center mb-8">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg mx-auto mb-4">
+                <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-2xl font-bold shadow-lg mx-auto mb-4">
                   {userData.name?.charAt(0).toUpperCase()}
                 </div>
                 <h2 className="font-bold text-gray-900 text-lg">{userData.name}</h2>
@@ -236,7 +211,7 @@ const UserAccount = () => {
                     onClick={() => setActiveTab(tab.id)}
                     className={`w-full flex items-center px-4 py-4 text-left rounded-xl border-2 transition-colors ${
                       activeTab === tab.id
-                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white border-blue-500 shadow-lg'
+                        ? 'bg-blue-500 text-white border-blue-500 shadow-lg'
                         : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                     }`}
                   >
@@ -265,7 +240,7 @@ const UserAccount = () => {
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <Button
                   fullWidth
-                  className="flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 rounded-xl font-semibold shadow-lg"
+                  className="flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold shadow-lg"
                   onClick={() => navigate('/events')}
                 >
                   <Search className="w-5 h-5 mr-2" />
@@ -279,7 +254,7 @@ const UserAccount = () => {
           <div className="lg:col-span-3">
             {activeTab === 'tickets' && (
               <div className="bg-white rounded-2xl lg:rounded-2xl shadow-sm lg:shadow-xl border border-gray-100 overflow-hidden">
-                <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 lg:p-8 border-b border-gray-200">
+                <div className="bg-gray-50 p-6 lg:p-8 border-b border-gray-200">
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div>
                       <h2 className="text-xl lg:text-2xl font-bold text-gray-900">My Tickets</h2>
@@ -295,25 +270,26 @@ const UserAccount = () => {
                 <div className="p-4 lg:p-8">
                   {userTickets.length === 0 ? (
                     <div className="text-center py-8 lg:py-12">
-                      <div className="w-16 h-16 lg:w-24 lg:h-24 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4 lg:mb-6 shadow-inner">
+                      <div className="w-16 h-16 lg:w-24 lg:h-24 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 lg:mb-6 shadow-inner">
                         <Ticket className="w-8 h-8 lg:w-12 lg:h-12 text-gray-400" />
                       </div>
                       <h3 className="text-lg lg:text-2xl font-bold text-gray-900 mb-3">No events yet</h3>
                       <p className="text-gray-600 text-sm lg:text-lg mb-6 lg:mb-8 max-w-md mx-auto">
                         Your adventure starts here. Discover amazing events and get your first ticket to see it in your collection.
                       </p>
-                      <Button 
-                        onClick={() => navigate('/events')}
-                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 px-6 lg:px-8 rounded-xl font-semibold shadow-lg text-base lg:text-lg"
-                      >
-                        <Search className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
-                        Explore Events
-                      </Button>
+                      <Button
+  onClick={() => navigate('/events')}
+  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 lg:px-8 rounded-xl font-semibold shadow-lg text-base lg:text-lg"
+>
+  <Search className="w-4 h-4 lg:w-5 lg:h-5" />
+  <span>Explore Events</span>
+</Button>
+
                     </div>
                   ) : (
                     <div className="grid gap-4 lg:gap-6">
                       {userTickets.map((ticket) => (
-                        <div key={ticket._id} className="bg-gradient-to-br from-white to-gray-50 rounded-xl lg:rounded-2xl border-2 border-gray-100 p-4 lg:p-6 shadow-sm">
+                        <div key={ticket._id} className="bg-white rounded-xl lg:rounded-2xl border-2 border-gray-100 p-4 lg:p-6 shadow-sm">
                           <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                             <div className="flex-1">
                               <div className="flex flex-col lg:flex-row lg:items-start justify-between mb-4 gap-3">
@@ -392,9 +368,9 @@ const UserAccount = () => {
                               </div>
                             </div>
 
-                            {/* QR Code - Stack below on mobile */}
+                            {/* QR Code */}
                             <div className="lg:ml-6 flex justify-center lg:block">
-                              <div className="bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 rounded-xl lg:rounded-2xl p-3 lg:p-4 shadow-sm">
+                              <div className="bg-white border-2 border-gray-200 rounded-xl lg:rounded-2xl p-3 lg:p-4 shadow-sm">
                                 <div className="w-20 h-20 lg:w-28 lg:h-28 bg-white border border-gray-300 rounded-lg lg:rounded-xl flex items-center justify-center p-2">
                                   {ticket.qrCode ? (
                                     <img src={ticket.qrCode} alt="QR Code" className="w-16 h-16 lg:w-24 lg:h-24 object-contain" />
@@ -416,7 +392,7 @@ const UserAccount = () => {
 
             {activeTab === 'orders' && (
               <div className="bg-white rounded-2xl lg:rounded-2xl shadow-sm lg:shadow-xl border border-gray-100 overflow-hidden">
-                <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 lg:p-8 border-b border-gray-200">
+                <div className="bg-gray-50 p-6 lg:p-8 border-b border-gray-200">
                   <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Order History</h2>
                   <p className="text-gray-600 mt-1 lg:mt-2 text-sm lg:text-lg">Your past orders and receipts</p>
                 </div>
@@ -429,7 +405,7 @@ const UserAccount = () => {
                   ) : (
                     <div className="space-y-4">
                       {orderHistory.map((order) => (
-                        <div key={order.id} className="bg-gradient-to-br from-white to-gray-50 rounded-xl lg:rounded-2xl border-2 border-gray-100 p-4 lg:p-6 shadow-sm">
+                        <div key={order.id} className="bg-white rounded-xl lg:rounded-2xl border-2 border-gray-100 p-4 lg:p-6 shadow-sm">
                           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                             <div className="flex-1">
                               <h3 className="text-base lg:text-lg font-bold text-gray-900">Order #{order.orderNumber}</h3>
@@ -466,7 +442,7 @@ const UserAccount = () => {
 
             {activeTab === 'saved' && (
               <div className="bg-white rounded-2xl lg:rounded-2xl shadow-sm lg:shadow-xl border border-gray-100 overflow-hidden">
-                <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 lg:p-8 border-b border-gray-200">
+                <div className="bg-gray-50 p-6 lg:p-8 border-b border-gray-200">
                   <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Saved Events</h2>
                   <p className="text-gray-600 mt-1 lg:mt-2 text-sm lg:text-lg">Events you're interested in</p>
                 </div>
@@ -490,7 +466,7 @@ const UserAccount = () => {
 
             {activeTab === 'account' && (
               <div className="bg-white rounded-2xl lg:rounded-2xl shadow-sm lg:shadow-xl border border-gray-100 overflow-hidden">
-                <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 lg:p-8 border-b border-gray-200">
+                <div className="bg-gray-50 p-6 lg:p-8 border-b border-gray-200">
                   <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Account Settings</h2>
                   <p className="text-gray-600 mt-1 lg:mt-2 text-sm lg:text-lg">Manage your profile and preferences</p>
                 </div>

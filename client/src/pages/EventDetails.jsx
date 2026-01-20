@@ -6,7 +6,10 @@ import { formatDate, formatPrice, getDaysUntilEvent } from '../utils/formatDate'
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Button from '../components/common/Button';
 import TicketModal from '../components/common/TicketModal';
-// Add react-icons imports
+import { 
+  Calendar, MapPin, Clock, Users, Ticket, Share2, Copy, Check,
+  AlertCircle, Zap, Flame, Sparkles, AlertOctagon
+} from 'lucide-react';
 import { FiCalendar, FiMapPin, FiClock, FiUsers, FiFileText, FiChevronDown, FiChevronUp, FiCopy, FiShare2, FiMenu } from 'react-icons/fi';
 import { FaFacebook, FaCheck, FaWhatsapp, FaLinkedin, FaTicketAlt } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
@@ -165,9 +168,9 @@ const EventDetails = () => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-auto text-center">
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FaCheck className="w-8 h-8 text-green-600" />
+          <Check className="w-8 h-8 text-green-600" />
         </div>
-        <h3 className="text-xl font-bold text-gray-900 mb-2">You're In! 🎉</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-2">You're All Set!</h3>
         <p className="text-gray-600 mb-4">
           {selectedQuantity} spot(s) reserved for <strong>{event.title}</strong>
         </p>
@@ -609,7 +612,7 @@ const EventDetails = () => {
                   
                   <div className="pb-4 border-b border-gray-100">
                     <div className="flex items-center space-x-3">
-                      <FiUsers className="w-5 h-5 text-primary-600" />
+                      <Users className="w-5 h-5 text-primary-600" />
                       <div>
                         <p className="text-xs lg:text-sm text-gray-500">Capacity</p>
                         <p className="font-semibold text-gray-900 text-sm lg:text-base">{event.capacity} attendees</p>
@@ -619,7 +622,7 @@ const EventDetails = () => {
 
                   <div className="pb-4 border-b border-gray-100">
                     <div className="flex items-center space-x-3">
-                      <FiUsers className="w-5 h-5 text-green-600" />
+                      <Users className="w-5 h-5 text-green-600" />
                       <div>
                         <p className="text-xs lg:text-sm text-gray-500">Registered</p>
                         <p className="font-semibold text-gray-900 text-sm lg:text-base">{event.registered} people</p>
@@ -629,7 +632,7 @@ const EventDetails = () => {
 
                   <div className="pb-4 border-b border-gray-100">
                     <div className="flex items-center space-x-3">
-                      <span className="text-blue-600 font-bold">🎫</span>
+                      <Ticket className="w-5 h-5 text-blue-600" />
                       <div>
                         <p className="text-xs lg:text-sm text-gray-500">Available Spots</p>
                         <p className={`font-semibold text-sm lg:text-base ${spotsLeft <= 10 ? 'text-red-600' : 'text-green-600'}`}>
@@ -641,7 +644,7 @@ const EventDetails = () => {
 
                   <div className="pb-4 border-b border-gray-100">
                     <div className="flex items-center space-x-3">
-                      <span className="text-purple-600 font-bold">⏱️</span>
+                      <Clock className="w-5 h-5 text-purple-600" />
                       <div>
                         <p className="text-xs lg:text-sm text-gray-500">Duration</p>
                         <p className="font-semibold text-gray-900 text-sm lg:text-base">{event.duration || '2-3 hours'}</p>
@@ -881,17 +884,23 @@ const EventDetails = () => {
                   {/* Urgency Messages */}
                   {daysUntil <= 7 && daysUntil > 0 && (
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                      <p className="text-orange-700 text-sm font-medium">
-                        ⚡ Event starts in {daysUntil} day{daysUntil !== 1 ? 's' : ''}!
-                      </p>
+                      <div className="flex items-center space-x-2">
+                        <Zap className="w-4 h-4 text-orange-600" />
+                        <p className="text-orange-700 text-sm font-medium">
+                          Event starts in {daysUntil} day{daysUntil !== 1 ? 's' : ''}!
+                        </p>
+                      </div>
                     </div>
                   )}
 
                   {available <= 10 && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <p className="text-red-700 text-sm font-medium">
-                        🔥 Only {available} spots left!
-                      </p>
+                      <div className="flex items-center space-x-2">
+                        <Flame className="w-4 h-4 text-red-600" />
+                        <p className="text-red-700 text-sm font-medium">
+                          Only {available} spots left!
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -917,7 +926,7 @@ const EventDetails = () => {
               {available === 0 && (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-gray-500 text-2xl">🎫</span>
+                    <AlertOctagon className="w-8 h-8 text-gray-500" />
                   </div>
                   <h4 className="text-lg font-semibold text-gray-900 mb-2">Sold Out</h4>
                   <p className="text-gray-500 mb-6">
@@ -937,7 +946,7 @@ const EventDetails = () => {
               {!isUpcoming && (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-gray-500 text-2xl">⏰</span>
+                    <Clock className="w-8 h-8 text-gray-500" />
                   </div>
                   <h4 className="text-lg font-semibold text-gray-900 mb-2">Event Ended</h4>
                   <p className="text-gray-500">
