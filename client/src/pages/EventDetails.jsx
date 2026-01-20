@@ -299,9 +299,9 @@ const EventDetails = () => {
   // Mobile Ticket Modal - use showTicketsMobile to control
   const MobileTicketModal = () => (
     <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 lg:hidden">
-      <div className="bg-white rounded-t-3xl w-full max-h-[90vh] overflow-y-auto animate-slideUp">
+      <div className="bg-white rounded-t-3xl w-full max-h-[90vh] overflow-y-auto overscroll-contain">
         {/* Modal Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-10">
           <h2 className="text-lg font-bold text-gray-900">Get Tickets</h2>
           <button 
             onClick={() => {
@@ -315,7 +315,7 @@ const EventDetails = () => {
         </div>
 
         {/* Modal Content */}
-        <div className="p-4">
+        <div className="p-4 pb-24">
           {/* Price Display */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
@@ -534,27 +534,27 @@ const EventDetails = () => {
 
   // Mobile Floating Action Button
   const MobileFloatingButton = () => (
-  <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent p-4 z-40 lg:hidden">
-    <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <p className="text-sm text-gray-500">Starting from</p>
-          <p className="text-xl font-bold text-primary-600">
-            {isFreeEvent ? 'Free' : formatPrice(lowestTicketPrice)}
-          </p>
-        </div>
+        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent p-4 z-40 lg:hidden pointer-events-none">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 pointer-events-auto">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm text-gray-500">Starting from</p>
+                <p className="text-xl font-bold text-primary-600">
+                  {isFreeEvent ? 'Free' : formatPrice(lowestTicketPrice)}
+                </p>
+              </div>
 
-        <Button 
-          onClick={() => setShowTicketsMobile(true)}
-          size="large"
-          className="flex-1 ml-4 py-3"
-        >
-          Get Tickets
-        </Button>
-      </div>
-    </div>
-  </div>
-);
+              <Button 
+                onClick={() => setShowTicketsMobile(true)}
+                size="large"
+                className="flex-1 ml-4 py-3"
+              >
+                Get Tickets
+              </Button>
+            </div>
+          </div>
+        </div>
+  );
 
 
   // Mobile Header Summary
@@ -603,6 +603,19 @@ const EventDetails = () => {
       </div>
     </div>
   );
+
+  useEffect(() => {
+    // Prevent body scroll when mobile modal is open
+    if (showMobileTicketModal || showTicketsMobile) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showMobileTicketModal, showTicketsMobile]);
 
   if (loading) {
     return (
@@ -1084,8 +1097,8 @@ const EventDetails = () => {
 
       {/* Mobile Floating Action Button */}
       {isUpcoming && available > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent p-4 z-40 lg:hidden">
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4">
+        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent p-4 z-40 lg:hidden pointer-events-none">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 pointer-events-auto">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <p className="text-sm text-gray-500">Starting from</p>
