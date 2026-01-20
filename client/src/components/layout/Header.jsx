@@ -11,21 +11,17 @@ import {
   RiTicketLine
 } from 'react-icons/ri';
 import { useAuth } from '../../context/AuthContext';
-import { useCart } from '../../context/CartContext';
 import { useUI } from '../../context/UIContext';
 
 const Header = () => {
   const { user, logout } = useAuth();
-  const { getTotalItems } = useCart();
   const { mobileMenuOpen, toggleMobileMenu } = useUI();
   const navigate = useNavigate();
   const location = useLocation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [cartBounce, setCartBounce] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const totalItems = getTotalItems();
 
   // Handle scroll effect
   useEffect(() => {
@@ -35,15 +31,6 @@ const Header = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  // Animate cart when items are added
-  useEffect(() => {
-    if (totalItems > 0) {
-      setCartBounce(true);
-      const t = setTimeout(() => setCartBounce(false), 300);
-      return () => clearTimeout(t);
-    }
-  }, [totalItems]);
 
   // Auth initialization
   useEffect(() => {
@@ -145,12 +132,6 @@ const Header = () => {
             >
               <RiTicketLine className="w-5 h-5" />
               <span className="hidden sm:inline font-medium">Find my tickets</span>
-
-              {getTotalItems() > 0 && (
-                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
-                  {getTotalItems()}
-                </span>
-              )}
             </button>
 
             {/* Enhanced User Menu */}

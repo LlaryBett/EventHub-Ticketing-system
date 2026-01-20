@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
 const UIContext = createContext();
 
@@ -15,7 +15,7 @@ export const UIProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const addNotification = (notification) => {
+  const addNotification = useCallback((notification) => {
     const id = Date.now();
     const newNotification = {
       id,
@@ -30,45 +30,46 @@ export const UIProvider = ({ children }) => {
     setTimeout(() => {
       removeNotification(id);
     }, newNotification.duration);
-  };
+  }, []);
 
-  const removeNotification = (id) => {
+  const removeNotification = useCallback((id) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
-  };
+  }, []);
 
-  const showSuccess = (message) => {
+  const showSuccess = useCallback((message) => {
     addNotification({
       type: 'success',
       message
     });
-  };
+  }, [addNotification]);
 
-  const showError = (message) => {
+  const showError = useCallback((message) => {
     addNotification({
       type: 'error',
       message
     });
-  };
+  }, [addNotification]);
 
-  const showWarning = (message) => {
+  const showWarning = useCallback((message) => {
     addNotification({
       type: 'warning',
       message
     });
-  };
+  }, [addNotification]);
 
-  const showInfo = (message) => {
+  const showInfo = useCallback((message) => {
     addNotification({
       type: 'info',
       message
     });
-  };
+  }, [addNotification]);
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-  };
+  const toggleMobileMenu = useCallback(() => {
+    setMobileMenuOpen(prev => !prev);
+  }, []);
 
-  const value = {
+  // Memoize the entire value object to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     notifications,
     loading,
     mobileMenuOpen,
@@ -81,7 +82,19 @@ export const UIProvider = ({ children }) => {
     setLoading,
     toggleMobileMenu,
     setMobileMenuOpen
-  };
+  }), [
+    notifications,
+    loading,
+    mobileMenuOpen,
+    addNotification,
+    removeNotification,
+    showSuccess,
+    showError,
+    showWarning,
+    showInfo,
+    toggleMobileMenu
+    // Note: setLoading and setMobileMenuOpen are stable from useState
+  ]);
 
   return (
     <UIContext.Provider value={value}>

@@ -1,15 +1,24 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { 
+  MdFlag, MdVisibility, MdFavorite, 
+  MdTrendingUp, MdPeople, MdBusiness, 
+  MdLocationCity, MdEventAvailable, MdEmojiEvents,
+  MdSecurity, MdPayment, MdVerified, MdSupportAgent,
+  MdLocalOffer, MdQrCodeScanner, MdSmartphone
+} from 'react-icons/md';
 
-// Mock Button component since we don't have the import
-const Button = ({ children, variant = 'primary', size = 'medium', ...props }) => {
-  const baseClasses = "font-semibold rounded-lg transition-colors duration-200 whitespace-nowrap";
+const Button = ({ children, variant = 'primary', size = 'medium', icon, iconPosition = 'right', ...props }) => {
+  const baseClasses = "font-semibold rounded-lg transition-all duration-200 whitespace-nowrap inline-flex items-center justify-center gap-2 hover:shadow-md";
   const variants = {
     primary: "bg-blue-600 text-white hover:bg-blue-700",
-    outline: "border-2 border-blue-600 text-blue-600 hover:bg-blue-50"
+    secondary: "bg-emerald-600 text-white hover:bg-emerald-700",
+    outline: "border-2 border-blue-600 text-blue-600 hover:bg-blue-50",
+    ghost: "text-gray-700 hover:bg-gray-100"
   };
   const sizes = {
-    medium: "px-4 py-2 text-base",
-    large: "px-6 py-3 text-base min-h-12"
+    medium: "px-4 py-2.5 text-base",
+    large: "px-6 py-3.5 text-lg"
   };
   
   return (
@@ -17,58 +26,84 @@ const Button = ({ children, variant = 'primary', size = 'medium', ...props }) =>
       className={`${baseClasses} ${variants[variant]} ${sizes[size]}`} 
       {...props}
     >
+      {icon && iconPosition === 'left' && <span className="text-xl">{icon}</span>}
       {children}
+      {icon && iconPosition === 'right' && <span className="text-xl">{icon}</span>}
     </button>
   );
 };
 
+const StatCard = ({ number, label, icon }) => (
+  <div className="text-center p-4">
+    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 mb-3">
+      {icon}
+    </div>
+    <div className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">{number}</div>
+    <div className="text-sm text-gray-600">{label}</div>
+  </div>
+);
+
 const About = () => {
-  const teamMembers = [
-    {
-      name: 'Sarah Johnson',
-      role: 'CEO & Founder',
-      image: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=300',
-      description: 'Former event organizer with 10+ years of experience in the industry.'
-    },
-    {
-      name: 'Michael Chen',
-      role: 'CTO',
-      image: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=300',
-      description: 'Tech expert passionate about creating seamless digital experiences.'
-    },
-    {
-      name: 'Emily Rodriguez',
-      role: 'Head of Design',
-      image: 'https://images.pexels.com/photos/712513/pexels-photo-712513.jpeg?auto=compress&cs=tinysrgb&w=300',
-      description: 'Award-winning designer focused on user-centered design principles.'
-    }
-  ];
+  const founder = {
+    name: 'Hillary Bett',
+    role: 'Founder & CEO',
+    image: 'https://avatars.githubusercontent.com/u/1068367?v=4',
+    description: 'Former event organizer with 10+ years experience in the ticketing industry. Built EventHub to solve ticketing pain points experienced firsthand.',
+    background: 'Previously managed ticketing for 200+ events, witnessing the challenges of fraud, poor UX, and unreliable platforms.'
+  };
 
   const values = [
     {
-      icon: '🎯',
-      title: 'Our Mission',
-      description: 'To connect people through amazing events and create unforgettable experiences that bring communities together.'
+      icon: <MdSecurity className="text-blue-600" size={32} />,
+      title: 'Security First',
+      description: 'Bank-level encryption, fraud protection, and secure payment processing for every transaction.'
     },
     {
-      icon: '👁️',
-      title: 'Our Vision',
-      description: 'To be the world\'s most trusted platform for discovering, organizing, and attending events of all kinds.'
+      icon: <MdVerified className="text-emerald-600" size={32} />,
+      title: 'Verified Tickets',
+      description: 'Every ticket is verified and protected against fraud, scams, and counterfeiting.'
     },
     {
-      icon: '❤️',
-      title: 'Our Values',
-      description: 'We believe in authenticity, community, innovation, and making events accessible to everyone.'
+      icon: <MdPayment className="text-purple-600" size={32} />,
+      title: 'Transparent Pricing',
+      description: 'No hidden fees. Clear breakdown of ticket prices and organizer fees upfront.'
+    },
+    {
+      icon: <MdSupportAgent className="text-pink-500" size={32} />,
+      title: '24/7 Support',
+      description: 'Round-the-clock customer support for organizers and ticket buyers.'
     }
   ];
 
   const stats = [
-    { number: '10,000+', label: 'Events Hosted' },
-    { number: '100,000+', label: 'Happy Users' },
-    { number: '500+', label: 'Cities Covered' },
-    { number: '5 Years', label: 'In Business' }
+    { number: '1k+', label: 'Tickets Sold', icon: <MdLocalOffer size={24} /> },
+    { number: '99.9%', label: 'Uptime', icon: <MdVerified size={24} /> },
+    { number: '12+', label: 'Events Hosted', icon: <MdPayment size={24} /> },
+    { number: '<1%', label: 'Chargeback Rate', icon: <MdSecurity size={24} /> }
   ];
 
+  const features = [
+    {
+      title: 'For Organizers',
+      items: [
+        { icon: <MdQrCodeScanner />, text: 'QR Code Check-in' },
+        { icon: <MdTrendingUp />, text: 'Real-time Analytics' },
+        { icon: <MdLocalOffer />, text: 'Dynamic Pricing' },
+        { icon: <MdPeople />, text: 'Attendee Management' }
+      ]
+    },
+    {
+      title: 'For Attendees',
+      items: [
+        { icon: <MdSmartphone />, text: 'Mobile Tickets' },
+        { icon: <MdVerified />, text: 'Ticket Protection' },
+        { icon: <MdPayment />, text: 'Secure Payments' },
+        { icon: <MdSupportAgent />, text: 'Easy Transfers' }
+      ]
+    }
+  ];
+
+ 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */} 
@@ -85,11 +120,11 @@ const About = () => {
         </div>
 
         {/* Content */}
-        <div className="relative max-w-7xl mx-auto container-padding text-center">
-          <h1 className="text-2xl md:text-5xl font-bold mb-4 drop-shadow-lg">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-3xl md:text-4xl font-bold mb-4 drop-shadow-lg">
             About EventHub
           </h1>
-          <p className="text-xl text-blue-100 max-w-3xl mx-auto">
+          <p className="text-base md:text-lg text-blue-100 max-w-3xl mx-auto">
             We're on a mission to make discovering and attending amazing events effortless for everyone, 
             while empowering organizers to create unforgettable experiences.
           </p>
@@ -102,7 +137,7 @@ const About = () => {
 
       {/* Our Story */}
       <section className="py-12 md:py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 items-center">
             <div>
               {/* H2 - Mobile: 22px, Desktop: 30px */}
@@ -125,7 +160,7 @@ const About = () => {
                 </p>
               </div>
             </div>
-            <div className="relative">
+            <div className="relative hidden lg:block">
               <img
                 src="https://images.pexels.com/photos/1190298/pexels-photo-1190298.jpeg?auto=compress&cs=tinysrgb&w=800"
                 alt="Team collaboration"
@@ -140,105 +175,248 @@ const About = () => {
         </div>
       </section>
 
-      {/* Values Section */}
-      <section className="py-12 md:py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-12 md:mb-16">
-            {/* H2 - Mobile: 22px, Desktop: 30px */}
-            <h2 className="text-xl md:text-3xl font-bold text-gray-900 mb-4">What Drives Us</h2>
-            {/* Body text - Mobile: 16px, Desktop: 20px */}
-            <p className="text-base md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              Our core values guide everything we do, from product development to customer support.
+      {/* VALUES SECTION */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Our Ticketing Principles
+            </h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Built on a foundation of trust, security, and transparency
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {values.map((value, index) => (
-              <div key={index} className="bg-white rounded-xl shadow-md p-6 md:p-8 text-center">
-                <div className="text-3xl md:text-4xl mb-3 md:mb-4">{value.icon}</div>
-                {/* H3 - Mobile: 18px, Desktop: 20px */}
-                <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4">{value.title}</h3>
-                {/* Description - Mobile: 14px, Desktop: 16px */}
-                <p className="text-sm md:text-base text-gray-600 leading-relaxed">{value.description}</p>
+              <div key={index} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow duration-200">
+                <div className="mb-4 flex justify-center">
+                  <div className="p-3 rounded-lg bg-gray-50">
+                    {value.icon}
+                  </div>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-3 text-center">{value.title}</h3>
+                <p className="text-gray-600 text-sm leading-relaxed text-center">{value.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-12 md:py-16 bg-blue-600 text-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-12 md:mb-16">
-            {/* H2 - Mobile: 22px, Desktop: 30px */}
-            <h2 className="text-xl md:text-3xl font-bold mb-4">EventHub by the Numbers</h2>
-            {/* Body text - Mobile: 16px, Desktop: 20px */}
-            <p className="text-base md:text-xl text-blue-100 leading-relaxed">
-              Here's what we've accomplished together with our amazing community.
-            </p>
-          </div>
+      <section className="py-20 bg-gradient-to-b from-white via-gray-50 to-white">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="text-center mb-16">
+      <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+        Complete Ticketing Solution
+      </h2>
+      <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+        Everything you need to sell and manage tickets with confidence.
+      </p>
+    </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 text-center">
-            {stats.map((stat, index) => (
-              <div key={index}>
-                {/* Stats numbers - Mobile: 24px, Desktop: 48px */}
-                <div className="text-2xl md:text-5xl font-bold mb-2">{stat.number}</div>
-                {/* Stats labels - Mobile: 14px, Desktop: 16px */}
-                <div className="text-sm md:text-base text-blue-200">{stat.label}</div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {features.map((feature, index) => (
+        <div 
+          key={index} 
+          className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-0 border border-gray-200"
+        >
+          {/* Gradient header spanning the top of the card */}
+          <div className="w-full bg-gradient-to-br from-blue-50 to-blue-100 rounded-t-2xl px-0 py-0">
+            <h3 className="text-2xl font-bold text-gray-900 py-5 px-8 m-0 text-center">
+              {feature.title}
+            </h3>
+          </div>
+          <div className="p-8 space-y-5">
+            {feature.items.map((item, itemIndex) => (
+              <div 
+                key={itemIndex} 
+                className="flex items-start gap-4 group"
+              >
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
+                  {item.icon}
+                </div>
+                <span className="text-gray-700 leading-relaxed pt-2">
+                  {item.text}
+                </span>
               </div>
             ))}
           </div>
         </div>
-      </section>
+      ))}
+    </div>
+  </div>
+</section>
 
-      {/* Team Section */}
-      <section className="py-12 md:py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-12 md:mb-16">
-            {/* H2 - Mobile: 22px, Desktop: 30px */}
-            <h2 className="text-xl md:text-3xl font-bold text-gray-900 mb-4">Meet Our Team</h2>
-            {/* Body text - Mobile: 16px, Desktop: 20px */}
-            <p className="text-base md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              We're a passionate team of event enthusiasts, designers, and developers working to make 
-              EventHub the best platform for events.
-            </p>
-          </div>
+      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="text-center mb-16">
+      <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+        How Our Ticketing Works
+      </h2>
+      <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+        Simple, secure, and seamless from purchase to entry
+      </p>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+      {/* Connection lines for desktop */}
+      <div className="hidden md:block absolute top-12 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-blue-200 via-blue-400 to-blue-200"></div>
+      
+      <div className="relative text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 group">
+        <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
+          <MdPayment size={32} />
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 mb-3">Secure Purchase</h3>
+        <p className="text-gray-600 leading-relaxed">
+          Buy tickets with encrypted payment processing and instant confirmation.
+        </p>
+      </div>
+      
+      <div className="relative text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 group">
+        <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
+          <MdSmartphone size={32} />
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 mb-3">Mobile Tickets</h3>
+        <p className="text-gray-600 leading-relaxed">
+          Receive digital tickets on your phone. No printing needed.
+        </p>
+      </div>
+      
+      <div className="relative text-center p-8 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 group">
+        <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
+          <MdQrCodeScanner size={32} />
+        </div>
+        <h3 className="text-xl font-bold text-gray-900 mb-3">Easy Entry</h3>
+        <p className="text-gray-600 leading-relaxed">
+          Scan QR code at venue. Fast, contactless check-in.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {teamMembers.map((member, index) => (
-              <div key={index} className="text-center">
+      <section className="py-16 bg-gradient-to-br from-gray-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+              <div className="md:col-span-1">
                 <img
-                  src={member.image}
-                  alt={member.name}
-                  className="w-32 h-32 md:w-48 md:h-48 rounded-full mx-auto mb-4 object-cover"
+                  src={founder.image}
+                  alt={founder.name}
+                  className="w-48 h-48 rounded-full mx-auto md:mx-0 object-cover border-4 border-white shadow-lg"
                 />
-                {/* Name - Mobile: 18px, Desktop: 20px */}
-                <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">{member.name}</h3>
-                {/* Role - Mobile: 16px, Desktop: 16px */}
-                <p className="text-base text-blue-600 font-medium mb-3">{member.role}</p>
-                {/* Description - Mobile: 14px, Desktop: 14px */}
-                <p className="text-sm text-gray-600">{member.description}</p>
+                <div className="mt-4 text-center md:text-left">
+                  <h3 className="text-xl font-bold text-gray-900">{founder.name}</h3>
+                  <p className="text-blue-600 font-medium">{founder.role}</p>
+                </div>
               </div>
-            ))}
+              <div className="md:col-span-2">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Built by Event Professionals, for Event Professionals
+                </h2>
+                <p className="text-gray-700 mb-4">{founder.description}</p>
+                <p className="text-gray-600 mb-6">{founder.background}</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-12 md:py-16 bg-gray-50">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          {/* H2 - Mobile: 22px, Desktop: 30px */}
-          <h2 className="text-xl md:text-3xl font-bold text-gray-900 mb-4">
-            Ready to Join Our Community?
-          </h2>
-          {/* Body text - Mobile: 16px, Desktop: 20px */}
-          <p className="text-base md:text-xl text-gray-600 mb-6 md:mb-8 leading-relaxed">
-            Whether you're looking to attend amazing events or organize your own, 
+      <section className="py-16 bg-gradient-to-b from-gray-50 to-white border-b border-gray-100">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="text-center mb-12">
+      <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+        Trusted by Event Professionals Worldwide
+      </h2>
+      <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+        Join thousands of organizers creating unforgettable experiences
+      </p>
+    </div>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+      {stats.map((stat, index) => (
+        <StatCard key={index} {...stat} />
+      ))}
+    </div>
+  </div>
+</section>
+
+       
+       {/* CTA Section - No py padding, only px */}
+      <section className="bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="
+            relative 
+            rounded-2xl shadow-2xl overflow-hidden 
+            flex flex-col md:flex-row w-full text-white
+            bg-gradient-to-r from-blue-600 to-purple-600
+          ">
+
+            {/* LEFT SIDE */}
+            <div className="
+              relative 
+              flex-1 
+              py-8 px-6 sm:px-10 md:px-12
+              flex flex-col justify-center text-left
+            ">
+              {/* Soft Circles */}
+              <div className="absolute inset-0 opacity-10 pointer-events-none">
+                <div className="absolute -top-3 -left-3 w-12 h-12 bg-white rounded-full"></div>
+                <div className="absolute -bottom-5 -right-6 w-16 h-16 bg-white rounded-full"></div>
+                <div className="absolute top-1/2 left-1/4 w-8 h-8 bg-white rounded-full"></div>
+              </div>
+
+              <div className="relative z-10">
+                <h3 className="text-xl sm:text-2xl font-bold mb-2 leading-tight">
+                   Ready to Join Our Community?
+                </h3>
+
+                <p className="text-sm sm:text-base text-blue-100 mb-4 max-w-xl leading-relaxed">
+                 Whether you're looking to attend amazing events or organize your own, 
             EventHub is here to help you every step of the way.
-          </p>
-          <div className="flex flex-row gap-3 justify-center">
-            <Button size="large">Browse Events</Button>
-            <Button variant="outline" size="large">Create Event</Button>
+                </p>
+
+                {/* BUTTONS */}
+                <div className="flex flex-row gap-3 sm:gap-4">
+                  <Link to="/register">
+                    <button className="
+                      px-4 py-2 bg-white text-blue-600
+                      font-semibold rounded-lg hover:bg-gray-50 
+                      transition duration-200 text-xs sm:text-sm
+                    ">
+                      Sign Up For Free
+                    </button>
+                  </Link>
+
+                  <Link to="/about">
+                    <button className="
+                      px-4 py-2 border-2 border-white
+                      text-white font-semibold rounded-lg 
+                      hover:bg-white/10 transition duration-200
+                      text-xs sm:text-sm
+                    ">
+                      Learn More
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT SIDE IMAGE */}
+            <div className="
+              hidden md:block flex-1 relative
+              [clip-path:polygon(20%_0,100%_0,100%_100%,5%_100%,0_50%)]
+            ">
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{
+                  backgroundImage:
+                    "url('https://images.unsplash.com/photo-1492684223066-e302cb576266?w=600&h=400&fit=crop')",
+                }}
+              ></div>
+
+              {/* OVERLAY */}
+              <div className="absolute inset-0 bg-gradient-to-l from-transparent to-purple-600/70"></div>
+            </div>
           </div>
         </div>
       </section>

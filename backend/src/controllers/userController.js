@@ -248,7 +248,10 @@ exports.getMe = async (req, res, next) => {
         await organizerProfile.save();
 
         userData = userData.toObject();
-        userData.organizerProfile = organizerProfile;
+        userData.organizerProfile = {
+          ...organizerProfile.toObject(),
+          createdThroughAdmin: organizerProfile.createdThroughAdmin
+        };
         userData.analytics = {
           totalEvents: events.length,
           totalRevenue,
@@ -1136,12 +1139,127 @@ exports.getUserById = async (req, res, next) => {
   }
 };
 
+// @desc    Create user (admin only)
+// @route   POST /api/users/admin/users
+// @access  Private/Admin
+exports.createUser = async (req, res, next) => {
+  try {
+    const { 
+      name, 
+      email, 
+      phone, 
+      userType, 
+      password, 
+      status 
+    } = req.body;
+
+    // Validate userType
+    const validUserTypes = ['attendee', 'organizer', 'admin'];
+    if (!validUserTypes.includes(userType)) {
+      return res.status(400).json({
+        success: false,
+        message: `userType must be one of: ${validUserTypes.join(', ')}`
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists'
+      });
+    }
+
+    // Prepare user data
+    const userData = {
+      name,
+      email,
+      phone: phone || '',
+      userType,
+      password,
+      status: status || 'active',
+      emailVerified: false, // User needs to verify email
+      isApprovedOrganizer: false
+    };
+
+    // Create user
+    const user = await User.create(userData);
+
+    // If user is organizer, create BASIC organizer profile with placeholders
+    if (userType === 'organizer') {
+      const organizer = new Organizer({
+        userId: user._id,
+        
+        // Required business fields with placeholders
+        organizationName: `${name}'s Organization`,
+        businessType: 'individual',
+        businessAddress: 'Please update your business address',
+        city: 'Please update your city',
+        state: 'Please update your state',
+        zipCode: '00000',
+        
+        // Optional fields
+        taxId: null,
+        website: null,
+        
+        // System fields
+        verificationStatus: 'pending',
+        approvalStatus: 'pending',
+        isApprovedOrganizer: false,
+        logo: 'default-logo.jpg',
+        totalEvents: 0,
+        totalRevenue: 0,
+        isActive: true,
+        createdBy: 'admin',
+        registrationCompleted: false, // IMPORTANT: User must complete profile
+        profileCompletionRequired: true, // Flag to prompt user
+        welcomeEmailSent: false,
+        createdThroughAdmin: true // <-- add this line
+      });
+
+      await organizer.save();
+      console.log(`✅ Created BASIC organizer profile for new user ${user._id}`);
+      
+      // Send welcome email with instructions to complete profile
+      try {
+        await emailService.sendOrganizerWelcomeEmail({
+          to: user.email,
+          name: user.name,
+          organizationName: organizer.organizationName,
+          loginLink: `${process.env.FRONTEND_URL}/login`,
+          completeProfileLink: `${process.env.FRONTEND_URL}/organizer/profile`
+        });
+        organizer.welcomeEmailSent = true;
+        await organizer.save();
+        console.log(`📧 Sent organizer welcome email to ${user.email}`);
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      data: user,
+      message: userType === 'organizer' 
+        ? 'Organizer account created. User will receive email instructions to verify email and complete their profile.'
+        : 'User account created successfully.'
+    });
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
+  }
+};
+
 // @desc    Update user (admin only)
 // @route   PUT /api/users/admin/users/:id
 // @access  Private/Admin
 exports.updateUser = async (req, res, next) => {
   try {
-    const { name, email, phone, role, status } = req.body;
+    const { name, email, phone, userType, status } = req.body;
     
     const user = await User.findById(req.params.id);
     
@@ -1152,18 +1270,103 @@ exports.updateUser = async (req, res, next) => {
       });
     }
 
-    // Update fields
+    // Keep track of whether we're changing to organizer
+    const changingToOrganizer = (userType === 'organizer' && user.userType !== 'organizer');
+    const changingFromOrganizer = (user.userType === 'organizer' && userType !== 'organizer');
+
+    // Update user fields
     if (name) user.name = name;
     if (email) user.email = email;
     if (phone) user.phone = phone;
-    if (role) user.role = role;
+    if (userType) user.userType = userType;
     if (status) user.status = status;
+
+    // Handle organizer profile creation/deletion
+    if (changingToOrganizer) {
+      // Check if organizer profile already exists
+      const existingOrganizer = await Organizer.findOne({ userId: user._id });
+      
+      if (!existingOrganizer) {
+        // Create BASIC organizer profile with placeholders
+        const newOrganizer = new Organizer({
+          userId: user._id,
+          
+          // Required business fields with placeholders
+          organizationName: `${user.name}'s Organization`,
+          businessType: 'individual',
+          businessAddress: 'Please update your business address',
+          city: 'Please update your city',
+          state: 'Please update your state',
+          zipCode: '00000',
+          
+          // Optional fields
+          taxId: null,
+          website: null,
+          
+          // System fields
+          verificationStatus: 'pending',
+          approvalStatus: 'pending',
+          isApprovedOrganizer: false,
+          logo: 'default-logo.jpg',
+          totalEvents: 0,
+          totalRevenue: 0,
+          isActive: true,
+          createdBy: 'admin',
+          registrationCompleted: false, // User must complete profile
+          profileCompletionRequired: true,
+          welcomeEmailSent: false,
+          createdThroughAdmin: true // <-- always set true for admin upgrade
+        });
+        
+        await newOrganizer.save();
+        console.log(`✅ Created BASIC organizer profile for user ${user._id}`);
+        
+        // Send notification email
+        if (user.email) {
+          try {
+            await emailService.sendOrganizerWelcomeEmail({
+              to: user.email,
+              name: user.name,
+              organizationName: newOrganizer.organizationName,
+              loginLink: `${process.env.FRONTEND_URL}/login`,
+              completeProfileLink: `${process.env.FRONTEND_URL}/organizer/profile`
+            });
+            newOrganizer.welcomeEmailSent = true;
+            await newOrganizer.save();
+            console.log(`📧 Sent organizer conversion email to ${user.email}`);
+          } catch (emailError) {
+            console.error('Failed to send email:', emailError);
+          }
+        }
+      } else {
+        // Reactivate existing organizer profile
+        existingOrganizer.isActive = true;
+        existingOrganizer.verificationStatus = 'pending';
+        existingOrganizer.profileCompletionRequired = true;
+        existingOrganizer.createdThroughAdmin = true; // <-- ensure flag is set on reactivation
+        await existingOrganizer.save();
+        console.log(`✅ Reactivated organizer profile for user ${user._id}`);
+      }
+    } else if (changingFromOrganizer) {
+      // If changing FROM organizer to another type
+      const existingOrganizer = await Organizer.findOne({ userId: user._id });
+      if (existingOrganizer) {
+        // Mark as inactive
+        existingOrganizer.isActive = false;
+        existingOrganizer.verificationStatus = 'suspended';
+        await existingOrganizer.save();
+        console.log(`⚠️ Deactivated organizer profile for user ${user._id}`);
+      }
+    }
 
     await user.save();
 
     res.status(200).json({
       success: true,
-      data: user
+      data: user,
+      message: changingToOrganizer 
+        ? 'User converted to organizer. They will need to complete their profile.'
+        : 'User updated successfully.'
     });
   } catch (error) {
     console.error('Update user error:', error);
@@ -1923,6 +2126,36 @@ exports.uploadOrganizerLogo = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error uploading logo'
+    });
+  }
+};
+
+
+// @desc    Get organizer by user ID
+// @route   GET /api/users/admin/organizers/user/:userId
+// @access  Private/Admin
+exports.getOrganizerByUserId = async (req, res, next) => {
+  try {
+    const organizer = await Organizer.findOne({ 
+      userId: req.params.userId 
+    }).populate('userId', 'name email phone userType status createdAt');
+    
+    if (!organizer) {
+      return res.status(404).json({
+        success: false,
+        message: 'Organizer not found for this user'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: organizer
+    });
+  } catch (error) {
+    console.error('Get organizer by user ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
     });
   }
 };

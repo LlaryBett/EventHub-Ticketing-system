@@ -1,11 +1,11 @@
 // PaymentConfirmation.js - Two-column layout with modal
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import Button from '../components/common/Button';
 import { formatPrice } from '../utils/formatDate';
-import { getOrderById, pollPaymentStatus, checkPaymentStatus } from '../services/checkoutService';
+import { getOrderById, pollPaymentStatus } from '../services/checkoutService';
 
 // Modal Component
 const AccountSuggestionModal = ({ isOpen, onClose, orderData, onCreateAccount, onLogin }) => {
@@ -155,10 +155,18 @@ const PaymentConfirmation = () => {
   const [countdown, setCountdown] = useState(8);
   const [error, setError] = useState(null);
 
+  // Use a ref to store showError to avoid including it in dependencies
+  const showErrorRef = useRef(showError);
+  useEffect(() => {
+    showErrorRef.current = showError;
+  }, [showError]);
+
   const fetchOrderAndPaymentStatus = useCallback(async () => {
     if (!orderId) {
-      setError('No order ID provided');
+      const errorMsg = 'No order ID provided';
+      setError(errorMsg);
       setLoading(false);
+      showErrorRef.current(errorMsg);
       return;
     }
 
@@ -171,8 +179,10 @@ const PaymentConfirmation = () => {
         setPaymentStatus(paymentResult);
 
         if (paymentResult.status === 'failed') {
-          setError(`Payment failed: ${paymentResult.resultDesc}`);
+          const errorMsg = `Payment failed: ${paymentResult.resultDesc}`;
+          setError(errorMsg);
           setLoading(false);
+          showErrorRef.current(errorMsg);
           return;
         }
 
@@ -197,11 +207,14 @@ const PaymentConfirmation = () => {
         setOrderData(response.order);
         setError(null);
       } else {
-        setError('Order not found');
+        const errorMsg = 'Order not found';
+        setError(errorMsg);
+        showErrorRef.current(errorMsg);
       }
     } catch (err) {
       const errorMessage = err.message || 'Failed to load order details';
       setError(errorMessage);
+      showErrorRef.current(errorMessage);
       console.error('Order fetch error:', err);
     } finally {
       setLoading(false);
@@ -212,12 +225,12 @@ const PaymentConfirmation = () => {
     fetchOrderAndPaymentStatus();
   }, [fetchOrderAndPaymentStatus]);
 
-  // Show error notification only once when error state changes
-  useEffect(() => {
-    if (error) {
-      showError(error);
-    }
-  }, [error, showError]);
+  // REMOVED the problematic useEffect that caused infinite loop:
+  // useEffect(() => {
+  //   if (error) {
+  //     showError(error);
+  //   }
+  // }, [error, showError]);
 
   // Countdown and modal trigger logic - only for guest orders without existing accounts
   useEffect(() => {
@@ -559,22 +572,21 @@ const PaymentConfirmation = () => {
 
                 {/* Action Buttons */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-  <Button
-    variant="outline"
-    onClick={() => navigate('/events')}
-    className="flex-1 sm:flex-none border-blue-600 text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-lg font-medium transition-colors"
-  >
-    Browse More Events
-  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/events')}
+                    className="flex-1 sm:flex-none border-blue-600 text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-lg font-medium transition-colors"
+                  >
+                    Browse More Events
+                  </Button>
 
-  <Button
-    onClick={() => navigate(`/tickets?email=${encodeURIComponent(orderData.customerEmail)}`)}
-    className="flex-1 sm:flex-none bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
-  >
-    View My Tickets
-  </Button>
-</div>
-
+                  <Button
+                    onClick={() => navigate(`/tickets?email=${encodeURIComponent(orderData.customerEmail)}`)}
+                    className="flex-1 sm:flex-none bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
+                  >
+                    View My Tickets
+                  </Button>
+                </div>
 
                 {/* Countdown - only show for guest orders without existing accounts */}
                 {orderData.isGuestOrder && !user && !orderData?.hasAccount && !showAccountModal && countdown > 0 && (

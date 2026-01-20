@@ -22,6 +22,26 @@ const AdminUsers = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedOrganizer, setSelectedOrganizer] = useState(null);
   const [modalMode, setModalMode] = useState('create'); // create, edit, view
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'organizers', 'pending'
+
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    userType: 'attendee',
+    password: '',
+    status: 'active',
+    // Organizer-specific fields
+    organizationName: '',
+    businessType: 'individual',
+    businessAddress: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    taxId: '',
+    website: ''
+  });
 
   // Filters and search
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,6 +82,48 @@ const AdminUsers = () => {
     }
   };
 
+  // Reset form when modal opens/closes
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      userType: 'attendee',
+      password: '',
+      status: 'active',
+      organizationName: '',
+      businessType: 'individual',
+      businessAddress: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      taxId: '',
+      website: ''
+    });
+  };
+
+  // Load organizer data for selected user
+  const loadOrganizerData = async (userId) => {
+    try {
+      const organizer = await adminService.getOrganizerByUserId(userId);
+      if (organizer?.data) {
+        setFormData(prev => ({
+          ...prev,
+          organizationName: organizer.data.organizationName || '',
+          businessType: organizer.data.businessType || 'individual',
+          businessAddress: organizer.data.businessAddress || '',
+          city: organizer.data.city || '',
+          state: organizer.data.state || '',
+          zipCode: organizer.data.zipCode || '',
+          taxId: organizer.data.taxId || '',
+          website: organizer.data.website || ''
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to load organizer data:', error);
+    }
+  };
+
   const handleUserAction = async (action, userId, userData = null) => {
     console.log('User action:', { action, userId, userData });
     try {
@@ -85,29 +147,30 @@ const AdminUsers = () => {
           await adminService.updateUser(userId, userData);
           showSuccess('User updated successfully');
           setShowUserModal(false);
+          resetForm();
           break;
         case 'create':
           await adminService.createUser(userData);
           showSuccess('User created successfully');
           setShowUserModal(false);
+          resetForm();
           break;
       }
       console.log('User action completed successfully');
       fetchUsers();
+      fetchOrganizers();
     } catch (error) {
       console.error('Failed user action:', error);
       showError(`Failed to ${action} user`);
     }
   };
 
-  // FIXED: Updated handleOrganizerAction to update both status fields and let backend handle user updates
   const handleOrganizerAction = async (action, organizerId, rejectionReason = null) => {
     console.log('Organizer action:', { action, organizerId, rejectionReason });
     try {
       switch (action) {
         case 'verify':
           console.log('Verifying organizer:', organizerId);
-          // Update both organizer status fields - backend should handle updating the related user
           await adminService.verifyOrganizer(organizerId, {
             verificationStatus: 'verified',
             approvalStatus: 'approved'
@@ -127,7 +190,14 @@ const AdminUsers = () => {
           await adminService.verifyOrganizer(organizerId, {
             verificationStatus: 'suspended'
           });
-          showSuccess('Organizer suspended successfully');
+          showSuccess('Organizer verification suspended');
+          break;
+
+        case 'reinstate':
+          await adminService.verifyOrganizer(organizerId, {
+            verificationStatus: 'verified'
+          });
+          showSuccess('Organizer reinstated');
           break;
 
         case 'delete':
@@ -140,7 +210,7 @@ const AdminUsers = () => {
 
       console.log('Action completed successfully');
       fetchOrganizers();
-      fetchUsers(); // Refresh users to see updated types
+      fetchUsers();
       setShowOrganizerModal(false);
     } catch (error) {
       console.error('Failed organizer action:', error);
@@ -148,30 +218,24 @@ const AdminUsers = () => {
     }
   };
 
-  // Get verification status for organizer users
-  const getOrganizerVerificationStatus = (userId) => {
-    console.log('Getting verification status for user ID:', userId);
-    const organizer = organizers.find(org => org.userId === userId || org.id === userId);
-    console.log('Found organizer for status:', organizer);
-    return organizer?.verificationStatus || 'pending';
-  };
-
-  // Add logging to findOrganizerByUser
-  const findOrganizerByUser = (userId) => {
-    console.log('Finding organizer for user ID:', userId);
-    console.log('Available organizers:', organizers);
-    const organizer = organizers.find(org => 
+  // Get organizer by user ID
+  const getOrganizerByUserId = (userId) => {
+    return organizers.find(org => 
       org.userId === userId || 
       org.userId?._id === userId || 
       org.userId?.id === userId
     );
-    console.log('Found organizer:', organizer);
-    return organizer;
   };
 
-  // FIXED: Enhanced function to get organizer by user ID for actions
+  // Get verification status for organizer users
+  const getOrganizerVerificationStatus = (userId) => {
+    const organizer = getOrganizerByUserId(userId);
+    return organizer?.verificationStatus || 'pending';
+  };
+
+  // Find organizer ID by user ID
   const findOrganizerIdByUser = (userId) => {
-    const organizer = findOrganizerByUser(userId);
+    const organizer = getOrganizerByUserId(userId);
     return organizer?.id || organizer?._id;
   };
 
@@ -195,21 +259,162 @@ const AdminUsers = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
+    
     const userData = {
-      name: formData.get('name'),
-      email: formData.get('email'),
-      userType: formData.get('role'),
-      password: modalMode === 'create' ? formData.get('password') : undefined
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      userType: formData.userType,
+      status: formData.status,
+      ...(modalMode === 'create' && { password: formData.password })
     };
+
+    // If creating/updating organizer, add organizer fields
+    if (formData.userType === 'organizer') {
+      userData.organizationName = formData.organizationName;
+      userData.businessType = formData.businessType;
+      userData.businessAddress = formData.businessAddress;
+      userData.city = formData.city;
+      userData.state = formData.state;
+      userData.zipCode = formData.zipCode;
+      userData.taxId = formData.taxId || null;
+      userData.website = formData.website || null;
+    }
 
     if (modalMode === 'create') {
       handleUserAction('create', null, userData);
     } else {
       handleUserAction('update', selectedUser.id, userData);
     }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Helper to determine which action buttons to show for a user
+  const getUserActions = (user) => {
+    const organizer = getOrganizerByUserId(user.id);
+    const verificationStatus = user.userType === 'organizer' ? getOrganizerVerificationStatus(user.id) : null;
+    const organizerId = findOrganizerIdByUser(user.id);
+
+    const actions = [];
+
+    // Always show Edit for all users
+    actions.push({
+      label: 'Edit',
+      color: 'text-blue-600 hover:text-blue-900',
+      onClick: async () => {
+        setModalMode('edit');
+        setSelectedUser(user);
+        setFormData({
+          name: user.name || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          userType: user.userType || 'attendee',
+          password: '',
+          status: user.status || 'active',
+          organizationName: '',
+          businessType: 'individual',
+          businessAddress: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          taxId: '',
+          website: ''
+        });
+        
+        // If user is organizer, load their organizer data
+        if (user.userType === 'organizer') {
+          await loadOrganizerData(user.id);
+        }
+        
+        setShowUserModal(true);
+      }
+    });
+
+    // User status actions
+    if (user.status === 'active' || user.status === 'pending_verification') {
+      actions.push({
+        label: 'Suspend User',
+        color: 'text-yellow-600 hover:text-yellow-900',
+        onClick: () => handleUserAction('suspend', user.id)
+      });
+    } else if (user.status === 'suspended') {
+      actions.push({
+        label: 'Activate User',
+        color: 'text-green-600 hover:text-green-900',
+        onClick: () => handleUserAction('activate', user.id)
+      });
+    }
+
+    // Organizer-specific actions
+    if (user.userType === 'organizer' && organizer) {
+      // Review organizer application
+      actions.push({
+        label: 'Review Org',
+        color: 'text-purple-600 hover:text-purple-900',
+        onClick: async () => {
+          try {
+            const organizerDetails = await adminService.getOrganizerById(organizer.id);
+            setSelectedOrganizer(organizerDetails);
+            setShowOrganizerModal(true);
+          } catch (error) {
+            showError('Failed to load organizer details');
+          }
+        }
+      });
+
+      // Organizer verification actions
+      if (verificationStatus === 'pending') {
+        actions.push({
+          label: 'Verify Org',
+          color: 'text-green-600 hover:text-green-900',
+          onClick: () => handleOrganizerAction('verify', organizerId)
+        });
+        actions.push({
+          label: 'Reject Org',
+          color: 'text-red-600 hover:text-red-900',
+          onClick: () => {
+            const reason = prompt('Enter rejection reason:');
+            if (reason) {
+              handleOrganizerAction('reject', organizerId, reason);
+            }
+          }
+        });
+      }
+
+      if (verificationStatus === 'verified') {
+        actions.push({
+          label: 'Suspend Org',
+          color: 'text-orange-600 hover:text-orange-900',
+          onClick: () => handleOrganizerAction('suspend', organizerId)
+        });
+      }
+
+      if (verificationStatus === 'suspended') {
+        actions.push({
+          label: 'Reinstate Org',
+          color: 'text-blue-600 hover:text-blue-900',
+          onClick: () => handleOrganizerAction('reinstate', organizerId)
+        });
+      }
+    }
+
+    // Delete action (always last)
+    actions.push({
+      label: 'Delete',
+      color: 'text-red-600 hover:text-red-900',
+      onClick: () => handleUserAction('delete', user.id)
+    });
+
+    return actions;
   };
 
   if (loading) {
@@ -245,11 +450,40 @@ const AdminUsers = () => {
             onClick={() => {
               setModalMode('create');
               setSelectedUser(null);
+              resetForm();
               setShowUserModal(true);
             }}
           >
             Add New User
           </Button>
+        </div>
+
+        {/* Tabs for quick filtering */}
+        <div className="flex border-b border-gray-200 mt-4">
+          <button
+            className={`px-4 py-2 text-sm font-medium ${activeTab === 'all' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            onClick={() => setActiveTab('all')}
+          >
+            All Users ({users.length})
+          </button>
+          <button
+            className={`px-4 py-2 text-sm font-medium ${activeTab === 'organizers' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            onClick={() => {
+              setActiveTab('organizers');
+              setRoleFilter('organizer');
+            }}
+          >
+            Organizers ({users.filter(u => u.userType === 'organizer').length})
+          </button>
+          <button
+            className={`px-4 py-2 text-sm font-medium ${activeTab === 'pending' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            onClick={() => {
+              setActiveTab('pending');
+              setShowOrganizerSection(true);
+            }}
+          >
+            Pending Verification ({pendingOrganizersCount})
+          </button>
         </div>
 
         {/* Filters */}
@@ -265,7 +499,10 @@ const AdminUsers = () => {
           </div>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              if (e.target.value !== 'all') setActiveTab('all');
+            }}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
           >
             <option value="all">All Status</option>
@@ -276,7 +513,10 @@ const AdminUsers = () => {
           </select>
           <select
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setActiveTab(e.target.value === 'organizer' ? 'organizers' : 'all');
+            }}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
           >
             <option value="all">All Roles</option>
@@ -390,13 +630,10 @@ const AdminUsers = () => {
                         <button
                           onClick={async () => {
                             try {
-                              console.log('Review clicked for organizer:', organizer);
                               const organizerDetails = await adminService.getOrganizerById(organizer.id);
-                              console.log('Fetched organizer details:', organizerDetails);
                               setSelectedOrganizer(organizerDetails);
                               setShowOrganizerModal(true);
                             } catch (error) {
-                              console.error('Review error:', error);
                               showError('Failed to load organizer details');
                             }
                           }}
@@ -406,20 +643,42 @@ const AdminUsers = () => {
                         </button>
                         
                         {organizer.verificationStatus === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleOrganizerAction('verify', organizer.id)}
+                              className="text-green-600 hover:text-green-900 px-2 py-1 rounded"
+                            >
+                              Verify
+                            </button>
+                            <button
+                              onClick={() => {
+                                const reason = prompt('Enter rejection reason:');
+                                if (reason) {
+                                  handleOrganizerAction('reject', organizer.id, reason);
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-900 px-2 py-1 rounded"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                        
+                        {organizer.verificationStatus === 'verified' && (
                           <button
-                            onClick={() => handleOrganizerAction('verify', organizer.id)}
-                            className="text-green-600 hover:text-green-900 px-2 py-1 rounded"
+                            onClick={() => handleOrganizerAction('suspend', organizer.id)}
+                            className="text-orange-600 hover:text-orange-900 px-2 py-1 rounded"
                           >
-                            Verify
+                            Suspend
                           </button>
                         )}
                         
-                        {(organizer.verificationStatus === 'verified' || organizer.verificationStatus === 'pending') && (
+                        {organizer.verificationStatus === 'suspended' && (
                           <button
-                            onClick={() => handleOrganizerAction('suspend', organizer.id)}
-                            className="text-yellow-600 hover:text-yellow-900 px-2 py-1 rounded"
+                            onClick={() => handleOrganizerAction('reinstate', organizer.id)}
+                            className="text-blue-600 hover:text-blue-900 px-2 py-1 rounded"
                           >
-                            Suspend
+                            Reinstate
                           </button>
                         )}
                         
@@ -463,6 +722,7 @@ const AdminUsers = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.map((user) => {
                 const verificationStatus = user.userType === 'organizer' ? getOrganizerVerificationStatus(user.id) : null;
+                const actions = getUserActions(user);
                 
                 return (
                   <tr key={user.id} className="hover:bg-gray-50">
@@ -492,6 +752,10 @@ const AdminUsers = () => {
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         user.status === 'active' 
                           ? 'bg-green-100 text-green-800'
+                          : user.status === 'pending_verification'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : user.status === 'suspended'
+                          ? 'bg-orange-100 text-orange-800'
                           : 'bg-red-100 text-red-800'
                       }`}>
                         {user.status}
@@ -504,6 +768,8 @@ const AdminUsers = () => {
                             ? 'bg-green-100 text-green-800'
                             : verificationStatus === 'pending'
                             ? 'bg-yellow-100 text-yellow-800'
+                            : verificationStatus === 'suspended'
+                            ? 'bg-orange-100 text-orange-800'
                             : 'bg-red-100 text-red-800'
                         }`}>
                           {verificationStatus}
@@ -516,91 +782,22 @@ const AdminUsers = () => {
                       {formatDate(user.createdAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {
-                        user.userType === 'organizer'
-                          ? (user.analytics?.organizerStats?.totalEvents ?? user.upcomingEvents ?? 0)
-                          : (user.eventsAttended ?? 0)
+                      {user.userType === 'organizer'
+                        ? (user.analytics?.organizerStats?.totalEvents ?? user.upcomingEvents ?? 0)
+                        : (user.eventsAttended ?? 0)
                       }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => {
-                            setModalMode('edit');
-                            setSelectedUser(user);
-                            setShowUserModal(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-900 px-2 py-1 rounded"
-                        >
-                          Edit
-                        </button>
-                        
-                        {/* Organizer verification actions */}
-                        {user.userType === 'organizer' && verificationStatus === 'pending' && (
-                          <>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  console.log('Review clicked for user:', user);
-                                  const organizer = findOrganizerByUser(user.id);
-                                  console.log('Found organizer for review:', organizer);
-                                  if (organizer) {
-                                    const organizerDetails = await adminService.getOrganizerById(organizer.id);
-                                    console.log('Fetched organizer details:', organizerDetails);
-                                    setSelectedOrganizer(organizerDetails);
-                                    setShowOrganizerModal(true);
-                                  } else {
-                                    console.warn('No organizer found for user:', user);
-                                    showError('Organizer details not found');
-                                  }
-                                } catch (error) {
-                                  console.error('Review error:', error);
-                                  showError('Failed to load organizer details');
-                                }
-                              }}
-                              className="text-purple-600 hover:text-purple-900 px-2 py-1 rounded"
-                            >
-                              Review
-                            </button>
-                            {/* FIXED: Use organizer ID instead of user ID */}
-                            <button
-                              onClick={async () => {
-                                const organizerId = findOrganizerIdByUser(user.id);
-                                if (organizerId) {
-                                  handleOrganizerAction('verify', organizerId);
-                                } else {
-                                  showError('Organizer not found for this user');
-                                }
-                              }}
-                              className="text-green-600 hover:text-green-900 px-2 py-1 rounded"
-                            >
-                              Verify
-                            </button>
-                          </>
-                        )}
-                        
-                        {(user.userType === 'organizer' && (verificationStatus === 'verified' || verificationStatus === 'pending')) && (
+                      <div className="flex flex-wrap gap-1">
+                        {actions.map((action, index) => (
                           <button
-                            onClick={async () => {
-                              const organizerId = findOrganizerIdByUser(user.id);
-                              if (organizerId) {
-                                handleOrganizerAction('suspend', organizerId);
-                              } else {
-                                showError('Organizer not found for this user');
-                              }
-                            }}
-                            className="text-yellow-600 hover:text-yellow-900 px-2 py-1 rounded"
+                            key={index}
+                            onClick={action.onClick}
+                            className={`${action.color} px-2 py-1 rounded text-xs`}
                           >
-                            Suspend
+                            {action.label}
                           </button>
-                        )}
-                        
-                        <button
-                          onClick={() => handleUserAction('delete', user.id)}
-                          className="text-red-600 hover:text-red-900 px-2 py-1 rounded"
-                        >
-                          Delete
-                        </button>
+                        ))}
                       </div>
                     </td>
                   </tr>
@@ -617,49 +814,186 @@ const AdminUsers = () => {
         </div>
       </div>
 
-      {/* User Modal */}
+      {/* User Modal - UPDATED WITH DYNAMIC FIELDS */}
       <Modal
         isOpen={showUserModal}
-        onClose={() => setShowUserModal(false)}
+        onClose={() => {
+          setShowUserModal(false);
+          resetForm();
+        }}
         title={modalMode === 'create' ? 'Add New User' : 'Edit User'}
+        size={formData.userType === 'organizer' ? 'large' : 'medium'}
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Name"
-            name="name"
-            defaultValue={selectedUser?.name || ''}
-            required
-          />
-          <Input
-            label="Email"
-            name="email"
-            type="email"
-            defaultValue={selectedUser?.email || ''}
-            required
-          />
-          {modalMode === 'create' && (
-            <Input
-              label="Password"
-              name="password"
-              type="password"
-              required
-            />
-          )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-            <select
-              name="role"
-              defaultValue={selectedUser?.userType || 'attendee'}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              required
-            >
-              <option value="attendee">Attendee</option>
-              <option value="organizer">Organizer</option>
-              <option value="admin">Admin</option>
-            </select>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Information Section */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Basic Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Full Name *"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+              />
+              <Input
+                label="Email Address *"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                required
+              />
+              <Input
+                label="Phone Number"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="0712345678"
+              />
+              {modalMode === 'create' && (
+                <Input
+                  label="Password *"
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  required={modalMode === 'create'}
+                />
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  User Type *
+                </label>
+                <select
+                  name="userType"
+                  value={formData.userType}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  required
+                >
+                  <option value="attendee">Attendee</option>
+                  <option value="organizer">Organizer</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status *
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  required
+                >
+                  <option value="active">Active</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="pending_verification">Pending Verification</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-end space-x-4 pt-4">
-            <Button variant="outline" type="button" onClick={() => setShowUserModal(false)}>
+
+          {/* Organizer Business Information Section - Only shown for organizers */}
+          {formData.userType === 'organizer' && (
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold text-blue-900 mb-3">Organizer Business Information</h3>
+              <p className="text-sm text-blue-700 mb-4">
+                {modalMode === 'create' 
+                  ? 'Fill in organizer business details. These fields are required for organizer accounts.'
+                  : 'Update organizer business information.'
+                }
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Organization Name *"
+                  name="organizationName"
+                  value={formData.organizationName}
+                  onChange={handleInputChange}
+                  required={formData.userType === 'organizer'}
+                  placeholder="My Event Company"
+                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Business Type *
+                  </label>
+                  <select
+                    name="businessType"
+                    value={formData.businessType}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    required={formData.userType === 'organizer'}
+                  >
+                    <option value="individual">Individual</option>
+                    <option value="company">Company</option>
+                    <option value="nonprofit">Nonprofit</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <Input
+                  label="Business Address *"
+                  name="businessAddress"
+                  value={formData.businessAddress}
+                  onChange={handleInputChange}
+                  required={formData.userType === 'organizer'}
+                  placeholder="123 Main Street"
+                />
+                <Input
+                  label="City *"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  required={formData.userType === 'organizer'}
+                  placeholder="Nairobi"
+                />
+                <Input
+                  label="State/Province *"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleInputChange}
+                  required={formData.userType === 'organizer'}
+                  placeholder="Nairobi County"
+                />
+                <Input
+                  label="ZIP/Postal Code *"
+                  name="zipCode"
+                  value={formData.zipCode}
+                  onChange={handleInputChange}
+                  required={formData.userType === 'organizer'}
+                  placeholder="00100"
+                />
+                <Input
+                  label="Tax ID (Optional)"
+                  name="taxId"
+                  value={formData.taxId}
+                  onChange={handleInputChange}
+                  placeholder="Tax identification number"
+                />
+                <Input
+                  label="Website (Optional)"
+                  name="website"
+                  value={formData.website}
+                  onChange={handleInputChange}
+                  placeholder="https://example.com"
+                  type="url"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-4 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              type="button" 
+              onClick={() => {
+                setShowUserModal(false);
+                resetForm();
+              }}
+            >
               Cancel
             </Button>
             <Button type="submit">
@@ -672,16 +1006,12 @@ const AdminUsers = () => {
       {/* Organizer Review Modal */}
       <Modal
         isOpen={showOrganizerModal}
-        onClose={() => {
-          console.log('Closing organizer modal');
-          setShowOrganizerModal(false);
-        }}
+        onClose={() => setShowOrganizerModal(false)}
         title="Review Organizer Application"
         size="large"
       >
         {selectedOrganizer && (
           <div className="space-y-6">
-            {console.log('Rendering organizer modal with data:', selectedOrganizer)}
             {/* Organizer Info */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Organizer Information</h3>
@@ -713,6 +1043,8 @@ const AdminUsers = () => {
                       ? 'bg-green-100 text-green-800'
                       : selectedOrganizer.data?.verificationStatus === 'pending'
                       ? 'bg-yellow-100 text-yellow-800'
+                      : selectedOrganizer.data?.verificationStatus === 'suspended'
+                      ? 'bg-orange-100 text-orange-800'
                       : 'bg-red-100 text-red-800'
                   }`}>
                     {selectedOrganizer.data?.verificationStatus || 'pending'}
@@ -763,34 +1095,6 @@ const AdminUsers = () => {
                   <p className="text-sm font-medium text-gray-700">Approval Status</p>
                   <p className="text-sm text-gray-900">{selectedOrganizer.data?.approvalStatus}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Payout Method</p>
-                  <p className="text-sm text-gray-900">{selectedOrganizer.data?.payoutMethod}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Commission Rate</p>
-                  <p className="text-sm text-gray-900">{selectedOrganizer.data?.commissionRate}%</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Total Events</p>
-                  <p className="text-sm text-gray-900">{selectedOrganizer.data?.totalEvents}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Total Revenue</p>
-                  <p className="text-sm text-gray-900">{selectedOrganizer.data?.totalRevenue}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Featured Organizer</p>
-                  <p className="text-sm text-gray-900">{selectedOrganizer.data?.isFeatured ? 'Yes' : 'No'}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Upgraded From Attendee</p>
-                  <p className="text-sm text-gray-900">{selectedOrganizer.data?.upgradedFromAttendee ? 'Yes' : 'No'}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Is Active</p>
-                  <p className="text-sm text-gray-900">{selectedOrganizer.data?.isActive ? 'Yes' : 'No'}</p>
-                </div>
               </div>
             </div>
 
@@ -807,13 +1111,11 @@ const AdminUsers = () => {
                   variant="outline"
                   onClick={() => {
                     const organizerId = selectedOrganizer.data?.id || selectedOrganizer.data?._id;
-                    console.log('Reject action clicked for organizer:', organizerId);
-                    if (!organizerId) {
-                      console.warn('Organizer ID missing for reject action:', selectedOrganizer);
-                      return;
-                    }
-                    if (window.confirm('Are you sure you want to reject this organizer application?')) {
-                      handleOrganizerAction('reject', organizerId);
+                    if (!organizerId) return;
+                    
+                    const reason = prompt('Enter rejection reason:');
+                    if (reason) {
+                      handleOrganizerAction('reject', organizerId, reason);
                     }
                   }}
                   className="text-red-600 border-red-600 hover:bg-red-50"
@@ -823,11 +1125,7 @@ const AdminUsers = () => {
                 <Button
                   onClick={() => {
                     const organizerId = selectedOrganizer.data?.id || selectedOrganizer.data?._id;
-                    console.log('Verify action clicked for organizer:', organizerId);
-                    if (!organizerId) {
-                      console.warn('Organizer ID missing for verify action:', selectedOrganizer);
-                      return;
-                    }
+                    if (!organizerId) return;
                     handleOrganizerAction('verify', organizerId);
                   }}
                   className="bg-green-600 hover:bg-green-700"

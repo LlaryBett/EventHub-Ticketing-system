@@ -1,454 +1,440 @@
-// AdminOverview.jsx - Event ticketing admin dashboard overview
 import React, { useState, useEffect } from 'react';
-import { useUI } from '../../context/UIContext';
-import adminService  from '../../services/adminService';
-import { formatDate, formatPrice } from '../../utils/formatDate';
+import { AlertCircle, CheckCircle, Clock, TrendingUp, Users, DollarSign, Calendar, Activity, LinkIcon, Bell, Eye, Trash2, Download } from 'lucide-react';
+import { eventService } from '../../services/eventService';
+import { formatPrice, formatDate } from '../../utils/formatDate';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { useNavigate } from 'react-router-dom';
-// Import necessary icons from react-icons
-import { 
-  FiUsers, 
-  FiDollarSign, 
-  FiAlertTriangle,
-  FiSettings,
-  FiFileText,
-  FiCreditCard // Use this instead of FiTicket
-} from 'react-icons/fi';
-import { 
-  MdCategory, 
-  MdAnalytics, 
-  MdWarning,
-  MdEventAvailable 
-} from 'react-icons/md';
-import { BsGraphUp } from 'react-icons/bs';
-import { IoTicketOutline } from 'react-icons/io5';
-// Add Recharts imports
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import Button from '../../components/common/Button';
+import { useUI } from '../../context/UIContext';
 
 const AdminOverview = () => {
-  const { showError } = useUI();
-  const navigate = useNavigate();
+  const { showSuccess, showError } = useUI();
   const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState({
-    // KPI Stats
-    totalUsers: 0,
-    totalOrganizers: 0,
-    totalAttendees: 0,
-    totalEvents: 0,
-    activeEvents: 0,
-    upcomingEvents: 0,
-    pastEvents: 0,
-    totalTicketsSold: 0,
-    totalRevenue: 0,
-    pendingApprovals: 0,
-    
-    // Charts data
-    ticketTrend: [],
-    revenueTrend: [],
-    eventsByCategory: [],
-    userGrowth: [],
-    
-    // Activity feeds
-    recentEvents: [],
-    recentPurchases: [],
-    newSignups: [],
-    supportTickets: [],
-    
-    // Top performers
-    topEvents: [],
-    topOrganizers: [],
-    
-    // Alerts
-    pendingOrganizerVerification: 0,
-    reportedItems: 0,
-    lowStockEvents: [],
-    soldOutEvents: []
-  });
+  const [events, setEvents] = useState([]);
+  const [todayMetrics, setTodayMetrics] = useState(null);
+  const [pendingActions, setPendingActions] = useState([]);
+  const [systemAlerts, setSystemAlerts] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
 
   useEffect(() => {
-    fetchDashboardData();
+    fetchOverviewData();
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchOverviewData = async () => {
     try {
       setLoading(true);
-      // Use the new backend dashboard endpoint
-      const dashboardStats = await adminService.getAdminDashboardStats();
-      setDashboardData(dashboardStats.data || dashboardStats); // handle both {data: ...} and direct object
+      const response = await eventService.getAllEvents();
+      
+      if (response.success) {
+        const allEvents = response.data || [];
+        setEvents(allEvents);
+        
+        // Calculate today's metrics
+        calculateTodayMetrics(allEvents);
+        
+        // Get pending actions
+        getPendingActions(allEvents);
+        
+        // Get system alerts
+        getSystemAlerts(allEvents);
+        
+        // Get recent activity (last 24 hours)
+        getRecentActivity(allEvents);
+        
+        showSuccess('Admin overview data loaded successfully');
+      }
     } catch (error) {
-      console.error('Failed to fetch dashboard data:', error);
-      showError('Failed to load dashboard data');
+      console.error('Error fetching overview data:', error);
+      showError('Failed to load admin overview');
     } finally {
       setLoading(false);
     }
   };
 
+  const calculateTodayMetrics = (eventsList) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const todayEvents = eventsList.filter(e => {
+      const eventDate = new Date(e.date);
+      eventDate.setHours(0, 0, 0, 0);
+      return eventDate.getTime() === today.getTime();
+    });
+
+    const todayRevenue = todayEvents.reduce((sum, e) => 
+      sum + (e.tickets?.reduce((s, t) => s + (t.price * (t.quantity - t.available)), 0) || 0), 0
+    );
+
+    const todayAttendees = todayEvents.reduce((sum, e) => sum + (e.registered || 0), 0);
+
+    setTodayMetrics({
+      eventsToday: todayEvents.length,
+      attendeesJoined: todayAttendees,
+      revenueToday: todayRevenue,
+      newRegistrations: Math.floor(todayAttendees * 0.3) // Approximate
+    });
+  };
+
+  const getPendingActions = (eventsList) => {
+    const actions = [];
+    const now = new Date();
+
+    // Unpublished events
+    const unpublishedCount = eventsList.filter(e => e.status !== 'published').length;
+    if (unpublishedCount > 0) {
+      actions.push({
+        id: 'unpublished',
+        title: `${unpublishedCount} Events Pending Publication`,
+        description: 'Events waiting to be published',
+        action: 'Review',
+        priority: 'high',
+        icon: Calendar
+      });
+    }
+
+    // Events starting soon (within 7 days)
+    const soonEvents = eventsList.filter(e => {
+      const eventDate = new Date(e.date);
+      const daysUntil = (eventDate - now) / (1000 * 60 * 60 * 24);
+      return daysUntil > 0 && daysUntil <= 7;
+    }).length;
+
+    if (soonEvents > 0) {
+      actions.push({
+        id: 'upcoming',
+        title: `${soonEvents} Events Starting Soon`,
+        description: 'Events happening within the next 7 days',
+        action: 'Prepare',
+        priority: 'high',
+        icon: TrendingUp
+      });
+    }
+
+    // Low attendance events
+    const lowAttendanceEvents = eventsList.filter(e => {
+      const capacity = e.capacity || 100;
+      const registered = e.registered || 0;
+      return registered < (capacity * 0.3);
+    }).length;
+
+    if (lowAttendanceEvents > 0) {
+      actions.push({
+        id: 'lowAttendance',
+        title: `${lowAttendanceEvents} Events with Low Attendance`,
+        description: 'Less than 30% capacity filled',
+        action: 'Promote',
+        priority: 'medium',
+        icon: Users
+      });
+    }
+
+    setPendingActions(actions);
+  };
+
+  const getSystemAlerts = (eventsList) => {
+    const alerts = [];
+    const now = new Date();
+
+    // High capacity events
+    const highCapacityEvents = eventsList.filter(e => {
+      if (!e.capacity) return false;
+      const occupancy = ((e.registered || 0) / e.capacity) * 100;
+      return occupancy >= 90;
+    }).length;
+
+    if (highCapacityEvents > 0) {
+      alerts.push({
+        id: 'highCapacity',
+        type: 'warning',
+        title: 'High Event Capacity',
+        message: `${highCapacityEvents} events are at 90% or more capacity`,
+        icon: AlertCircle
+      });
+    }
+
+    // Past events not archived
+    const pastEvents = eventsList.filter(e => new Date(e.date) < now && e.status === 'published').length;
+    if (pastEvents > 5) {
+      alerts.push({
+        id: 'pastEvents',
+        type: 'info',
+        title: 'Archive Old Events',
+        message: `${pastEvents} past events should be archived`,
+        icon: Clock
+      });
+    }
+
+    // No events scheduled for next week
+    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const nextWeekEvents = eventsList.filter(e => {
+      const eventDate = new Date(e.date);
+      return eventDate > now && eventDate < nextWeek;
+    }).length;
+
+    if (nextWeekEvents === 0) {
+      alerts.push({
+        id: 'noEvents',
+        type: 'warning',
+        title: 'No Events Scheduled',
+        message: 'Consider scheduling new events for next week',
+        icon: AlertCircle
+      });
+    }
+
+    setSystemAlerts(alerts);
+  };
+
+  const getRecentActivity = (eventsList) => {
+    // Simulate recent activity - in production this would come from an activity log
+    const activities = [];
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    // New registrations in last 24h
+    const recentEvents = eventsList.filter(e => {
+      const eventDate = new Date(e.createdAt || e.date);
+      return eventDate >= oneDayAgo;
+    });
+
+    recentEvents.forEach((event, idx) => {
+      activities.push({
+        id: `event-${idx}`,
+        type: 'event_created',
+        title: 'Event Created',
+        description: event.title,
+        timestamp: event.createdAt || event.date,
+        icon: Calendar,
+        color: 'blue'
+      });
+
+      if (event.registered > 0) {
+        activities.push({
+          id: `reg-${idx}`,
+          type: 'registration',
+          title: 'New Registrations',
+          description: `${event.registered} people registered for ${event.title}`,
+          timestamp: event.date,
+          icon: Users,
+          color: 'green'
+        });
+      }
+    });
+
+    setRecentActivity(activities.sort((a, b) => 
+      new Date(b.timestamp) - new Date(a.timestamp)
+    ).slice(0, 8));
+  };
+
+  const quickLinks = [
+    { id: 'create-event', label: 'Create Event', icon: Calendar, path: '/organizer', color: 'blue' },
+    { id: 'view-users', label: 'Manage Users', icon: Users, path: '/admin/users', color: 'green' },
+    { id: 'view-analytics', label: 'View Analytics', icon: TrendingUp, path: '/admin/analytics', color: 'purple' },
+    { id: 'send-alert', label: 'Send Alert', icon: Bell, path: '/admin/reports', color: 'red' }
+  ];
+
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-8 flex items-center justify-center">
-        <LoadingSpinner size="medium" />
+      <div className="flex items-center justify-center py-12">
+        <LoadingSpinner size="large" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      {/* 1. Summary Stats - Key Performance Indicators */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <FiUsers className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm text-gray-500">Total Users</p>
-              <p className="text-2xl font-bold text-gray-900">{dashboardData.totalUsers}</p>
-              <p className="text-xs text-gray-400">{dashboardData.totalOrganizers} organizers, {dashboardData.totalAttendees} attendees</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <MdEventAvailable className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm text-gray-500">Total Events</p>
-              <p className="text-2xl font-bold text-gray-900">{dashboardData.totalEvents}</p>
-              <p className="text-xs text-gray-400">{dashboardData.activeEvents} active, {dashboardData.upcomingEvents} upcoming</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <IoTicketOutline className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm text-gray-500">Tickets Sold</p>
-              <p className="text-2xl font-bold text-gray-900">{dashboardData.totalTicketsSold}</p>
-              <p className="text-xs text-gray-400">Platform-wide</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-              <FiDollarSign className="w-6 h-6 text-orange-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm text-gray-500">Total Revenue</p>
-              <p className="text-2xl font-bold text-gray-900">{formatPrice(dashboardData.totalRevenue)}</p>
-              <p className="text-xs text-gray-400">Commission earnings</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <FiAlertTriangle className="w-6 h-6 text-red-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm text-gray-500">Pending</p>
-              <p className="text-2xl font-bold text-gray-900">{dashboardData.pendingApprovals}</p>
-              <p className="text-xs text-gray-400">Awaiting review</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Charts & Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Tickets Sold Over Time</h2>
-          <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-            {dashboardData.ticketTrend && dashboardData.ticketTrend.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboardData.ticketTrend}>
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="tickets" fill="#6366f1" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-gray-500">No ticket sales data</p>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Events by Category</h2>
-          <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
-            {dashboardData.eventsByCategory && dashboardData.eventsByCategory.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={dashboardData.eventsByCategory}
-                    dataKey="count"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    fill="#a78bfa"
-                    label={({ name, count }) => `${name}: ${count}`}
-                  >
-                    {dashboardData.eventsByCategory.map((entry, idx) => (
-                      <Cell key={`cell-${idx}`} fill={entry.color || ["#6366f1", "#a78bfa", "#f59e42", "#f87171", "#34d399"][idx % 5]} />
-                    ))}
-                  </Pie>
-                  <Legend />
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-gray-500">No category data</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Recent Activity Feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white rounded-lg shadow-md">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">Recent Events</h2>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {dashboardData.recentEvents?.slice(0, 5).map((event) => (
-                <div key={event.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <img
-                      src={event.image}
-                      alt={event.title}
-                      className="w-10 h-10 rounded-lg object-cover"
-                    />
-                    <div className="ml-3">
-                      <p className="font-medium text-gray-900 text-sm">{event.title}</p>
-                      <p className="text-sm text-gray-500">{formatDate(event.date)}</p>
-                    </div>
-                  </div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    event.status === 'approved' 
-                      ? 'bg-green-100 text-green-800'
-                      : event.status === 'pending'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {event.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">Recent Purchases</h2>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {dashboardData.recentPurchases?.slice(0, 5).map((purchase) => (
-                <div key={purchase.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <p className="font-medium text-gray-900 text-sm">{purchase.eventTitle}</p>
-                      <p className="text-sm text-gray-500">{purchase.buyerName} • {purchase.quantity} tickets</p>
-                    </div>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">{formatPrice(purchase.amount)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Top Performers */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white rounded-lg shadow-md">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">Top Events</h2>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {dashboardData.topEvents?.slice(0, 5).map((event, index) => (
-                <div key={event.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <span className="text-lg font-bold text-gray-400 mr-3">#{index + 1}</span>
-                    <img
-                      src={event.image}
-                      alt={event.title}
-                      className="w-8 h-8 rounded object-cover"
-                    />
-                    <div className="ml-3">
-                      <p className="font-medium text-gray-900 text-sm">{event.title}</p>
-                      <p className="text-sm text-gray-500">{event.ticketsSold} tickets sold</p>
-                    </div>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">{formatPrice(event.revenue)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">Top Organizers</h2>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {dashboardData.topOrganizers?.slice(0, 5).map((organizer, index) => (
-                <div key={organizer.id} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <span className="text-lg font-bold text-gray-400 mr-3">#{index + 1}</span>
-                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                      <span className="text-xs font-medium">{organizer.name?.charAt(0)}</span>
-                    </div>
-                    <div className="ml-3">
-                      <p className="font-medium text-gray-900 text-sm">{organizer.name}</p>
-                      <p className="text-sm text-gray-500">{organizer.eventsCount} events</p>
-                    </div>
-                  </div>
-                  <span className="text-sm font-medium text-gray-900">{formatPrice(organizer.totalRevenue)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 5. Alerts & Pending Actions */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">Alerts & Pending Actions</h2>
+    <div className="space-y-6">
+      {/* Today's Metrics */}
+      {todayMetrics && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-4 border border-orange-200 bg-orange-50 rounded-lg">
-            <div className="flex items-center">
-              <MdWarning className="w-5 h-5 text-orange-600 mr-2" />
-              <span className="font-medium text-orange-800">Organizer Verification</span>
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-700 font-medium">Events Today</p>
+                <p className="text-3xl font-bold text-blue-900 mt-1">{todayMetrics.eventsToday}</p>
+              </div>
+              <Calendar className="w-10 h-10 text-blue-300" />
             </div>
-            <p className="text-2xl font-bold text-orange-900 mt-2">{dashboardData.pendingOrganizerVerification}</p>
-            <p className="text-sm text-orange-600">Pending approval</p>
           </div>
 
-          <div className="p-4 border border-red-200 bg-red-50 rounded-lg">
-            <div className="flex items-center">
-              <MdWarning className="w-5 h-5 text-red-600 mr-2" />
-              <span className="font-medium text-red-800">Reported Items</span>
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-green-700 font-medium">Attendees Joined</p>
+                <p className="text-3xl font-bold text-green-900 mt-1">{todayMetrics.attendeesJoined}</p>
+              </div>
+              <Users className="w-10 h-10 text-green-300" />
             </div>
-            <p className="text-2xl font-bold text-red-900 mt-2">{dashboardData.reportedItems}</p>
-            <p className="text-sm text-red-600">Need review</p>
           </div>
 
-          <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
-            <div className="flex items-center">
-              <MdWarning className="w-5 h-5 text-yellow-600 mr-2" />
-              <span className="font-medium text-yellow-800">Low Stock</span>
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-purple-700 font-medium">Revenue Today</p>
+                <p className="text-3xl font-bold text-purple-900 mt-1">{formatPrice(todayMetrics.revenueToday)}</p>
+              </div>
+              <DollarSign className="w-10 h-10 text-purple-300" />
             </div>
-            <p className="text-2xl font-bold text-yellow-900 mt-2">{dashboardData.lowStockEvents?.length || 0}</p>
-            <p className="text-sm text-yellow-600">Events</p>
           </div>
 
-          <div className="p-4 border border-blue-200 bg-blue-50 rounded-lg">
-            <div className="flex items-center">
-              <MdWarning className="w-5 h-5 text-blue-600 mr-2" />
-              <span className="font-medium text-blue-800">Sold Out</span>
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-6 border border-orange-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-orange-700 font-medium">New Registrations</p>
+                <p className="text-3xl font-bold text-orange-900 mt-1">{todayMetrics.newRegistrations}</p>
+              </div>
+              <Activity className="w-10 h-10 text-orange-300" />
             </div>
-            <p className="text-2xl font-bold text-blue-900 mt-2">{dashboardData.soldOutEvents?.length || 0}</p>
-            <p className="text-sm text-blue-600">Events</p>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Actions */}
+      {pendingActions.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            Pending Actions
+          </h2>
+          <div className="space-y-3">
+            {pendingActions.map(action => {
+              const IconComponent = action.icon;
+              return (
+                <div
+                  key={action.id}
+                  className={`flex items-center justify-between p-4 border-l-4 rounded ${
+                    action.priority === 'high'
+                      ? 'border-red-500 bg-red-50'
+                      : 'border-yellow-500 bg-yellow-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <IconComponent className={`w-5 h-5 ${
+                      action.priority === 'high' ? 'text-red-600' : 'text-yellow-600'
+                    }`} />
+                    <div>
+                      <p className="font-medium text-gray-900">{action.title}</p>
+                      <p className="text-sm text-gray-600">{action.description}</p>
+                    </div>
+                  </div>
+                  <Button size="small" variant="outline">
+                    {action.action}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* System Alerts & Quick Links Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* System Alerts */}
+        {systemAlerts.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Bell className="w-5 h-5 text-blue-600" />
+              System Alerts
+            </h2>
+            <div className="space-y-3">
+              {systemAlerts.map(alert => {
+                const IconComponent = alert.icon;
+                return (
+                  <div
+                    key={alert.id}
+                    className={`p-4 border-l-4 rounded ${
+                      alert.type === 'warning'
+                        ? 'border-yellow-500 bg-yellow-50'
+                        : 'border-blue-500 bg-blue-50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <IconComponent className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+                        alert.type === 'warning' ? 'text-yellow-600' : 'text-blue-600'
+                      }`} />
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{alert.title}</p>
+                        <p className="text-sm text-gray-600 mt-1">{alert.message}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Quick Links */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <LinkIcon className="w-5 h-5 text-blue-600" />
+            Quick Links
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            {quickLinks.map(link => {
+              const IconComponent = link.icon;
+              const colorClasses = {
+                blue: 'bg-blue-100 text-blue-600 hover:bg-blue-200',
+                green: 'bg-green-100 text-green-600 hover:bg-green-200',
+                purple: 'bg-purple-100 text-purple-600 hover:bg-purple-200',
+                red: 'bg-red-100 text-red-600 hover:bg-red-200'
+              };
+
+              return (
+                <a
+                  key={link.id}
+                  href={link.path}
+                  className={`flex flex-col items-center justify-center p-4 rounded-lg transition-colors ${colorClasses[link.color]}`}
+                  onClick={() => showSuccess(`Navigating to ${link.label}`)}
+                >
+                  <IconComponent className="w-6 h-6 mb-2" />
+                  <span className="text-sm font-medium text-center">{link.label}</span>
+                </a>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* 6. Quick Access Shortcuts */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Access</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <button 
-            onClick={() => navigate('/admin/users')}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
-          >
-            <div className="text-center">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                <FiUsers className="w-4 h-4 text-blue-600" />
-              </div>
-              <p className="text-sm font-medium text-gray-900">Users</p>
-            </div>
-          </button>
+      {/* Recent Activity Feed */}
+      {recentActivity.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-blue-600" />
+            Recent Activity (Last 24 Hours)
+          </h2>
+          <div className="space-y-4">
+            {recentActivity.map((activity, idx) => {
+              const IconComponent = activity.icon;
+              const colorClasses = {
+                blue: 'bg-blue-100 text-blue-600',
+                green: 'bg-green-100 text-green-600',
+                purple: 'bg-purple-100 text-purple-600'
+              };
 
-          <button 
-            onClick={() => navigate('/admin/events')}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
-          >
-            <div className="text-center">
-              <div className="w-8 h-8 bg-green-100 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                <FiCreditCard className="w-4 h-4 text-green-600" />
-              </div>
-              <p className="text-sm font-medium text-gray-900">Events</p>
-            </div>
-          </button>
-
-          <button 
-            onClick={() => navigate('/admin/categories')}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-colors"
-          >
-            <div className="text-center">
-              <div className="w-8 h-8 bg-purple-100 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                <MdCategory className="w-4 h-4 text-purple-600" />
-              </div>
-              <p className="text-sm font-medium text-gray-900">Categories</p>
-            </div>
-          </button>
-
-          <button 
-            onClick={() => navigate('/admin/analytics')}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors"
-          >
-            <div className="text-center">
-              <div className="w-8 h-8 bg-orange-100 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                <MdAnalytics className="w-4 h-4 text-orange-600" />
-              </div>
-              <p className="text-sm font-medium text-gray-900">Analytics</p>
-            </div>
-          </button>
-
-          <button 
-            onClick={() => navigate('/admin/reports')}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-red-500 hover:bg-red-50 transition-colors"
-          >
-            <div className="text-center">
-              <div className="w-8 h-8 bg-red-100 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                <FiFileText className="w-4 h-4 text-red-600" />
-              </div>
-              <p className="text-sm font-medium text-gray-900">Reports</p>
-            </div>
-          </button>
-
-          <button 
-            onClick={() => navigate('/admin/settings')}
-            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-500 hover:bg-gray-50 transition-colors"
-          >
-            <div className="text-center">
-              <div className="w-8 h-8 bg-gray-100 rounded-lg mx-auto mb-2 flex items-center justify-center">
-                <FiSettings className="w-4 h-4 text-gray-600" />
-              </div>
-              <p className="text-sm font-medium text-gray-900">Settings</p>
-            </div>
-          </button>
+              return (
+                <div key={activity.id} className="flex gap-4 pb-4 border-b last:border-b-0">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${colorClasses[activity.color]}`}>
+                    <IconComponent className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900">{activity.title}</p>
+                    <p className="text-sm text-gray-600 truncate">{activity.description}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formatDate(activity.timestamp)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {events.length > 0 && (
+            <p className="text-xs text-gray-400 mt-4">
+              Total events tracked: {events.length}
+            </p>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 };

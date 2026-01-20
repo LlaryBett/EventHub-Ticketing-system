@@ -36,10 +36,10 @@ const Features = () => {
   ];
 
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-12 bg-gray-50"> {/* Reduced from py-16 */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="text-center mb-16">
+        {/* Section Header - Reduced spacing */}
+        <div className="text-center mb-12"> {/* Reduced from mb-16 */}
           <h2 className="text-2xl md:text-4xl font-bold text-gray-900 mb-4">
             Why Choose EventHub?
           </h2>
@@ -48,8 +48,8 @@ const Features = () => {
           </p>
         </div>
 
-        {/* Clean Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        {/* Clean Features Grid - Reduced bottom margin */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"> {/* Reduced from mb-16 */}
           {features.map((feature, index) => (
             <div
               key={index}
@@ -72,8 +72,8 @@ const Features = () => {
           ))}
         </div>
 
-        {/* CTA Section - FURTHER REDUCED HEIGHT */}
-        <div className="my-16">
+        {/* CTA Section - Reduced top margin */}
+        <div className="mt-12"> {/* Changed from my-16 to mt-12 */}
           <div className="
             relative 
             rounded-2xl shadow-2xl overflow-hidden 
@@ -81,14 +81,14 @@ const Features = () => {
             bg-gradient-to-r from-blue-600 to-purple-600
           ">
 
-            {/* LEFT SIDE - FURTHER REDUCED PADDING */}
+            {/* LEFT SIDE - Further reduced padding */}
             <div className="
               relative 
               flex-1 
-              py-8 px-6 sm:px-10 md:px-12  {/* Changed to py-8 */}
+              py-8 px-6 sm:px-10 md:px-12
               flex flex-col justify-center text-left
             ">
-              {/* Soft Circles - Further adjusted */}
+              {/* Soft Circles */}
               <div className="absolute inset-0 opacity-10 pointer-events-none">
                 <div className="absolute -top-3 -left-3 w-12 h-12 bg-white rounded-full"></div>
                 <div className="absolute -bottom-5 -right-6 w-16 h-16 bg-white rounded-full"></div>
@@ -108,7 +108,7 @@ const Features = () => {
                 <div className="flex flex-row gap-3 sm:gap-4">
                   <Link to="/register">
                     <button className="
-                      px-4 py-2 bg-white text-blue-600  {/* Reduced further */}
+                      px-4 py-2 bg-white text-blue-600
                       font-semibold rounded-lg hover:bg-gray-50 
                       transition duration-200 text-xs sm:text-sm
                     ">
@@ -118,7 +118,7 @@ const Features = () => {
 
                   <Link to="/about">
                     <button className="
-                      px-4 py-2 border-2 border-white  {/* Reduced further */}
+                      px-4 py-2 border-2 border-white
                       text-white font-semibold rounded-lg 
                       hover:bg-white/10 transition duration-200
                       text-xs sm:text-sm
@@ -139,14 +139,13 @@ const Features = () => {
                 className="absolute inset-0 bg-cover bg-center"
                 style={{
                   backgroundImage:
-                    "url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&h=400&fit=crop')",
+                    "url('https://images.unsplash.com/photo-1492684223066-e302cb576266?w=600&h=400&fit=crop')",
                 }}
               ></div>
 
-              {/* OVERLAY TO HIDE SEAM — does NOT change shape */}
+              {/* OVERLAY */}
               <div className="absolute inset-0 bg-gradient-to-l from-transparent to-purple-600/70"></div>
             </div>
-
           </div>
         </div>
       </div>

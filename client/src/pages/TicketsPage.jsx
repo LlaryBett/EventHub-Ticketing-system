@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import ticketService from '../services/ticketService';
+import { Ticket as TicketIcon } from 'lucide-react';
 
 const TicketsPage = () => {
   const { user } = useAuth();
@@ -270,7 +271,9 @@ const TicketsPage = () => {
               ) : (
                 !loading && !error && (
                   <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
-                    <div className="text-gray-400 text-6xl mb-4">🎫</div>
+                    <div className="flex justify-center mb-4">
+                      <TicketIcon className="w-16 h-16 text-gray-300" />
+                    </div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">No tickets found</h3>
                     <p className="text-gray-600">
                       {user 

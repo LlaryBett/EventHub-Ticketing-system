@@ -28,9 +28,11 @@ const {
   searchUsers,
   getOrganizers,
   getOrganizerById,
+  getOrganizerByUserId, // ADD THIS IMPORT
   verifyOrganizer,
   getAdminDashboardStats,
   uploadOrganizerLogo,
+  createUser,
 } = require('../controllers/userController');
 
 const { protect, authorize } = require('../middleware/auth');
@@ -126,6 +128,34 @@ const organizerProfileValidation = [
     .withMessage('If provided, website must be a valid URL')
 ];
 
+// ADD: Create user validation rules
+const createUserValidation = [
+  body('name')
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('Name must be between 2 and 50 characters'),
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email'),
+  body('phone')
+    .optional()
+    .matches(/^(?:254|\+254|0)?(?:7|1[0-1])?[0-9]{8}$/)
+    .withMessage('Please provide a valid Kenyan phone number'),
+  body('userType')
+    .isIn(['attendee', 'organizer', 'admin'])
+    .withMessage('User type must be attendee, organizer, or admin'),
+  body('password')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
+  body('status')
+    .optional()
+    .isIn(['active', 'suspended', 'pending_verification'])
+    .withMessage('Status must be active, suspended, or pending_verification')
+];
+
 // User profile routes
 router.get('/me', protect, getMe);
 router.get('/:id', getUserProfile);
@@ -165,6 +195,7 @@ router.post('/organizer/logo',
 router.get('/admin/dashboard', protect, authorize('admin'), getAdminDashboardStats);
 
 // User management
+router.post('/admin/users', protect, authorize('admin'), createUserValidation, createUser);
 router.get('/admin/users', protect, authorize('admin'), getUsers);
 router.get('/admin/users/:id', protect, authorize('admin'), getUserById);
 router.put('/admin/users/:id', protect, authorize('admin'), updateUser);
@@ -176,6 +207,7 @@ router.get('/admin/users/search/:query', protect, authorize('admin'), searchUser
 // Organizer management
 router.get('/admin/organizers', protect, authorize('admin'), getOrganizers);
 router.get('/admin/organizers/:id', protect, authorize('admin'), getOrganizerById);
+router.get('/admin/organizers/user/:userId', protect, authorize('admin'), getOrganizerByUserId); // ADD THIS ROUTE
 router.patch('/admin/organizers/:id/verification', protect, authorize('admin'), verifyOrganizer);
 
 module.exports = router;

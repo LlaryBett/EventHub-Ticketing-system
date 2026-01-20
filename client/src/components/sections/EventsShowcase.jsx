@@ -242,16 +242,9 @@ const EventsShowcase = () => {
 
                 {/* Current Benefit Content */}
                 <div className="text-center mb-4">
-                  <div className="flex justify-center items-center space-x-2 mb-2">
-                    <div className={`w-8 h-8 bg-${benefitsArray[currentSlide][1].color}-400 bg-opacity-20 rounded-lg flex items-center justify-center`}>
-                      <div className="w-4 h-4 text-white">
-                        {benefitsArray[currentSlide][1].icon}
-                      </div>
-                    </div>
-                    <h4 className="text-lg font-bold text-white">
-                      {benefitsArray[currentSlide][1].title}
-                    </h4>
-                  </div>
+                  <h4 className="text-lg font-bold text-white mb-2">
+                    {benefitsArray[currentSlide][1].title}
+                  </h4>
                   <p className="text-primary-100 text-sm px-4">
                     {benefitsArray[currentSlide][1].description}
                   </p>
@@ -332,17 +325,12 @@ const EventsShowcase = () => {
                         />
                       </div>
                       
-                      {/* Image Overlay with Title */}
+                      {/* Image Overlay with Title - Single Icon */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
                       <div className="absolute bottom-4 left-4 right-4">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <div className={`w-10 h-10 bg-${benefits[selectedBenefit].color}-400 bg-opacity-20 rounded-lg flex items-center justify-center text-${benefits[selectedBenefit].color}-300`}>
-                            {benefits[selectedBenefit].icon}
-                          </div>
-                          <h5 className="text-white font-bold text-lg">
-                            {benefits[selectedBenefit].title}
-                          </h5>
-                        </div>
+                        <h5 className="text-white font-bold text-lg mb-1">
+                          {benefits[selectedBenefit].title}
+                        </h5>
                         <p className="text-gray-200 text-sm">
                           {benefits[selectedBenefit].description}
                         </p>

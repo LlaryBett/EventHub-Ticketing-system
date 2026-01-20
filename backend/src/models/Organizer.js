@@ -158,6 +158,10 @@ const OrganizerSchema = new mongoose.Schema({
   upgradedFromAttendee: {
     type: Boolean,
     default: false
+  },
+  createdThroughAdmin: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,

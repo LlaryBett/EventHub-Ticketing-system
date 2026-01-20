@@ -120,9 +120,10 @@ app.use(
         'http://localhost:5173',
         'http://192.168.137.1:5173',
         'http://172.17.88.193:5173',
+        'https://event-hub-ticketing-system-qzyu.vercel.app',
         'https://event-hub-ticketing-system-stqx.vercel.app',
         // Allow all Vercel preview URLs
-        /^https:\/\/event-hub-ticketing-system.*\.vercel\.app$/
+      
       ];
 
       if (!origin || allowedOrigins.some(allowed => 

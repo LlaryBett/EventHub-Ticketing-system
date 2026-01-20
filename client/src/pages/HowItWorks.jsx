@@ -211,14 +211,14 @@ const HowItWorks = () => {
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-purple-600 to-purple-800 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">
+          <h1 className="text-3xl md:text-4xl font-bold mb-6">
             How EventHub Works for Organizers
           </h1>
-          <p className="text-xl text-purple-100 mb-8 max-w-3xl mx-auto">
+          <p className="text-base md:text-lg text-purple-100 mb-8 max-w-3xl mx-auto">
             From application to analytics, learn how EventHub empowers you to create, manage, 
             and grow successful events with our comprehensive platform.
           </p>
-          <div className="flex items-center justify-center space-x-8 text-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-xs sm:text-sm">
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-green-400" />
               <span>2-3 Day Approval Process</span>
@@ -475,30 +475,30 @@ const HowItWorks = () => {
       </div>
 
       {/* CTA Section */}
-      <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white py-16">
+      <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white py-12 md:py-16">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold mb-4">
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">
             Ready to Start Creating Events?
           </h2>
-          <p className="text-xl text-purple-100 mb-8">
+          <p className="text-base md:text-lg text-purple-100 mb-8">
             Join thousands of successful event organizers on EventHub. 
             Apply today and get approved within 2-3 business days.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a 
               href="/register?type=organizer"
-              className="bg-white text-purple-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+              className="bg-white text-purple-600 px-8 py-4 rounded-lg font-semibold hover:bg-gray-50 transition-colors text-sm sm:text-base"
             >
               Apply to Become an Organizer
             </a>
             <a 
-              href="/organizer/login"
-              className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-purple-600 transition-colors"
+              href="/login"
+              className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-purple-600 transition-colors text-sm sm:text-base"
             >
               Sign In to Your Account
             </a>
           </div>
-          <p className="text-sm text-purple-200 mt-6">
+          <p className="text-xs sm:text-sm text-purple-200 mt-6">
             Already have an account? <a href="/organizer/login" className="underline hover:text-white">Sign in here</a>
           </p>
         </div>

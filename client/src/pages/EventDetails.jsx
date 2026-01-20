@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { eventService } from '../services/eventService';
-import { useCart } from '../context/CartContext';
 import { useUI } from '../context/UIContext';
 import { formatDate, formatPrice, getDaysUntilEvent } from '../utils/formatDate';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -30,7 +29,6 @@ const EventDetails = () => {
     minutes: 0,
     seconds: 0
   });
-  const { addToCart } = useCart();
   const { showSuccess, showError } = useUI();
   const navigate = useNavigate();
 
@@ -160,6 +158,24 @@ const EventDetails = () => {
     }
   };
 
+  // Handle paid ticket purchase - direct to checkout
+  const handleBuyTickets = () => {
+    const ticket = tickets[selectedTicketIndex] || {};
+    navigate('/checkout', {
+      state: {
+        item: {
+          eventId: event._id || event.id,
+          title: event.title,
+          price: ticket.price || 0,
+          quantity: selectedQuantity,
+          image: event.image,
+          type: ticket.type,
+          _id: ticket.id
+        }
+      }
+    });
+  };
+
   // Success Modal Component
   const SuccessModal = () => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -280,7 +296,7 @@ const EventDetails = () => {
     </div>
   );
 
-  // Mobile Ticket Modal
+  // Mobile Ticket Modal - use showTicketsMobile to control
   const MobileTicketModal = () => (
     <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 lg:hidden">
       <div className="bg-white rounded-t-3xl w-full max-h-[90vh] overflow-y-auto animate-slideUp">
@@ -288,7 +304,10 @@ const EventDetails = () => {
         <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
           <h2 className="text-lg font-bold text-gray-900">Get Tickets</h2>
           <button 
-            onClick={() => setShowMobileTicketModal(false)}
+            onClick={() => {
+              setShowTicketsMobile(false);
+              setShowMobileTicketModal(false);
+            }}
             className="p-2 rounded-full hover:bg-gray-100"
           >
             <IoClose className="w-5 h-5 text-gray-500" />
@@ -373,7 +392,10 @@ const EventDetails = () => {
                 <Button 
                   fullWidth 
                   size="large" 
-                  onClick={handleReserveSpot}
+                  onClick={() => {
+                    handleReserveSpot();
+                    setShowTicketsMobile(false);
+                  }}
                   loading={reservationLoading}
                   className="text-lg py-4"
                 >
@@ -384,21 +406,8 @@ const EventDetails = () => {
                   fullWidth 
                   size="large" 
                   onClick={() => {
-                    const ticket = tickets[selectedTicketIndex] || {};
-                    setShowMobileTicketModal(false);
-                    navigate('/checkout', {
-                      state: {
-                        item: {
-                          eventId: event._id || event.id,
-                          title: event.title,
-                          price: ticket.price || 0,
-                          quantity: selectedQuantity,
-                          image: event.image,
-                          type: ticket.type,
-                          _id: ticket.id
-                        }
-                      }
-                    });
+                    handleBuyTickets();
+                    setShowTicketsMobile(false);
                   }}
                   className="text-lg py-4"
                 >
@@ -536,7 +545,7 @@ const EventDetails = () => {
         </div>
 
         <Button 
-          onClick={() => setShowMobileTicketModal(true)}
+          onClick={() => setShowTicketsMobile(true)}
           size="large"
           className="flex-1 ml-4 py-3"
         >
@@ -636,7 +645,7 @@ const EventDetails = () => {
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-0">
       {showSuccessModal && <SuccessModal />}
       {showShareOptions && <ShareModal />}
-      {showMobileTicketModal && <MobileTicketModal />}
+      {(showMobileTicketModal || showTicketsMobile) && <MobileTicketModal />}
       
       {/* Mobile Header */}
       <MobileHeaderSummary />
@@ -994,22 +1003,7 @@ const EventDetails = () => {
                     <Button 
                       fullWidth 
                       size="large" 
-                      onClick={() => {
-                        const ticket = tickets[selectedTicketIndex] || {};
-                        navigate('/checkout', {
-                          state: {
-                            item: {
-                              eventId: event._id || event.id,
-                              title: event.title,
-                              price: ticket.price || 0,
-                              quantity: selectedQuantity,
-                              image: event.image,
-                              type: ticket.type,
-                              _id: ticket.id
-                            }
-                          }
-                        });
-                      }}
+                      onClick={handleBuyTickets}
                       className="text-lg py-4"
                     >
                       Buy Tickets Now
@@ -1089,7 +1083,28 @@ const EventDetails = () => {
       </div>
 
       {/* Mobile Floating Action Button */}
-      {isUpcoming && available > 0 && <MobileFloatingButton />}
+      {isUpcoming && available > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent p-4 z-40 lg:hidden">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm text-gray-500">Starting from</p>
+                <p className="text-xl font-bold text-primary-600">
+                  {isFreeEvent ? 'Free' : formatPrice(lowestTicketPrice)}
+                </p>
+              </div>
+
+              <Button 
+                onClick={() => setShowTicketsMobile(true)}
+                size="large"
+                className="flex-1 ml-4 py-3"
+              >
+                Get Tickets
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

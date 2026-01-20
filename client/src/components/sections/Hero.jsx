@@ -170,12 +170,16 @@ const Hero = () => {
             </p>
                      
             <div className="flex flex-row gap-4">
-              <Link to="/events">
+              {/* Mobile: full width buttons, Desktop: auto */}
+              <Link
+                to="/events"
+                className="w-full sm:w-auto"
+              >
                 <Button 
                   size="large" 
-                  className="bg-yellow-400 text-gray-900 font-semibold hover:bg-yellow-300 hover:shadow-lg transition-all hover:scale-105 border-0 text-sm sm:text-base px-4 py-3 min-h-[48px] whitespace-nowrap"
+                  className="w-full sm:w-auto bg-yellow-400 text-gray-900 font-semibold hover:bg-yellow-300 hover:shadow-lg transition-all hover:scale-105 border-0 text-sm sm:text-base px-4 py-3 min-h-[48px] whitespace-nowrap"
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 justify-center">
                     <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
@@ -185,28 +189,30 @@ const Hero = () => {
                   </span>
                 </Button>
               </Link>
-              <button
-                onClick={handleCreateEventClick}
-                className="border-2 border-white text-white bg-transparent hover:bg-white hover:text-gray-900 transition-all hover:scale-105 font-semibold text-sm sm:text-base px-4 py-3 min-h-[48px] whitespace-nowrap rounded-lg cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  <span className="hidden sm:inline">Create Event</span>
-                  <span className="sm:hidden">Create</span>
-                </span>
-              </button>
+              <div className="w-full sm:w-auto">
+                <button
+                  onClick={handleCreateEventClick}
+                  className="w-full sm:w-auto border-2 border-white text-white bg-transparent hover:bg-white hover:text-gray-900 transition-all hover:scale-105 font-semibold text-sm sm:text-base px-4 py-3 min-h-[48px] whitespace-nowrap rounded-full cursor-pointer"
+                >
+                  <span className="flex items-center gap-2 justify-center">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span className="hidden sm:inline">Create Event</span>
+                    <span className="sm:hidden">Create</span>
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Stats */}
-            <div className="flex flex-wrap gap-6 sm:gap-8 pt-6 sm:pt-8">
+            <div className="flex flex-row flex-nowrap justify-start gap-6 sm:gap-8 pt-6 sm:pt-8 w-full">
               {[
                 { number: "10K+", label: "Events Listed" },
                 { number: "50K+", label: "Happy Attendees" },
                 { number: "500+", label: "Cities Covered" }
               ].map((stat, index) => (
-                <div key={index} className="text-center">
+                <div key={index} className="flex-1 min-w-0 text-center">
                   <div className="text-2xl sm:text-3xl font-bold">{stat.number}</div>
                   <div className="text-gray-300 text-sm">{stat.label}</div>
                 </div>

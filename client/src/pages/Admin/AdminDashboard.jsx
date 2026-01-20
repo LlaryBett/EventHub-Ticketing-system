@@ -52,9 +52,9 @@ const AdminDashboard = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h2>
           <p className="text-gray-600">You don't have permission to access the admin dashboard.</p>
-          <pre className="mt-4 text-left bg-gray-100 p-4 rounded">
+          {/* <pre className="mt-4 text-left bg-gray-100 p-4 rounded">
             {JSON.stringify({ userType: user?.data?.userType }, null, 2)}
-          </pre>
+          </pre> */}
         </div>
       </div>
     );
@@ -70,9 +70,9 @@ const AdminDashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar Navigation */}
+          {/* Sidebar Navigation - Fixed */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="bg-white rounded-lg shadow-md p-6 sticky top-8 h-fit">
               <div className="flex items-center mb-6">
                 <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
                   A

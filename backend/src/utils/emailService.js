@@ -124,6 +124,137 @@ const sendOrganizerApplicationNotification = async (adminEmail, applicationData)
   });
 };
 
+// Send organizer welcome email (for admin-created organizers)
+const sendOrganizerWelcomeEmail = async ({ to, name, organizationName, loginLink, completeProfileLink }) => {
+  console.log('🔔 sendOrganizerWelcomeEmail triggered for:', to, organizationName);
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #4F46E5; margin-bottom: 20px;">Welcome to EventHub, ${name}!</h2>
+      
+      <p style="font-size: 16px; line-height: 1.6; color: #374151;">
+        Your organizer account has been created by the EventHub admin team for <strong>${organizationName}</strong>.
+      </p>
+      
+      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4F46E5;">
+        <h3 style="margin-top: 0; color: #374151;">Next Steps:</h3>
+        <ol style="line-height: 1.8; color: #4B5563;">
+          <li><strong>Verify your email:</strong> Check your inbox for a verification email</li>
+          <li><strong>Complete your profile:</strong> Fill out your business information</li>
+          <li><strong>Get verified:</strong> Our team will review and verify your organizer account</li>
+          <li><strong>Start creating events!</strong></li>
+        </ol>
+      </div>
+      
+      <div style="margin: 30px 0;">
+        <a href="${loginLink}" 
+           style="background-color: #4F46E5; color: white; padding: 12px 24px; 
+                  text-decoration: none; border-radius: 6px; display: inline-block;
+                  font-weight: 600; margin-right: 10px;">
+          Log In to EventHub
+        </a>
+        
+        <a href="${completeProfileLink}" 
+           style="background-color: #10B981; color: white; padding: 12px 24px; 
+                  text-decoration: none; border-radius: 6px; display: inline-block;
+                  font-weight: 600;">
+          Complete Your Profile
+        </a>
+      </div>
+      
+      <div style="border-top: 1px solid #E5E7EB; padding-top: 20px; margin-top: 30px;">
+        <p style="color: #6B7280; font-size: 14px;">
+          <strong>Important:</strong> You must complete your business profile before creating events.
+        </p>
+        <p style="color: #9CA3AF; font-size: 13px; margin-top: 5px;">
+          Organization: ${organizationName}
+        </p>
+      </div>
+      
+      <p style="color: #6B7280; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #E5E7EB;">
+        This is an automated message from EventHub. Please do not reply to this email.
+      </p>
+    </div>
+  `;
+
+  return await sendEmail({
+    to,
+    subject: 'Welcome as an Organizer on EventHub!',
+    html
+  });
+};
+
+// Send organizer verification email
+const sendOrganizerVerificationEmail = async ({ to, name, organizationName, status, notes }) => {
+  let subject, html;
+  
+  if (status === 'verified') {
+    subject = 'Your Organizer Application Has Been Approved';
+    html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #10B981;">Congratulations, ${name}!</h2>
+        <p style="font-size: 16px; line-height: 1.6;">
+          Your organizer application for <strong>${organizationName}</strong> has been approved! 🎉
+        </p>
+        <div style="background-color: #ECFDF5; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10B981;">
+          <h3 style="margin-top: 0; color: #065F46;">You're Ready to Go!</h3>
+          <p style="color: #065F46;">
+            You can now create and manage events on our platform. Log in to start organizing amazing events!
+          </p>
+        </div>
+        <p>If you have any questions, feel free to contact our support team.</p>
+        <br>
+        <p>Best regards,<br>The EventHub Team</p>
+      </div>
+    `;
+  } else if (status === 'rejected') {
+    subject = 'Your Organizer Application Was Rejected';
+    html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #DC2626;">Application Status Update</h2>
+        <p style="font-size: 16px; line-height: 1.6;">
+          We regret to inform you that your organizer application for <strong>${organizationName}</strong> was rejected.
+        </p>
+        ${notes ? `
+        <div style="background-color: #FEF2F2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #DC2626;">
+          <h4 style="margin-top: 0; color: #991B1B;">Reason:</h4>
+          <p style="color: #991B1B; white-space: pre-wrap;">${notes}</p>
+        </div>
+        ` : ''}
+        <p>If you have questions or would like to appeal this decision, please contact our support team.</p>
+        <br>
+        <p>Best regards,<br>The EventHub Team</p>
+      </div>
+    `;
+  } else if (status === 'suspended') {
+    subject = 'Your Organizer Account Has Been Suspended';
+    html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #F59E0B;">Account Suspension Notice</h2>
+        <p style="font-size: 16px; line-height: 1.6;">
+          Your organizer account for <strong>${organizationName}</strong> has been suspended.
+        </p>
+        ${notes ? `
+        <div style="background-color: #FFFBEB; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B;">
+          <h4 style="margin-top: 0; color: #92400E;">Reason:</h4>
+          <p style="color: #92400E; white-space: pre-wrap;">${notes}</p>
+        </div>
+        ` : ''}
+        <p>Please contact support for more information about this suspension.</p>
+        <br>
+        <p>Best regards,<br>The EventHub Team</p>
+      </div>
+    `;
+  } else {
+    return;
+  }
+  
+  return await sendEmail({
+    to,
+    subject,
+    html
+  });
+};
+
 // Send contact form confirmation email to user
 const sendContactConfirmation = async (email, { name, subject, category, referenceId }) => {
   const html = `
@@ -222,25 +353,6 @@ const sendContactResponse = async (email, { name, subject, response, referenceId
   });
 };
 
-// Send organizer verification email
-const sendOrganizerVerificationEmail = async ({ to, name, organizationName, status, notes }) => {
-  let subject, text;
-  if (status === 'verified') {
-    subject = 'Your Organizer Application Has Been Approved';
-    text = `Hello ${name},\n\nCongratulations! Your organizer application for "${organizationName}" has been approved. You can now create and manage events on our platform.\n\nBest regards,\nE-Ticket Team`;
-  } else if (status === 'rejected') {
-    subject = 'Your Organizer Application Was Rejected';
-    text = `Hello ${name},\n\nWe regret to inform you that your organizer application for "${organizationName}" was rejected.${notes ? `\n\nReason: ${notes}` : ''}\n\nIf you have questions, please contact support.\n\nBest regards,\nE-Ticket Team`;
-  } else if (status === 'suspended') {
-    subject = 'Your Organizer Account Has Been Suspended';
-    text = `Hello ${name},\n\nYour organizer account for "${organizationName}" has been suspended.${notes ? `\n\nReason: ${notes}` : ''}\n\nPlease contact support for more information.\n\nBest regards,\nE-Ticket Team`;
-  } else {
-    return;
-  }
-  
-  return await sendEmail({ to, subject, text });
-};
-
 module.exports = {
   sendEmail,
   sendAccountClaimEmail,
@@ -248,6 +360,7 @@ module.exports = {
   sendOrganizerApplicationConfirmation,
   sendOrganizerApplicationNotification,
   sendOrganizerVerificationEmail,
+  sendOrganizerWelcomeEmail, // NEW FUNCTION ADDED
   sendContactConfirmation,
   sendContactNotification,
   sendContactResponse

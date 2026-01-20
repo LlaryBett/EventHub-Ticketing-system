@@ -2,6 +2,18 @@ import { api } from './api';
 
 // ========== USER MANAGEMENT ==========
 
+// Create user (admin only)
+export const createUser = async (userData) => {
+  try {
+    console.log('Creating user with data:', userData);
+    const response = await api.post('/user/admin/users', userData);
+    return response.data;
+  } catch (error) {
+    console.error('Create user error:', error.response?.data || error.message);
+    throw error.response?.data || error.message;
+  }
+};
+
 // Get all users
 export const getUsers = async (params = {}) => {
   try {
@@ -25,9 +37,11 @@ export const getUserById = async (userId) => {
 // Update user
 export const updateUser = async (userId, userData) => {
   try {
+    console.log('Updating user:', userId, 'with data:', userData);
     const response = await api.put(`/user/admin/users/${userId}`, userData);
     return response.data;
   } catch (error) {
+    console.error('Update user error:', error.response?.data || error.message);
     throw error.response?.data || error.message;
   }
 };
@@ -76,6 +90,35 @@ export const searchUsers = async (query, limit = 10) => {
 
 // ========== ORGANIZER MANAGEMENT ==========
 
+// Get organizer by user ID - NOTE: This route doesn't exist yet, you need to add it
+export const getOrganizerByUserId = async (userId) => {
+  try {
+    const response = await api.get(`/user/admin/organizers/user/${userId}`);
+    return response.data;
+  } catch (error) {
+    // If route doesn't exist, we'll get organizers and filter
+    if (error.response?.status === 404) {
+      console.log('Route not found, falling back to filtering organizers');
+      const organizers = await getOrganizers();
+      const organizer = organizers.data?.find(org => 
+        org.userId?._id === userId || 
+        org.userId?.id === userId ||
+        org.userId === userId
+      );
+      
+      if (organizer) {
+        return {
+          success: true,
+          data: organizer
+        };
+      }
+      
+      throw new Error('Organizer not found for this user');
+    }
+    throw error.response?.data || error.message;
+  }
+};
+
 // Get all organizers
 export const getOrganizers = async (params = {}) => {
   try {
@@ -118,9 +161,20 @@ export const verifyOrganizer = async (organizerId, verificationData) => {
   }
 };
 
+// Delete organizer - NOTE: This route doesn't exist yet
+export const deleteOrganizer = async (organizerId) => {
+  try {
+    // Try to use user delete endpoint if organizer delete doesn't exist
+    const response = await api.delete(`/user/admin/users/${organizerId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
 // ========== ADMIN ROUTES ==========
 
-// Get admin dashboard stats (from /admin/dashboard endpoint)
+// Get admin dashboard stats
 export const getAdminDashboardStats = async () => {
   try {
     const response = await api.get('/user/admin/dashboard');
@@ -145,13 +199,19 @@ export const isAdmin = () => {
   }
 };
 
-// Get admin dashboard stats
+// Get admin dashboard stats (comprehensive)
 export const getDashboardStats = async () => {
   try {
-    const [usersStats, organizersData] = await Promise.all([
+    const [usersStats, organizersData, dashboardStats] = await Promise.all([
       getUserStatistics(),
-      getOrganizers()
+      getOrganizers(),
+      getAdminDashboardStats()
     ]);
+
+    // Use dashboard stats if available, otherwise fall back to manual calculation
+    if (dashboardStats.success) {
+      return dashboardStats.data;
+    }
 
     return {
       totalUsers: usersStats.data?.totalUsers || 0,
@@ -160,7 +220,10 @@ export const getDashboardStats = async () => {
       pendingOrganizers: organizersData.data?.filter(org => 
         org.verificationStatus === 'pending'
       ).length || 0,
-      monthlyRegistrations: usersStats.data?.monthlyRegistrations || []
+      monthlyRegistrations: usersStats.data?.monthlyRegistrations || [],
+      totalEvents: dashboardStats.data?.totalEvents || 0,
+      totalRevenue: dashboardStats.data?.totalRevenue || 0,
+      recentUsers: dashboardStats.data?.recentUsers || []
     };
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
@@ -170,6 +233,7 @@ export const getDashboardStats = async () => {
 
 export default {
   // User Management
+  createUser,
   getUsers,
   getUserById,
   updateUser,
@@ -179,13 +243,14 @@ export default {
   searchUsers,
 
   // Organizer Management
+  getOrganizerByUserId,
   getOrganizers,
   getOrganizerById,
   verifyOrganizer,
+  deleteOrganizer,
 
   // Utilities
   isAdmin,
   getDashboardStats,
-  // Admin
   getAdminDashboardStats
 };

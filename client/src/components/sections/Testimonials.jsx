@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 const Testimonials = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Mock testimonials data since we don't have the import
   const testimonials = [
     {
       id: 1,
@@ -45,14 +44,12 @@ const Testimonials = () => {
   const currentTestimonial = testimonials[currentIndex];
 
   return (
-    <section className="py-12 md:py-16 bg-gray-50">
+    <section className="py-8 md:py-12 bg-gray-50"> {/* Reduced from py-12 md:py-16 */}
       <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-12 md:mb-16">
-          {/* H2 - Mobile: 24px, Desktop: 36px */}
+        <div className="text-center mb-8 md:mb-12"> {/* Reduced from mb-12 md:mb-16 */}
           <h2 className="text-2xl md:text-4xl font-bold text-gray-900 mb-4">
             What Our Users Say
           </h2>
-          {/* Body text - Mobile: 16px, Desktop: 20px */}
           <p className="text-base md:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
             Don't just take our word for it. Here's what event organizers and attendees have to say about EventHub.
           </p>
@@ -96,7 +93,6 @@ const Testimonials = () => {
               ))}
             </div>
 
-            {/* Quote text - Mobile: 14px */}
             <blockquote className="text-sm text-gray-600 mb-6 italic leading-relaxed">
               "{currentTestimonial.content}"
             </blockquote>
@@ -108,11 +104,9 @@ const Testimonials = () => {
                 className="w-10 h-10 rounded-full mr-3"
               />
               <div>
-                {/* Name - Mobile: 16px */}
                 <div className="font-semibold text-base text-gray-900">
                   {currentTestimonial.name}
                 </div>
-                {/* Role/Company - Mobile: 14px */}
                 <div className="text-sm text-gray-500">
                   {currentTestimonial.role} at {currentTestimonial.company}
                 </div>
@@ -152,7 +146,6 @@ const Testimonials = () => {
                 ))}
               </div>
 
-              {/* Quote text - Desktop: 16px */}
               <blockquote className="text-sm md:text-base text-gray-600 mb-6 italic leading-relaxed">
                 "{testimonial.content}"
               </blockquote>
@@ -164,11 +157,9 @@ const Testimonials = () => {
                   className="w-10 h-10 md:w-12 md:h-12 rounded-full mr-3 md:mr-4"
                 />
                 <div>
-                  {/* Name - Desktop: 16px */}
                   <div className="font-semibold text-base text-gray-900">
                     {testimonial.name}
                   </div>
-                  {/* Role/Company - Desktop: 14px */}
                   <div className="text-sm text-gray-500">
                     {testimonial.role} at {testimonial.company}
                   </div>
@@ -178,21 +169,93 @@ const Testimonials = () => {
           ))}
         </div>
 
-        {/* Trust Indicators */}
-        <div className="mt-12 md:mt-16 text-center">
-          {/* Trust text - Mobile: 16px, Desktop: 16px */}
-          <p className="text-base text-gray-600 mb-6 md:mb-8">
-            Trusted by thousands of companies worldwide
-          </p>
-          <div className="flex flex-wrap justify-center items-center gap-6 md:gap-8 opacity-60">
-            {/* Company names - Mobile: 18px, Desktop: 24px */}
-            <div className="text-lg md:text-2xl font-bold text-gray-400">TechCorp</div>
-            <div className="text-lg md:text-2xl font-bold text-gray-400">InnovateLab</div>
-            <div className="text-lg md:text-2xl font-bold text-gray-400">CreativeStudio</div>
-            <div className="text-lg md:text-2xl font-bold text-gray-400">StartupHub</div>
-            <div className="text-lg md:text-2xl font-bold text-gray-400">EventPro</div>
-          </div>
-        </div>
+        {/* Trust Indicators - Reduced spacing */}
+        {/* Trust Indicators - Event & Tech focused companies */}
+<div className="mt-8 md:mt-12 text-center">
+  <p className="text-base text-gray-600 mb-6 md:mb-8">
+    Trusted by leading companies and event organizers
+  </p>
+  
+  <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
+    {/* Eventbrite - Using PNG version */}
+    <div className="w-32 h-16 flex items-center justify-center group">
+      <img 
+        src="https://cdn.worldvectorlogo.com/logos/eventbrite-1.svg" 
+        alt="Eventbrite"
+        className="h-8 object-contain opacity-70 group-hover:opacity-100 transition-opacity duration-300"
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = "https://logos-world.net/wp-content/uploads/2021/02/Eventbrite-Logo.png";
+        }}
+      />
+    </div>
+    
+    {/* Meetup - Using simple SVG */}
+    <div className="w-32 h-16 flex items-center justify-center group">
+      <img 
+        src="https://cdn.worldvectorlogo.com/logos/meetup-1.svg" 
+        alt="Meetup"
+        className="h-10 object-contain opacity-70 group-hover:opacity-100 transition-opacity duration-300"
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Meetup_Logo.png/640px-Meetup_Logo.png";
+        }}
+      />
+    </div>
+    
+    {/* HubSpot - Using clean SVG */}
+    <div className="w-32 h-16 flex items-center justify-center group">
+      <img 
+        src="https://cdn.worldvectorlogo.com/logos/hubspot-1.svg" 
+        alt="HubSpot"
+        className="h-8 object-contain opacity-70 group-hover:opacity-100 transition-opacity duration-300"
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = "https://cdn.freebiesupply.com/logos/large/2x/hubspot-1-logo-png-transparent.png";
+        }}
+      />
+    </div>
+    
+    {/* Google Calendar - Using simple icon */}
+    <div className="w-32 h-16 flex items-center justify-center group">
+      <img 
+        src="https://cdn.worldvectorlogo.com/logos/google-calendar-1.svg" 
+        alt="Google Calendar"
+        className="h-10 object-contain opacity-70 group-hover:opacity-100 transition-opacity duration-300"
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Google_Calendar_icon_%282020%29.svg/240px-Google_Calendar_icon_%282020%29.svg.png";
+        }}
+      />
+    </div>
+    
+    {/* Slack - Using PNG */}
+    <div className="w-32 h-16 flex items-center justify-center group">
+      <img 
+        src="https://cdn.worldvectorlogo.com/logos/slack-new-logo.svg" 
+        alt="Slack"
+        className="h-10 object-contain opacity-70 group-hover:opacity-100 transition-opacity duration-300"
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = "https://cdn.freebiesupply.com/logos/large/2x/slack-logo-png-transparent.png";
+        }}
+      />
+    </div>
+    
+    {/* Zoom - Using SVG */}
+    <div className="w-32 h-16 flex items-center justify-center group">
+      <img 
+        src="https://cdn.worldvectorlogo.com/logos/zoom-1.svg" 
+        alt="Zoom"
+        className="h-10 object-contain opacity-70 group-hover:opacity-100 transition-opacity duration-300"
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = "https://cdn.freebiesupply.com/logos/large/2x/zoom-logo-png-transparent.png";
+        }}
+      />
+    </div>
+  </div>
+</div>
       </div>
     </section>
   );
