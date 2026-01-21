@@ -21,6 +21,15 @@ const Register = () => {
   const [showOrganizerSuccessModal, setShowOrganizerSuccessModal] = useState(false);
   const [organizerSuccessMessage, setOrganizerSuccessMessage] = useState('');
 
+  // Add validation errors state
+  const [validationErrors, setValidationErrors] = useState({
+    password: '',
+    confirmPassword: '',
+    name: '',
+    email: '',
+    phone: ''
+  });
+
   // Helper function to determine registration type from URL
   const getRegistrationTypeFromURL = () => {
     const searchParams = new URLSearchParams(location.search);
@@ -71,28 +80,53 @@ const Register = () => {
   };
 
   const validateStep1 = () => {
-    if (!formData.name || !formData.email || !formData.password || !formData.phone) {
-      showError('Please fill in all required personal information');
-      return false;
+    const errors = {};
+    
+    if (!formData.name) {
+      errors.name = 'Full name is required';
     }
     
-    if (formData.password !== formData.confirmPassword) {
-      showError('Passwords do not match');
-      return false;
+    if (!formData.email) {
+      errors.email = 'Email is required';
+    }
+    
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters long';
+    }
+    
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
     }
 
-    if (formData.password.length < 8) {
-      showError('Password must be at least 8 characters long');
-      return false;
+    if (!formData.phone) {
+      errors.phone = 'Phone number is required';
     }
 
-    return true;
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const validateStep2 = () => {
-    if (!formData.organizationName || !formData.businessAddress || !formData.city || !formData.state || !formData.zipCode) {
-      showError('Please fill in all required business information');
-      return false;
+    const errors = {};
+    
+    if (!formData.organizationName) {
+      errors.organizationName = 'Organization name is required';
+    }
+    if (!formData.businessAddress) {
+      errors.businessAddress = 'Business address is required';
+    }
+    if (!formData.city) {
+      errors.city = 'City is required';
+    }
+    if (!formData.state) {
+      errors.state = 'State is required';
+    }
+    if (!formData.zipCode) {
+      errors.zipCode = 'ZIP code is required';
     }
     
     if (!formData.acceptTerms) {
@@ -100,7 +134,8 @@ const Register = () => {
       return false;
     }
 
-    return true;
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleOrganizerStep1 = async () => {
@@ -315,44 +350,110 @@ const Register = () => {
             {isAttendee ? (
               <form onSubmit={handleAttendeeSubmit} className="space-y-4">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Attendee Registration</h2>
-                <Input
-                  label="Full Name *"
-                  placeholder="Enter your full name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  required
-                />
-                <Input
-                  label="Email Address *"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  required
-                />
-                <Input
-                  label="Password *"
-                  type="password"
-                  placeholder="Create a strong password (min 8 characters)"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  required
-                />
-                <Input
-                  label="Confirm Password *"
-                  type="password"
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                  required
-                />
-                <Input
-                  label="Phone Number (Optional)"
-                  type="tel"
-                  placeholder="Enter your phone number"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                />
+                
+                <div>
+                  <Input
+                    label="Full Name *"
+                    placeholder="Enter your full name"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    required
+                  />
+                  {validationErrors.name && (
+                    <p className="mt-1 text-xs text-red-600 flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      {validationErrors.name}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Input
+                    label="Email Address *"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    required
+                  />
+                  {validationErrors.email && (
+                    <p className="mt-1 text-xs text-red-600 flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      {validationErrors.email}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Input
+                    label="Password *"
+                    type="password"
+                    placeholder="Create a strong password (min 8 characters)"
+                    value={formData.password}
+                    onChange={(e) => {
+                      handleInputChange('password', e.target.value);
+                      if (validationErrors.password) {
+                        setValidationErrors(prev => ({ ...prev, password: '' }));
+                      }
+                    }}
+                    required
+                  />
+                  {validationErrors.password && (
+                    <p className="mt-1 text-xs text-red-600 flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      {validationErrors.password}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Input
+                    label="Confirm Password *"
+                    type="password"
+                    placeholder="Confirm your password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => {
+                      handleInputChange('confirmPassword', e.target.value);
+                      if (validationErrors.confirmPassword) {
+                        setValidationErrors(prev => ({ ...prev, confirmPassword: '' }));
+                      }
+                    }}
+                    required
+                  />
+                  {validationErrors.confirmPassword && (
+                    <p className="mt-1 text-xs text-red-600 flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      {validationErrors.confirmPassword}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Input
+                    label="Phone Number (Optional)"
+                    type="tel"
+                    placeholder="Enter your phone number"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                  />
+                  {validationErrors.phone && (
+                    <p className="mt-1 text-xs text-red-600 flex items-center">
+                      <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      {validationErrors.phone}
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex items-start">
                   <input
                     type="checkbox"
@@ -431,49 +532,109 @@ const Register = () => {
                           </ul>
                         </div>
                       )}
-                      <Input
-                        label="Full Name *"
-                        placeholder="Enter your full name"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        required
-                      />
+                      <div>
+                        <Input
+                          label="Full Name *"
+                          placeholder="Enter your full name"
+                          value={formData.name}
+                          onChange={(e) => handleInputChange('name', e.target.value)}
+                          required
+                        />
+                        {validationErrors.name && (
+                          <p className="mt-1 text-xs text-red-600 flex items-center">
+                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            {validationErrors.name}
+                          </p>
+                        )}
+                      </div>
 
-                      <Input
-                        label="Email Address *"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        required
-                      />
+                      <div>
+                        <Input
+                          label="Email Address *"
+                          type="email"
+                          placeholder="Enter your email"
+                          value={formData.email}
+                          onChange={(e) => handleInputChange('email', e.target.value)}
+                          required
+                        />
+                        {validationErrors.email && (
+                          <p className="mt-1 text-xs text-red-600 flex items-center">
+                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            {validationErrors.email}
+                          </p>
+                        )}
+                      </div>
 
-                      <Input
-                        label="Phone Number *"
-                        type="tel"
-                        placeholder="Enter your phone number"
-                        value={formData.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                        required
-                      />
+                      <div>
+                        <Input
+                          label="Phone Number *"
+                          type="tel"
+                          placeholder="Enter your phone number"
+                          value={formData.phone}
+                          onChange={(e) => handleInputChange('phone', e.target.value)}
+                          required
+                        />
+                        {validationErrors.phone && (
+                          <p className="mt-1 text-xs text-red-600 flex items-center">
+                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            {validationErrors.phone}
+                          </p>
+                        )}
+                      </div>
 
-                      <Input
-                        label="Password *"
-                        type="password"
-                        placeholder="Create a strong password (min 8 characters)"
-                        value={formData.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
-                        required
-                      />
+                      <div>
+                        <Input
+                          label="Password *"
+                          type="password"
+                          placeholder="Create a strong password (min 8 characters)"
+                          value={formData.password}
+                          onChange={(e) => {
+                            handleInputChange('password', e.target.value);
+                            if (validationErrors.password) {
+                              setValidationErrors(prev => ({ ...prev, password: '' }));
+                            }
+                          }}
+                          required
+                        />
+                        {validationErrors.password && (
+                          <p className="mt-1 text-xs text-red-600 flex items-center">
+                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            {validationErrors.password}
+                          </p>
+                        )}
+                      </div>
 
-                      <Input
-                        label="Confirm Password *"
-                        type="password"
-                        placeholder="Confirm your password"
-                        value={formData.confirmPassword}
-                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                        required
-                      />
+                      <div>
+                        <Input
+                          label="Confirm Password *"
+                          type="password"
+                          placeholder="Confirm your password"
+                          value={formData.confirmPassword}
+                          onChange={(e) => {
+                            handleInputChange('confirmPassword', e.target.value);
+                            if (validationErrors.confirmPassword) {
+                              setValidationErrors(prev => ({ ...prev, confirmPassword: '' }));
+                            }
+                          }}
+                          required
+                        />
+                        {validationErrors.confirmPassword && (
+                          <p className="mt-1 text-xs text-red-600 flex items-center">
+                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            {validationErrors.confirmPassword}
+                          </p>
+                        )}
+                      </div>
 
                       <Button
                         type="button"

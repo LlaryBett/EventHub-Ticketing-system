@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import Button from '../components/common/Button';
@@ -7,7 +7,8 @@ import Input from '../components/common/Input';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
-  const { resetToken } = useParams();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
   const { resetPassword } = useAuth();
   const { showSuccess, showError } = useUI();
   const [loading, setLoading] = useState(false);
@@ -15,7 +16,6 @@ const ResetPassword = () => {
     password: '',
     confirmPassword: ''
   });
-  const [tokenValid, setTokenValid] = useState(true);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,7 +33,7 @@ const ResetPassword = () => {
     setLoading(true);
     
     try {
-      await resetPassword(resetToken, formData.password);
+      await resetPassword(token, formData.password);
       showSuccess('Password reset successfully! You can now login with your new password.');
       navigate('/login');
     } catch (error) {
@@ -59,11 +59,8 @@ const ResetPassword = () => {
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 mx-4">
         {/* Header */}
         <div className="text-center mb-6">
-          <Link to="/" className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-7 h-7 bg-primary-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-base">E</span>
-            </div>
-            <span className="text-4xl font-bold text-gray-900">EventHub</span>
+          <Link to="/" className="flex items-center justify-center mb-4">
+            <img src="/vite1.png" alt="EventHub Logo" className="h-12 w-auto" />
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Set New Password</h1>
           <p className="text-sm text-gray-600">

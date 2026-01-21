@@ -55,7 +55,7 @@ const AppRoutes = () => {
       <Route path="/login" element={<Layout><Login /></Layout>} />
       <Route path="/register" element={<Layout><Register /></Layout>} />
       <Route path="/forgot-password" element={<Layout><ForgotPassword /></Layout>} />
-      <Route path="/reset-password/:resetToken" element={<Layout><ResetPassword /></Layout>} />
+      <Route path="/reset-password" element={<Layout><ResetPassword /></Layout>} />
       
       {/* Protected Routes with Layout */}
       <Route path="/checkout" element={<Layout><Checkout /></Layout>} />

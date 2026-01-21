@@ -48,11 +48,12 @@ const ForgotPassword = () => {
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 mx-4">
         {/* Header */}
         <div className="text-center mb-6">
-          <Link to="/" className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-7 h-7 bg-primary-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-base">E</span>
-            </div>
-            <span className="text-4xl font-bold text-gray-900">EventHub</span>
+          <Link to="/" className="flex items-center justify-center mb-4">
+            <img 
+              src="/vite1.png" 
+              alt="EventHub Logo" 
+              className="h-12 object-contain"
+            />
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             {emailSent ? 'Check Your Email' : 'Reset Your Password'}

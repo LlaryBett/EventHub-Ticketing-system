@@ -864,45 +864,67 @@ exports.forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
 
+    console.log('📧 Forgot password request for email:', email);
+
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('❌ No user found with email:', email);
       return res.status(404).json({
         success: false,
         message: 'No user found with this email'
       });
     }
 
-    // Generate reset token
-    const resetToken = user.getResetPasswordToken();
-    await user.save({ validateBeforeSave: false });
+    console.log('✅ User found:', user._id);
 
-    // Create reset URL
-    const resetUrl = `${req.protocol}://${req.get('host')}/api/auth/resetpassword/${resetToken}`;
+    // Generate reset token
+    console.log('🔑 Generating reset token...');
+    const resetToken = user.getResetPasswordToken();
+    console.log('✅ Reset token generated:', resetToken.substring(0, 10) + '...');
+    
+    await user.save({ validateBeforeSave: false });
+    console.log('💾 User saved with reset token');
+
+    // Create reset URL pointing to frontend, not API
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+    console.log('🔗 Reset URL created (frontend):', resetUrl);
 
     try {
+      console.log('📤 Sending password reset email to:', user.email);
       await sendPasswordResetEmail(user.email, resetUrl);
+      console.log('✅ Password reset email sent successfully');
 
       res.status(200).json({
         success: true,
         message: 'Email sent with password reset instructions'
       });
     } catch (error) {
-      console.error('Email send error:', error);
+      console.error('❌ Email send error:', error);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       
+      console.log('🔄 Clearing reset token from user...');
       user.resetPasswordToken = undefined;
       user.resetPasswordExpire = undefined;
       await user.save({ validateBeforeSave: false });
+      console.log('✅ Reset token cleared');
 
       return res.status(500).json({
         success: false,
-        message: 'Email could not be sent'
+        message: 'Email could not be sent',
+        error: error.message
       });
     }
   } catch (error) {
-    console.error('Forgot password error:', error);
+    console.error('🔥 Forgot password error:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
     res.status(500).json({
       success: false,
-      message: 'Server Error'
+      message: 'Server Error',
+      error: error.message
     });
   }
 };

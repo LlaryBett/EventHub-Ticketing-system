@@ -132,16 +132,16 @@ const Login = () => {
         </div>
 
         {/* Right Column - Form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-4">
-          <div className="max-w-xs w-full">
-            {/* Header (logo/name removed — app header provides branding) */}
-            <div className="text-center mb-4">
-              <h1 className="text-base font-bold text-gray-900 mb-1">Welcome Back</h1>
-              <p className="text-xs text-gray-600">Sign in to your account to continue</p>
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+          <div className="max-w-sm w-full">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+              <p className="text-sm sm:text-base text-gray-600">Sign in to your account to continue</p>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-2">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <Input
                 label="Email Address"
                 type="email"
@@ -149,9 +149,8 @@ const Login = () => {
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 required
-                className="py-1 px-2 text-xs"
-                inputClassName="text-xs"
-                labelClassName="text-xs font-medium"
+                labelClassName="text-sm font-medium"
+                inputClassName="text-base"
               />
 
               <Input
@@ -161,22 +160,21 @@ const Login = () => {
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
                 required
-                className="py-1 px-2 text-xs"
-                inputClassName="text-xs"
-                labelClassName="text-xs font-medium"
+                labelClassName="text-sm font-medium"
+                inputClassName="text-base"
               />
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pt-2">
                 <label className="flex items-center">
                   <input
                     type="checkbox"
-                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 w-3 h-3"
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 w-4 h-4"
                   />
-                  <span className="ml-2 text-xs text-gray-600">Remember me</span>
+                  <span className="ml-2 text-sm text-gray-600">Remember me</span>
                 </label>
                 <Link
                   to="/forgot-password"
-                  className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
                 >
                   Forgot password?
                 </Link>
@@ -185,18 +183,17 @@ const Login = () => {
               <Button
                 type="submit"
                 fullWidth
-                size="small"
                 loading={loading}
                 disabled={loading}
-                className="text-xs py-1"
+                className="py-3 mt-6 text-base"
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
 
             {/* Sign up link */}
-            <div className="mt-2 text-center">
-              <p className="text-xs text-gray-600">
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
                 Don't have an account?{' '}
                 <Link
                   to="/register"

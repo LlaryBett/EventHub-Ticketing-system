@@ -59,11 +59,20 @@ const sendAccountClaimEmail = async (email, claimUrl) => {
 
 // Send password reset email
 const sendPasswordResetEmail = async (email, resetUrl) => {
+  // Extract token from URL if it's an API URL, and convert to frontend URL
+  let frontendResetUrl = resetUrl;
+  
+  if (resetUrl.includes('/api/auth/resetpassword/')) {
+    const token = resetUrl.split('/api/auth/resetpassword/')[1];
+    frontendResetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+    console.log('🔄 Converted API URL to frontend URL:', frontendResetUrl);
+  }
+
   const html = `
     <h2>Password Reset Request</h2>
     <p>You are receiving this email because you (or someone else) has requested a password reset for your EventHub account.</p>
     <p>Please click on the following link to reset your password:</p>
-    <a href="${resetUrl}" style="display: inline-block; padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
+    <a href="${frontendResetUrl}" style="display: inline-block; padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
     <p>If you did not request this, please ignore this email and your password will remain unchanged.</p>
     <p>This reset token is valid for 10 minutes.</p>
   `;

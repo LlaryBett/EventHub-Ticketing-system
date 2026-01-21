@@ -243,14 +243,16 @@ const Checkout = () => {
             <div className="space-y-6">
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex items-center mb-6">
-                  <div className="bg-green-100 p-3 rounded-full mr-4">
-                    <svg className="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
+                  <div className="bg-green-100 p-3 rounded-lg mr-4">
+                    <img 
+                      src="https://www.kachwanya.com/wp-content/uploads/2020/12/1UCUl2bSj2RCyq6H.jpg" 
+                      alt="M-Pesa" 
+                      className="w-16 h-16 object-contain"
+                    />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">M-Pesa Payment</h2>
-                    <p className="text-sm text-gray-500">Safe, secure, and instant</p>
+                    <h2 className="text-2xl font-bold text-gray-900">M-Pesa Payment</h2>
+                    <p className="text-base text-gray-600">Safe, secure, and instant</p>
                   </div>
                 </div>
 
@@ -331,23 +333,22 @@ const Checkout = () => {
 
                 {/* Discount Code */}
                 <div className="mb-6">
-                  <div className="flex space-x-2">
+                  <div className="relative">
                     <input
                       type="text"
                       placeholder="Discount code"
                       value={discountCode}
                       onChange={(e) => setDiscountCode(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                     />
-                    <Button
+                    <button
                       type="button"
-                      variant="outline"
                       onClick={applyDiscountCode}
-                      loading={applyingDiscount}
-                      disabled={!discountCode.trim() || discount}
+                      disabled={!discountCode.trim() || discount || applyingDiscount}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 px-3 py-1 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed rounded transition-colors"
                     >
-                      Apply
-                    </Button>
+                      {applyingDiscount ? '...' : 'Apply'}
+                    </button>
                   </div>
                   {discount && (
                     <div className="mt-2 flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-2">
@@ -406,9 +407,14 @@ const Checkout = () => {
 
                 {/* Security Notice */}
                 <div className="mt-4 text-center">
-                  <p className="text-xs text-gray-500">
-                    🔒 Powered by Safaricom M-Pesa - Safe & Secure
-                  </p>
+                  <div className="flex items-center justify-center space-x-2">
+                    <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-xs text-gray-500 font-medium">
+                      Powered by Safaricom M-Pesa - Safe & Secure
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

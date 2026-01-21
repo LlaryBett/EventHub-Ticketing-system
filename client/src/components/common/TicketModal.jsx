@@ -108,7 +108,7 @@ const TicketModal = ({
       <div className="bg-white rounded-t-3xl w-full max-h-[90vh] overflow-y-auto animate-slideUp">
         {/* Modal Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-10">
-          <h2 className="text-lg font-bold text-gray-900">Get Tickets</h2>
+          <h2 className="text-base font-bold text-gray-900">Get Tickets</h2>
           <button 
             onClick={onClose}
             className="p-2 rounded-full hover:bg-gray-100"
@@ -126,22 +126,22 @@ const TicketModal = ({
                 {isFreeEvent ? 'Free' : formatPrice(ticketPrice)}
               </span>
               {isFreeEvent ? (
-                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
                   No Payment Required
                 </span>
               ) : (
-                <span className="bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-sm font-medium">
+                <span className="bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-xs font-medium">
                   Secure Payment
                 </span>
               )}
             </div>
-            <p className="text-gray-500 text-sm">per person • {available} available</p>
+            <p className="text-gray-500 text-xs">per person • {available} available</p>
           </div>
 
           {/* Ticket Selection */}
           {tickets.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              <h3 className="text-base font-bold text-gray-900 mb-3">
                 {isFreeEvent ? 'Reservation Type' : 'Ticket Type'}
               </h3>
               <div className="space-y-3">
@@ -166,14 +166,14 @@ const TicketModal = ({
           {isUpcoming && available > 0 && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs font-medium text-gray-700 mb-2">
                   Number of {isFreeEvent ? 'spots' : 'tickets'}
                 </label>
                 <div className="flex items-center space-x-4">
                   <select
                     value={selectedQuantity}
                     onChange={e => setSelectedQuantity(parseInt(e.target.value))}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base"
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                   >
                     {[...Array(Math.min(maxOrder, available)).keys()].map(i => (
                       <option key={i + minOrder} value={i + minOrder}>
@@ -182,8 +182,8 @@ const TicketModal = ({
                     ))}
                   </select>
                   <div className="text-right">
-                    <p className="text-sm text-gray-500">Total</p>
-                    <p className="text-xl font-bold text-primary-600">
+                    <p className="text-xs text-gray-500">Total</p>
+                    <p className="text-lg font-bold text-primary-600">
                       {isFreeEvent ? 'Free' : formatPrice(ticketPrice * selectedQuantity)}
                     </p>
                   </div>
@@ -197,7 +197,7 @@ const TicketModal = ({
                   size="large" 
                   onClick={onReserveSpot}
                   loading={reservationLoading}
-                  className="text-lg py-4"
+                  className="font-semibold py-3"
                 >
                   {reservationLoading ? 'Reserving...' : 'Reserve Your Spot'}
                 </Button>
@@ -222,7 +222,7 @@ const TicketModal = ({
                       }
                     });
                   }}
-                  className="text-lg py-4"
+                  className="font-semibold py-3"
                 >
                   Buy Tickets Now
                 </Button>
@@ -231,19 +231,19 @@ const TicketModal = ({
               {/* Urgency Messages */}
               {available <= 10 && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-red-700 text-sm font-medium">
-                    🔥 Only {available} spots left!
+                  <p className="text-red-700 text-xs font-medium">
+                    Only {available} spots left!
                   </p>
                 </div>
               )}
 
               {/* Event Info Summary */}
               <div className="space-y-3 pt-4 border-t border-gray-200">
-                <div className="flex items-center text-sm text-gray-600">
+                <div className="flex items-center text-xs text-gray-600">
                   <FiCalendar className="w-4 h-4 mr-3 text-primary-600" />
                   <span>{formatDate(event.date)} at {event.time}</span>
                 </div>
-                <div className="flex items-center text-sm text-gray-600">
+                <div className="flex items-center text-xs text-gray-600">
                   <FiMapPin className="w-4 h-4 mr-3 text-primary-600" />
                   <span className="truncate">{event.venue}</span>
                 </div>
@@ -252,16 +252,16 @@ const TicketModal = ({
               {/* Additional Event Info */}
               <div className="space-y-3 pt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-600 text-sm">Duration</span>
-                  <span className="font-medium text-sm text-gray-900">{event.duration || '2-3 hours'}</span>
+                  <span className="text-gray-600 text-xs">Duration</span>
+                  <span className="font-medium text-xs text-gray-900">{event.duration || '2-3 hours'}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-600 text-sm">Age Restriction</span>
-                  <span className="font-medium text-sm text-gray-900">{event.ageRestriction || 'All ages welcome'}</span>
+                  <span className="text-gray-600 text-xs">Age Restriction</span>
+                  <span className="font-medium text-xs text-gray-900">{event.ageRestriction || 'All ages welcome'}</span>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-gray-600 text-sm">Ticket Delivery</span>
-                  <span className="font-medium text-sm text-gray-900">{event.ticketDelivery || 'E-tickets provided'}</span>
+                  <span className="text-gray-600 text-xs">Ticket Delivery</span>
+                  <span className="font-medium text-xs text-gray-900">{event.ticketDelivery || 'E-tickets provided'}</span>
                 </div>
               </div>
             </div>
